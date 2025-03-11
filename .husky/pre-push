@@ -1,0 +1,4 @@
+#!/bin/sh
+
+echo '🚀 Running pre-push checks...'
+./gradlew clean build test
