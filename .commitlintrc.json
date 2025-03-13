@@ -7,7 +7,7 @@
   },
   "parserPreset": {
     "parserOpts": {
-      "ignorePattern": "^chore\\(release\\):"
+      "ignorePattern": "^chore\\(release\\): .*"
     }
   }
 }
