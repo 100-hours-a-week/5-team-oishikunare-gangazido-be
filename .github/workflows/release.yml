@@ -34,7 +34,7 @@ jobs:
         run: |
           COMMIT_MSG=$(git log -1 --pretty=format:"%s")
           echo "최근 커밋 메시지: $COMMIT_MSG"
-          if [[ "$COMMIT_MSG" == chore\(release\):* ]]; then
+          if [[ "$COMMIT_MSG" == release:* ]]; then
             echo "is_release=true" >> $GITHUB_OUTPUT
           else
             echo "is_release=false" >> $GITHUB_OUTPUT
