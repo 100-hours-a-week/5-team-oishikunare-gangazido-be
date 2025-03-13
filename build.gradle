@@ -41,7 +41,6 @@ scmVersion {
             def version = context.currentVersion
             println("🔍 Setting release commit message: chore(release): release version ${version}")
 
-            // Axion Release가 생성하는 커밋 메시지를 Conventional Commits 형식으로 맞춤
             "git commit --amend -m 'chore(release): ${version}'".execute()
         }
         pre 'push'
