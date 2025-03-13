@@ -12,6 +12,8 @@ scmVersion {
         prefix = 'v'    // 태그 접두사 설정 (예: v1.0.3)
     }
 
+    //야호
+
     ignoreUncommittedChanges = false
 
     nextVersion {

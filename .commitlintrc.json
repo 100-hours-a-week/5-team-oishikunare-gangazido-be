@@ -4,8 +4,8 @@
     "type-enum": [2, "always", ["feat", "fix", "docs", "chore", "test", "refactor", "ci", "release"]],
     "subject-case": [2, "always", "sentence-case"],
     "header-max-length": [2, "always", 72],
-    "type-empty": [1, "never"],
-    "subject-empty": [1, "never"]
+    "type-empty": [2, "never"],
+    "subject-empty": [2, "never"]
   },
   "parserPreset": {
     "parserOpts": {
