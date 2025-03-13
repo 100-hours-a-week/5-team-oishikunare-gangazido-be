@@ -50,12 +50,6 @@ jobs:
           TAG_NAME=$(./gradlew printVersion -q | tr -d '[:space:]')
           echo "new_version=$TAG_NAME" >> $GITHUB_OUTPUT
 
-      - name: Push new tags to remote
-        if: steps.check_release.outputs.is_release == 'true'
-        run: git push origin --tags
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TC }}
-
       - name: Create GitHub Release
         if: steps.check_release.outputs.is_release == 'true'
         uses: softprops/action-gh-release@v1
