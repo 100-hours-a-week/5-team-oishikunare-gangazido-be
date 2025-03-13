@@ -40,7 +40,7 @@ jobs:
 
       - name: Ensure Tag is Created
         run: |
-          TAG_NAME=$(./gradlew currentVersion -q)
+          TAG_NAME=$(./gradlew currentVersion -q | tr -d '[:space:]')
           echo "Tag to be created: v$TAG_NAME"
           git tag -a "v$TAG_NAME" -m "chore(release): v$TAG_NAME"
           git push origin --tags
