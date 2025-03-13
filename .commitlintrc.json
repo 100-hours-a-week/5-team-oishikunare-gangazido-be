@@ -1,9 +1,13 @@
 {
   "extends": ["@commitlint/config-conventional"],
-  "ignores": ["(message) => message.startsWith('chore(release):')"],
   "rules": {
     "type-enum": [2, "always", ["feat", "fix", "docs", "chore", "test", "refactor", "ci"]],
     "subject-case": [2, "always", "sentence-case"],
     "header-max-length": [2, "always", 72]
+  },
+  "parserPreset": {
+    "parserOpts": {
+      "ignorePattern": "^chore\\(release\\):"
+    }
   }
 }
