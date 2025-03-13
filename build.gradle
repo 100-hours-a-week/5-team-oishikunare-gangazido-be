@@ -12,6 +12,12 @@ scmVersion {
         prefix = 'v'    // 태그 접두사 설정 (예: v1.0.3)
     }
 
+    tasks.register('printVersion') {
+        doLast {
+            println scmVersion.version
+        }
+    }
+
     versionIncrementer 'incrementPatch'  // 패치 버전 자동 증가
 
     hooks {
