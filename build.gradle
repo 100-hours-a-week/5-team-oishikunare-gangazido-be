@@ -13,18 +13,18 @@ scmVersion {
     }
 
     versionIncrementer { context ->
-        def increment = 'incrementPatch' // 기본값: Patch 증가
+        def increment = 'incrementPatch' // 기본값: Patch
 
-        context.commitMessages.each { message ->
-            if (message.contains('BREAKING CHANGE')) {
-                increment = 'incrementMajor'
-                return
-            } else if (message.startsWith('feat') || message.startsWith('release')) {
-                increment = 'incrementMinor'
-            } else if (message.startsWith('fix')) {
-                increment = 'incrementPatch'
-            }
+        def lastCommitMessage = 'git log -1 --pretty=%B'.execute().text.trim()
+
+        if (lastCommitMessage.contains('BREAKING CHANGE')) {
+            increment = 'incrementMajor'
+        } else if (lastCommitMessage.startsWith('feat') || lastCommitMessage.startsWith('release')) {
+            increment = 'incrementMinor'
+        } else if (lastCommitMessage.startsWith('fix')) {
+            increment = 'incrementPatch'
         }
+
         return increment
     }
 
