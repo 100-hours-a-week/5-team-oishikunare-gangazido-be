@@ -3,7 +3,30 @@ plugins {
     id 'checkstyle'
     id 'org.springframework.boot' version '3.2.2'
     id 'io.spring.dependency-management' version '1.1.7'
-    id 'org.ec4j.editorconfig' version '0.0.3'
+    id 'org.ec4j.editorconfig' version '0.1.0'
+    id 'pl.allegro.tech.build.axion-release' version '1.18.18'
+}
+
+scmVersion {
+    versionIncrementer 'incrementPatch' // Conventional Commits 방식으로 버전 자동 증가
+
+    tag {
+        prefix = 'v'
+    }
+
+    repository {
+        pushTagsOnly = true // 브랜치는 푸시하지 않고 태그만 푸시
+    }
+
+    hooks {
+        pre 'commit'
+        pre 'push'
+        post {
+            exec {
+                commandLine 'git', 'push', 'origin', '--tags'
+            }
+        }
+    }
 }
 
 checkstyle {
@@ -17,7 +40,15 @@ compileJava.options.encoding = 'UTF-8'
 compileTestJava.options.encoding = 'UTF-8'
 
 editorconfig {
-    excludes = ['build']
+    excludes = [
+            'build',
+            '.github',
+            '.gradle',
+            '.husky',
+            'gradle',
+            'node_modules',
+            'config'
+    ]
 }
 
 check.dependsOn editorconfigCheck
@@ -48,3 +79,4 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
