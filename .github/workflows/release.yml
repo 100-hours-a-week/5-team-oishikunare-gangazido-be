@@ -29,6 +29,18 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TC }}
 
+      - name: Check if tag was created
+        run: git tag
+
+      - name: Ensure Tag is Created
+        run: |
+          TAG_NAME=$(./gradlew currentVersion -q)
+          echo "Tag to be created: v$TAG_NAME"
+          git tag -a "v$TAG_NAME" -m "chore(release): v$TAG_NAME"
+          git push origin --tags
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TC }}
+
       - name: Push Tags to GitHub (태그 푸시)
         run: git push origin --tags
         env:
@@ -44,4 +56,3 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TC }}
-#태그 미생성 문제
