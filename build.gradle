@@ -21,11 +21,11 @@ scmVersion {
         def version = context.currentVersion
 
         if (lastCommitMessage.contains('BREAKING CHANGE')) {
-            return version.incrementMajorVersion().toString()
+            return version.incrementMajorVersion()
         } else if (lastCommitMessage.startsWith('feat') || lastCommitMessage.startsWith('release')) {
-            return version.incrementMinorVersion().toString()
+            return version.incrementMinorVersion()
         } else {
-            return version.incrementPatchVersion().toString()
+            return version.incrementPatchVersion()
         }
     }
 
