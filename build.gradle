@@ -15,8 +15,7 @@ scmVersion {
     }
 
     versionIncrementer { context ->
-        def lastTag = 'git describe --tags --abbrev=0'.execute().text.trim().replaceFirst('v', '')
-        def version = Version.valueOf(lastTag)
+        def version = context.currentVersion
         def lastCommitMessage = 'git log -1 --pretty=%B'.execute().text.trim()
 
         if (lastCommitMessage.contains('BREAKING CHANGE')) {
