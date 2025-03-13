@@ -5,7 +5,7 @@ on:
     branches:
       - main
     # 프로젝트 진행할 땐 브랜치를 production으로 수정하여 프로덕션 릴리즈가 가능하도록 수정
-    # 오 되나? 안됌;
+    # 지금은?
 
 jobs:
   auto_release:
