@@ -17,13 +17,10 @@ scmVersion {
     hooks {
         pre 'commit', { context ->
             def version = context.currentVersion
-            println("🔍 Setting release commit message: chore(release): ${version}")
+            println("🔍 Setting release commit message: chore(release): release version ${version}")
 
-            // 기존 커밋 메시지를 가져옴
-            def commitMessage = "git log -1 --pretty=%B".execute().text.trim()
-
-            // 기존 메시지에 "chore(release): {version}"을 추가
-            "git commit --amend -m 'chore(release): ${version}\n\n${commitMessage}'".execute()
+            // Axion Release가 생성하는 커밋 메시지를 Conventional Commits 형식으로 맞춤
+            "git commit --amend -m 'chore(release): release version ${version}'".execute()
         }
         pre 'push'
     }
