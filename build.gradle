@@ -1,5 +1,3 @@
-import com.github.zafarkhaja.semver.Version
-
 plugins {
     id 'java'
     id 'checkstyle'
@@ -15,7 +13,6 @@ scmVersion {
     }
 
     versionIncrementer { context ->
-        def currentVersion = context.currentVersion
         def lastCommitMessage = 'git log -1 --pretty=%B'.execute().text.trim()
 
         def version = context.currentVersion
