@@ -5,6 +5,8 @@ on:
     branches:
       - main
     # 프로젝트 진행할 땐 브랜치를 production으로 수정하여 프로덕션 릴리즈가 가능하도록 수정
+    # 1.0.9 버전에서 증가하는지 확인
+
 jobs:
   auto_release:
     runs-on: ubuntu-latest
