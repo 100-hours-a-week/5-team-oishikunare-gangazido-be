@@ -27,19 +27,18 @@ jobs:
           git config --global user.name '${{ secrets.GIT_USER_NAME }}'
           git config --global user.email '${{ secrets.GIT_USER_EMAIL }}'
 
-      - name: Check for release commit
-        id: check_release
-        run: |
-          COMMIT_MSG=$(git log -1 --pretty=format:"%s")
-          echo "최근 커밋 메시지: $COMMIT_MSG"
-          if [[ "$COMMIT_MSG" == release:* ]]; then
-            echo "is_release=true" >> $GITHUB_OUTPUT
-          else
-            echo "is_release=false" >> $GITHUB_OUTPUT
-          fi
+#      - name: Check for release commit
+#        id: check_release
+#        run: |
+#          COMMIT_MSG=$(git log -1 --pretty=format:"%s")
+#          echo "최근 커밋 메시지: $COMMIT_MSG"
+#          if [[ "$COMMIT_MSG" == release:* ]]; then
+#            echo "is_release=true" >> $GITHUB_OUTPUT
+#          else
+#            echo "is_release=false" >> $GITHUB_OUTPUT
+#          fi
 
       - name: Run Axion Release (버전 업데이트 및 태그 생성)
-        if: steps.check_release.outputs.is_release == 'true'
         run: ./gradlew release
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TC }}
