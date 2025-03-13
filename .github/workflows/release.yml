@@ -22,6 +22,11 @@ jobs:
           java-version: 17
           cache: gradle
 
+      - name: Git 설정 (GitHub 시크릿 사용!)
+        run: |
+          git config --global user.name '${{ secrets.GIT_USER_NAME }}'
+          git config --global user.email '${{ secrets.GIT_USER_EMAIL }}'
+
       - name: Grant execute permission for Gradle
         run: chmod +x gradlew
 
