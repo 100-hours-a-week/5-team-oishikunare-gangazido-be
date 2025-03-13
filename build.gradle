@@ -21,7 +21,7 @@ scmVersion {
 tasks.named('release') {
     doFirst {
         exec {
-            commandLine 'git', 'commit', '--amend', '-m', "chore(release): ${version}"
+            commandLine 'git', 'commit', '--amend', '-m', "release: v${version}"
         }
     }
 }
