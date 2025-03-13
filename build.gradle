@@ -11,24 +11,28 @@ scmVersion {
     tag {
         prefix = 'v'    // 태그 접두사 설정 (예: v1.0.3)
     }
-//asdsadsadsadasdadsadsadasdasd
-    ignoreUncommittedChanges = false
 
-    nextVersion {
-        suffix = 'alpha'
+    versionIncrementer { context ->
+        def increment = 'incrementPatch' // 기본값: Patch 증가
+
+        context.commitMessages.each { message ->
+            if (message.contains('BREAKING CHANGE')) {
+                increment = 'incrementMajor'
+                return
+            } else if (message.startsWith('feat') || message.startsWith('release')) {
+                increment = 'incrementMinor'
+            } else if (message.startsWith('fix')) {
+                increment = 'incrementPatch'
+            }
+        }
+        return increment
     }
-
-    versionIncrementer 'incrementPatch'  // 패치 버전 자동 증가
 
     checks {
         aheadOfRemote = false
         uncommittedChanges = false
         snapshotDependencies = false
     }
-
-    branchVersionIncrementer = [
-            '.*': 'incrementPatch'
-    ]
 
     tasks.register('printVersion') {
         doLast {
@@ -40,21 +44,13 @@ scmVersion {
         pre 'commit', { context ->
             def version = context.currentVersion
             println("🔍 Setting release commit message: chore(release): release version ${version}")
-
             "git commit --amend -m 'chore(release): ${version}'".execute()
         }
         pre 'push'
     }
+
     repository {
         pushTagsOnly = true
-    }
-}
-
-tasks.named('release') {
-    doFirst {
-        exec {
-            commandLine 'git', 'commit', '--amend', '-m', "release: v${version}"
-        }
     }
 }
 
@@ -69,7 +65,7 @@ compileJava.options.encoding = 'UTF-8'
 compileTestJava.options.encoding = 'UTF-8'
 
 editorconfig {
-    excludes = [ //OOM 방지
+    excludes = [
             'build',
             '.github',
             '.gradle',
@@ -108,4 +104,3 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
-
