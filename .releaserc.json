@@ -66,7 +66,7 @@
       {
         "assets": [
           "CHANGELOG.md",
-          "build.gradle.kts",
+          "build.gradle",
           "gradle.properties"
         ],
         "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
