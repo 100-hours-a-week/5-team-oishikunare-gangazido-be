@@ -40,7 +40,7 @@ compileJava.options.encoding = 'UTF-8'
 compileTestJava.options.encoding = 'UTF-8'
 
 editorconfig {
-    excludes = [
+    excludes = [ //OOM 방지
             'build',
             '.github',
             '.gradle',
