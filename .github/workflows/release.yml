@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*' # v1.0.0 같은 태그가 푸시될 때 실행
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # 모든 태그 가져오기
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: 17
+          cache: gradle
+
+      - name: Grant execute permission for Gradle
+        run: chmod +x gradlew
+
+      - name: Run Axion Release (태그 생성 및 푸시)
+        run: ./gradlew release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TC }}
+
+      - name: Push Tags to GitHub (태그 푸시)
+        run: git push origin --tags
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TC }}
+
+      - name: Create GitHub Release (릴리즈 생성)
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }} # Axion Release가 생성한 태그 사용
+          name: Release ${{ github.ref_name }}
+          body: "### 🔥 새로운 릴리즈!\n- 자동 버전 관리 적용\n- 버그 수정 및 성능 개선"
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TC }}
