@@ -1,3 +1,5 @@
+import com.github.zafarkhaja.semver.Version
+
 plugins {
     id 'java'
     id 'checkstyle'
@@ -13,9 +15,9 @@ scmVersion {
     }
 
     versionIncrementer { context ->
+        def lastTag = 'git describe --tags --abbrev=0'.execute().text.trim().replaceFirst('v', '')
+        def version = Version.valueOf(lastTag)
         def lastCommitMessage = 'git log -1 --pretty=%B'.execute().text.trim()
-
-        def version = context.currentVersion
 
         if (lastCommitMessage.contains('BREAKING CHANGE')) {
             return version.incrementMajorVersion()
