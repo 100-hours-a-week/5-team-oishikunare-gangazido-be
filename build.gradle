@@ -11,13 +11,24 @@ scmVersion {
     tag {
         prefix = 'v'    // 태그 접두사 설정 (예: v1.0.3)
     }
+
     versionIncrementer 'incrementPatch'  // 패치 버전 자동 증가
 
     hooks {
-        pre 'commit'
+        pre 'commit', { context ->
+            def version = context.currentVersion
+            println("🔍 Setting release commit message: chore(release): ${version}")
+
+            // 기존 커밋 메시지를 가져옴
+            def commitMessage = "git log -1 --pretty=%B".execute().text.trim()
+
+            // 기존 메시지에 "chore(release): {version}"을 추가
+            "git commit --amend -m 'chore(release): ${version}\n\n${commitMessage}'".execute()
+        }
         pre 'push'
     }
 }
+
 tasks.named('release') {
     doFirst {
         exec {
