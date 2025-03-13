@@ -8,23 +8,20 @@ plugins {
 }
 
 scmVersion {
-    versionIncrementer 'incrementPatch' // Conventional Commits 방식으로 버전 자동 증가
-
     tag {
-        prefix = 'v'
+        prefix = 'v'    // 태그 접두사 설정 (예: v1.0.3)
     }
-
-    repository {
-        pushTagsOnly = true // 브랜치는 푸시하지 않고 태그만 푸시
-    }
+    versionIncrementer 'incrementPatch'  // 패치 버전 자동 증가
 
     hooks {
         pre 'commit'
         pre 'push'
-        post {
-            exec {
-                commandLine 'git', 'push', 'origin', '--tags'
-            }
+    }
+}
+tasks.named('release') {
+    doFirst {
+        exec {
+            commandLine 'git', 'commit', '--amend', '-m', "chore(release): ${version}"
         }
     }
 }
