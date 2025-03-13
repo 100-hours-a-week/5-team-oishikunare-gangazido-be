@@ -14,16 +14,17 @@ scmVersion {
         prefix = 'v'    // 태그 접두사 설정 (예: v1.0.3)
     }
 
+
     versionIncrementer { context ->
-        def version = context.currentVersion
+        def currentVersion = Version.valueOf(context.currentVersion.toString())
         def lastCommitMessage = 'git log -1 --pretty=%B'.execute().text.trim()
 
         if (lastCommitMessage.contains('BREAKING CHANGE')) {
-            return version.incrementMajorVersion()
+            return currentVersion.incrementMajorVersion().toString()
         } else if (lastCommitMessage.startsWith('feat') || lastCommitMessage.startsWith('release')) {
-            return version.incrementMinorVersion()
+            return currentVersion.incrementMinorVersion().toString()
         } else {
-            return version.incrementPatchVersion()
+            return currentVersion.incrementPatchVersion().toString()
         }
     }
 
@@ -31,6 +32,10 @@ scmVersion {
         aheadOfRemote = false
         uncommittedChanges = false
         snapshotDependencies = false
+    }
+
+    repository {
+        pushTagsOnly = true
     }
 
     tasks.register('printVersion') {
@@ -46,10 +51,6 @@ scmVersion {
             "git commit --amend -m 'chore(release): ${version}'".execute()
         }
         pre 'push'
-    }
-
-    repository {
-        pushTagsOnly = true
     }
 }
 
