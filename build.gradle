@@ -24,6 +24,9 @@ scmVersion {
         }
         pre 'push'
     }
+    repository {
+        pushTagsOnly = true
+    }
 }
 
 tasks.named('release') {
