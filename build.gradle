@@ -12,17 +12,16 @@ scmVersion {
         prefix = 'v'    // 태그 접두사 설정 (예: v1.0.3)
     }
 
-
     versionIncrementer { context ->
-        def currentVersion = context.currentVersion  // ✅ 이미 `Version` 객체로 변환된 상태
+        def currentVersion = context.currentVersion  // 이미 Version 객체이므로 변환할 필요 없음
         def lastCommitMessage = 'git log -1 --pretty=%B'.execute().text.trim()
 
         if (lastCommitMessage.contains('BREAKING CHANGE')) {
-            return currentVersion.incrementMajorVersion().toString()
+            return currentVersion.incrementMajorVersion()
         } else if (lastCommitMessage.startsWith('feat') || lastCommitMessage.startsWith('release')) {
-            return currentVersion.incrementMinorVersion().toString()
+            return currentVersion.incrementMinorVersion()
         } else {
-            return currentVersion.incrementPatchVersion().toString()
+            return currentVersion.incrementPatchVersion()
         }
     }
 
@@ -38,7 +37,7 @@ scmVersion {
 
     tasks.register('printVersion') {
         doLast {
-            println project.scmVersion.version.toString()  // 정확한 버전 출력
+            println project.scmVersion.version  // 정확한 버전 출력
         }
     }
 
