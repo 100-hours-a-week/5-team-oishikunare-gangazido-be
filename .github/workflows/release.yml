@@ -43,7 +43,7 @@ jobs:
       - name: Run Axion Release (버전 업데이트 및 태그 생성)
         if: steps.check_release.outputs.is_release == 'true'
         run: |
-          CURRENT_TAG=$(./gradlew printVersion -q)
+          CURRENT_TAG=$(./gradlew printVersion -q | tr -d '[:space:]')
           if git rev-parse "v$CURRENT_TAG" >/dev/null 2>&1; then
             echo "이미 존재하는 태그 v$CURRENT_TAG, 태그 생성을 스킵합니다."
           else

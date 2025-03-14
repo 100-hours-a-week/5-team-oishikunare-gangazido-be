@@ -13,23 +13,16 @@ scmVersion {
     }
 
     versionIncrementer { context ->
-        def currentVersion = context.currentVersion.toString()
+        def currentVersion = version.valueOf(context.currentVersion.toString())
         def lastCommitMessage = 'git log -1 --pretty=%B'.execute().text.trim()
 
-        def (major, minor, patch) = currentVersion.tokenize('.').collect { it.toInteger() }
-
         if (lastCommitMessage.contains('BREAKING CHANGE')) {
-            major += 1
-            minor = 0
-            patch = 0
+            return currentVersion.incrementMajorVersion().toString()
         } else if (lastCommitMessage.startsWith('feat') || lastCommitMessage.startsWith('release')) {
-            minor += 1
-            patch = 0
+            return currentVersion.incrementMinorVersion().toString()
         } else {
-            patch += 1
+            return currentVersion.incrementPatchVersion().toString()
         }
-
-        return "${major}.${minor}.${patch}"
     }
 
     checks {
@@ -44,7 +37,7 @@ scmVersion {
 
     tasks.register('printVersion') {
         doLast {
-            println "${scmVersion.version}".toString()
+            println scmVersion.version.toString()
         }
     }
 
