@@ -32,7 +32,7 @@ jobs:
       - name: Get current version from Axion
         id: get_version
         run: |
-          NEW_VERSION=$(./gradlew printVersion -q)
+          NEW_VERSION=$(./gradlew printVersion -q --no-daemon --console=plain | tail -n 1 | tr -d '[:space:]')
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
