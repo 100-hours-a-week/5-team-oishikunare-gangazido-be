@@ -1,4 +1,11 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
 
-npx --no -- commitlint --edit $1
+commit_msg=$(cat $1)
+
+# Axion Release가 생성한 커밋 메시지는 검사하지 않음
+if [[ "$commit_msg" == *"release:"* ]]; then
+  exit 0
+fi
+
+npx --no -- commitlint --edit "$1"
