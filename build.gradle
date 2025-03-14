@@ -20,21 +20,17 @@ scmVersion {
 
     versionIncrementer 'incrementPatch'
 
-    versionCreator { version, _ ->
-        version ?: '0.0.1'  // 최초 버전이 없으면 0.0.1을 반환
-    }
-
     checks {
         aheadOfRemote = false
         uncommittedChanges = false
         snapshotDependencies = false
     }
 
-    tasks.register('printVersion') {
-        doLast {
-            println project.scmVersion.version  // 정확한 버전 출력
-        }
-    }
+//    tasks.register('printVersion') {
+//        doLast {
+//            println project.scmVersion.version  // 정확한 버전 출력
+//        }
+//    }
 
     hooks {
         pre 'commit', { context ->
