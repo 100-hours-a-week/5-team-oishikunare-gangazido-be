@@ -8,31 +8,20 @@ plugins {
 }
 
 scmVersion {
-    ignoreUncommittedChanges = true
     tag {
         prefix = 'v'    // 태그 접두사 설정 (예: v1.0.3)
     }
 
     repository {
         pushTagsOnly = true
-        type = 'git'
     }
 
-    versionIncrementer { context ->
-        def currentVersion = context.currentVersion
-        def lastCommitMessage = 'git log -1 --pretty=%B'.execute().text.trim()
+    ignoreUncommittedChanges = true
 
-        if (git.tagExists("v${currentVersion}")) {  // ✅ 기존 태그가 있으면 버전 증가
-            return currentVersion.incrementPatchVersion()
-        }
+    versionIncrementer 'incrementPatch'
 
-        if (lastCommitMessage.contains('BREAKING CHANGE')) {
-            return currentVersion.incrementMajorVersion()
-        } else if (lastCommitMessage.startsWith('feat') || lastCommitMessage.startsWith('release')) {
-            return currentVersion.incrementMinorVersion()
-        } else {
-            return currentVersion.incrementPatchVersion()
-        }
+    versionCreator { version, _ ->
+        version ?: '0.0.1'  // 최초 버전이 없으면 0.0.1을 반환
     }
 
     checks {
