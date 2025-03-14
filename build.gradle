@@ -13,8 +13,12 @@ scmVersion {
     }
 
     versionIncrementer { context ->
-        def currentVersion = context.currentVersion  // 이미 Version 객체이므로 변환할 필요 없음
+        def currentVersion = context.currentVersion
         def lastCommitMessage = 'git log -1 --pretty=%B'.execute().text.trim()
+
+        if (git.tagExists("v${currentVersion}")) {  // ✅ 기존 태그가 있으면 버전 증가
+            return currentVersion.incrementPatchVersion()
+        }
 
         if (lastCommitMessage.contains('BREAKING CHANGE')) {
             return currentVersion.incrementMajorVersion()
