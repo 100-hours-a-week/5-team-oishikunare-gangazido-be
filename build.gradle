@@ -44,7 +44,7 @@ scmVersion {
 
     tasks.register('printVersion') {
         doLast {
-            println "${scmVersion.version}".toString()
+            println scmVersion.version as String
         }
     }
 
