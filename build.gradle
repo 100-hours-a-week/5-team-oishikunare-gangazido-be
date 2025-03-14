@@ -26,11 +26,11 @@ scmVersion {
         snapshotDependencies = false
     }
 
-//    tasks.register('printVersion') {
-//        doLast {
-//            println project.scmVersion.version  // 정확한 버전 출력
-//        }
-//    }
+    tasks.register('printVersion') {
+        doLast {
+            println project.scmVersion.version  // 정확한 버전 출력
+        }
+    }
 
     hooks {
         pre 'commit', { context ->
