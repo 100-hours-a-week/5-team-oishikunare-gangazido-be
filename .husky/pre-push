@@ -2,6 +2,7 @@
 echo '🚀 Running pre-push checks...'
 ./gradlew clean build -x test
 ./gradlew editorconfigFormat
+git fetch --tags --force
 
 
 if [ $? -ne 0 ]; then
