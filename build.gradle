@@ -12,8 +12,9 @@ scmVersion {
         prefix = 'v'    // 태그 접두사 설정 (예: v1.0.3)
     }
 
+
     versionIncrementer { context ->
-        def currentVersion = version.valueOf(context.currentVersion.toString())
+        def currentVersion = context.currentVersion  // ✅ 이미 `Version` 객체로 변환된 상태
         def lastCommitMessage = 'git log -1 --pretty=%B'.execute().text.trim()
 
         if (lastCommitMessage.contains('BREAKING CHANGE')) {
@@ -37,7 +38,7 @@ scmVersion {
 
     tasks.register('printVersion') {
         doLast {
-            println scmVersion.version.toString()
+            println project.scmVersion.version.toString()  // 정확한 버전 출력
         }
     }
 
