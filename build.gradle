@@ -12,6 +12,11 @@ scmVersion {
         prefix = 'v'    // 태그 접두사 설정 (예: v1.0.3)
     }
 
+    repository {
+        pushTagsOnly = true
+        type = 'git'
+    }
+
     versionIncrementer { context ->
         def currentVersion = context.currentVersion
         def lastCommitMessage = 'git log -1 --pretty=%B'.execute().text.trim()
@@ -33,10 +38,6 @@ scmVersion {
         aheadOfRemote = false
         uncommittedChanges = false
         snapshotDependencies = false
-    }
-
-    repository {
-        pushTagsOnly = true
     }
 
     tasks.register('printVersion') {
