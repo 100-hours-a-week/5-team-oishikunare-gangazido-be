@@ -14,18 +14,24 @@ scmVersion {
         prefix = 'v'    // 태그 접두사 설정 (예: v1.0.3)
     }
 
-
     versionIncrementer { context ->
-        def currentVersion = Version.valueOf(context.currentVersion.toString())
+        def currentVersion = context.currentVersion.toString()
         def lastCommitMessage = 'git log -1 --pretty=%B'.execute().text.trim()
 
+        def (major, minor, patch) = currentVersion.tokenize('.').collect { it.toInteger() }
+
         if (lastCommitMessage.contains('BREAKING CHANGE')) {
-            return currentVersion.incrementMajorVersion().toString()
+            major += 1
+            minor = 0
+            patch = 0
         } else if (lastCommitMessage.startsWith('feat') || lastCommitMessage.startsWith('release')) {
-            return currentVersion.incrementMinorVersion().toString()
+            minor += 1
+            patch = 0
         } else {
-            return currentVersion.incrementPatchVersion().toString()
+            patch += 1
         }
+
+        return "${major}.${minor}.${patch}"
     }
 
     checks {
@@ -94,7 +100,7 @@ repositories {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    //developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     runtimeOnly 'com.h2database:h2'
