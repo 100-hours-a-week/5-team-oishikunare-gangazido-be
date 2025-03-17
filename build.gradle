@@ -88,6 +88,8 @@ dependencies {
     runtimeOnly 'com.h2database:h2'
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
     implementation 'org.mariadb.jdbc:mariadb-java-client:3.3.2' // MariaDB 드라이버 추가
+    compileOnly 'org.projectlombok:lombok:1.18.26' // Lombok 추가
+    annotationProcessor 'org.projectlombok:lombok:1.18.26'
 }
 
 tasks.named('test') {
