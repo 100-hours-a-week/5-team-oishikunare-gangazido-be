@@ -30,7 +30,7 @@ public class MarkerController {
 		// 위도, 경도 값이 누락된 경우 예외 발생
 		// 값이 없을 경우 ILLegalStateException 발생
         if (requestDto.getLatitude() == null || requestDto.getLongitude() == null) {
-            throw new IllegalStateException("invalid_latitude_longitude");
+            throw new IllegalStateException("invalid_latitude_longitude");	// MarkerExceptionHandler로 넘기기
         }
 
 		// user_id 없을 시 SecurityException 발생
