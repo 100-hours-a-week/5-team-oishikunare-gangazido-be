@@ -165,4 +165,25 @@ public class UserService {
 		user.setDeletedAt(LocalDateTime.now());
 		userRepository.save(user);
 	}
+
+	@Transactional
+	public User changePassword(Integer userId, String currentPassword, String newPassword) {
+		User user = userRepository.findById(userId)
+			.orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+
+		// 현재 비밀번호 확인
+		if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+			throw new RuntimeException("현재 비밀번호가 일치하지 않습니다.");
+		}
+
+		// 비밀번호 복잡성 검증
+		if (!PasswordValidator.isValid(newPassword)) {
+			throw new RuntimeException(PasswordValidator.getValidationMessage());
+		}
+
+		// 새 비밀번호 설정
+		user.setPassword(passwordEncoder.encode(newPassword));
+
+		return userRepository.save(user);
+	}
 }

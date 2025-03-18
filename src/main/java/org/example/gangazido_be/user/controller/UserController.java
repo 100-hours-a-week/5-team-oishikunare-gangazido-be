@@ -1,6 +1,7 @@
 package org.example.gangazido_be.user.controller;
 
 import org.example.gangazido_be.user.dto.LoginRequestDTO;
+import org.example.gangazido_be.user.dto.PasswordChangeRequestDTO;
 import org.example.gangazido_be.user.dto.UserDTO;
 import org.example.gangazido_be.user.entity.User;
 import org.example.gangazido_be.user.service.UserService;
@@ -305,6 +306,44 @@ public class UserController {
 			return ResponseEntity.ok(Map.of("message", "회원 탈퇴가 완료되었습니다."));
 		} catch (RuntimeException e) {
 			logger.warn("회원 탈퇴 실패: {}", e.getMessage());
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body(Map.of("error", e.getMessage()));
+		} catch (Exception e) {
+			logger.error("서버 오류: ", e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+				.body(Map.of("error", "서버 오류가 발생했습니다."));
+		}
+	}
+
+	@PatchMapping("/me/password")
+	public ResponseEntity<Map<String, Object>> changePassword(
+		@Valid @RequestBody PasswordChangeRequestDTO requestDTO,
+		HttpSession session) {
+
+		User user = (User) session.getAttribute("user");
+		if (user == null) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+				.body(Map.of("error", "로그인이 필요합니다."));
+		}
+
+		try {
+			// 새 비밀번호와 확인 비밀번호 일치 확인
+			if (!requestDTO.getNewPassword().equals(requestDTO.getConfirmPassword())) {
+				return ResponseEntity.badRequest()
+					.body(Map.of("error", "새 비밀번호와 확인 비밀번호가 일치하지 않습니다."));
+			}
+
+			User updatedUser = userService.changePassword(
+				user.getId(),
+				requestDTO.getCurrentPassword(),
+				requestDTO.getNewPassword()
+			);
+
+			session.setAttribute("user", updatedUser); // 세션 업데이트
+
+			return ResponseEntity.ok(Map.of("message", "비밀번호가 성공적으로 변경되었습니다."));
+		} catch (RuntimeException e) {
+			logger.warn("비밀번호 변경 실패: {}", e.getMessage());
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
 				.body(Map.of("error", e.getMessage()));
 		} catch (Exception e) {

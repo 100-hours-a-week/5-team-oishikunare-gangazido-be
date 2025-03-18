@@ -28,6 +28,7 @@ public class UserSecurityConfig {
 				.requestMatchers("/v1/users/me").permitAll()  // 사용자 관련 API 허용
 				.requestMatchers("/v1/users/check-email").permitAll()  // 이메일 중복 확인 API 모두 허용
 				.requestMatchers("/v1/users/check-nickname").permitAll()  // 닉네임 중복 확인 API 모두 허용
+				.requestMatchers("/v1/users/me/password").permitAll()  // 비밀번호 변경 API 허용
 				.requestMatchers("/user-uploads/**").permitAll()  // 프로필 이미지 접근은 모두 허용
 				.requestMatchers("/api/system/**").permitAll()    // 시스템 테스트 API
 				.anyRequest().authenticated()  // 나머지 API는 인증 필요
