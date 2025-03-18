@@ -51,7 +51,6 @@ public class MarkerService {
 		// 존재하는지 확인 후 엔티티 조회
 		MarkerEntity marker = markerRepository.findById(Id)
 			.orElseThrow(() -> new IllegalArgumentException("marker_not_found"));
-
 		// 마커 삭제
 		markerRepository.deleteById(Id);
 	}

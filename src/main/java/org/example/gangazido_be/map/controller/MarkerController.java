@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import org.example.gangazido_be.map.dto.MarkerRequestDto;
 import org.example.gangazido_be.map.dto.MarkerResponseDto;
 import org.example.gangazido_be.map.service.MarkerService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -52,9 +53,17 @@ public class MarkerController {
 	}
 
 	@DeleteMapping("/{Id}")	// DELETE 마커 삭제 요청 처리
-	public ResponseEntity<?> deleteMarker(@PathVariable UUID Id) {
+	public ResponseEntity<?> deleteMarker(@PathVariable String Id){
+		UUID markerId;
+		try {
+			markerId = UUID.fromString(Id);
+		} catch (IllegalArgumentException e) {
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body(Map.of("message","invalid_marker_id", "data", new HashMap<>()));
+		}
+
 		// 서비스 계층에 마커 삭제 요청 위임
-		markerService.deleteMarker(Id);
+		markerService.deleteMarker(markerId);
 
 		// 성공적으로 삭제할 경우 응답 반환
 		return ResponseEntity.ok(Map.of("data", new HashMap<>(),"message", "marker_deleted_success"));

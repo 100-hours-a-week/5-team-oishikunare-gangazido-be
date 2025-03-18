@@ -37,12 +37,14 @@ public class MarkerExceptionHandler {
 	@ExceptionHandler(IllegalArgumentException.class)
 	public ResponseEntity<Map<String, Object>> handleNotFoundException(IllegalArgumentException ex) {
 		Map<String, Object> response = new LinkedHashMap<>();
-		response.put("message", "marker_not_found");
+		if ("marker_not_found".equals(ex.getMessage())) {
+			response.put("message", "marker_not_found");
+			response.put("data", new HashMap<>());
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response); // 404 반환
+		}
+		response.put("message", "invalid_marker_id");
 		response.put("data", new HashMap<>());
-		return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response); // 404 반환
-//		response.put("message", "invalid_request");
-//		response.put("data", null);
-//		return ResponseEntity.badRequest().body(response);
+		return ResponseEntity.badRequest().body(response);
 	}
 
 	// 위도 또는 경도 값이 null인 경우 (400 Bad Request)
