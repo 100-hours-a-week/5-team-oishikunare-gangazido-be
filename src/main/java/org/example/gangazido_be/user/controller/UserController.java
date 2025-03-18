@@ -217,6 +217,103 @@ public class UserController {
 		}
 	}
 
+	@PatchMapping(value = "/me", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	public ResponseEntity<Map<String, Object>> updateMyInfo(
+		@RequestPart(value = "user_nickname", required = false) String nickname,
+		@RequestPart(value = "user_profile_image", required = false) MultipartFile profileImage,
+		HttpSession session) {
+
+		User user = (User) session.getAttribute("user");
+		if (user == null) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+				.body(Map.of("error", "로그인이 필요합니다."));
+		}
+
+		try {
+			// 닉네임 정제 - 제어 문자 제거
+			if (nickname != null && !nickname.isEmpty()) {
+				nickname = nickname.replaceAll("[\\p{Cntrl}]", "");
+
+				// 빈 문자열이 되면 처리
+				if (nickname.isEmpty()) {
+					return ResponseEntity.badRequest()
+						.body(Map.of("error", "유효한 닉네임이 필요합니다."));
+				}
+			}
+
+			// 정보 업데이트 (nickname 또는 profileImage 중 하나는 제공되어야 함)
+			if ((nickname == null || nickname.isEmpty()) &&
+				(profileImage == null || profileImage.isEmpty())) {
+				return ResponseEntity.badRequest()
+					.body(Map.of("error", "닉네임 또는 프로필 이미지가 필요합니다."));
+			}
+
+			User updatedUser = userService.updateUserInfo(user.getId(), nickname, profileImage);
+			session.setAttribute("user", updatedUser); // 세션 업데이트
+
+			Map<String, Object> responseBody = new HashMap<>();
+			responseBody.put("message", "사용자 정보가 성공적으로 업데이트되었습니다.");
+			responseBody.put("userId", idEncryptionUtil.encrypt(updatedUser.getId()));
+			responseBody.put("nickname", updatedUser.getNickname());
+			responseBody.put("profileImage", updatedUser.getProfileImage());
+
+			return ResponseEntity.ok(responseBody);
+		} catch (RuntimeException e) {
+			logger.warn("사용자 정보 업데이트 실패: {}", e.getMessage());
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body(Map.of("error", e.getMessage()));
+		} catch (Exception e) {
+			logger.error("서버 오류: ", e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+				.body(Map.of("error", "서버 오류가 발생했습니다."));
+		}
+	}
+
+	@DeleteMapping("/me")
+	public ResponseEntity<Map<String, Object>> deleteMyAccount(
+		HttpServletRequest request,
+		HttpServletResponse response,
+		HttpSession session) {
+
+		User user = (User) session.getAttribute("user");
+		if (user == null) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+				.body(Map.of("error", "로그인이 필요합니다."));
+		}
+
+		try {
+			// 회원 탈퇴 처리
+			userService.deleteUser(user.getId());
+
+			// 세션 무효화
+			session.invalidate();
+
+			// 쿠키 삭제
+			Cookie[] cookies = request.getCookies();
+			if (cookies != null) {
+				for (Cookie cookie : cookies) {
+					if (cookie.getName().equals("SESSIONID")) {
+						cookie.setValue("");
+						cookie.setPath("/");
+						cookie.setMaxAge(0);
+						response.addCookie(cookie);
+						break;
+					}
+				}
+			}
+
+			return ResponseEntity.ok(Map.of("message", "회원 탈퇴가 완료되었습니다."));
+		} catch (RuntimeException e) {
+			logger.warn("회원 탈퇴 실패: {}", e.getMessage());
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body(Map.of("error", e.getMessage()));
+		} catch (Exception e) {
+			logger.error("서버 오류: ", e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+				.body(Map.of("error", "서버 오류가 발생했습니다."));
+		}
+	}
+
 	// 공통 세션 및 쿠키 설정 메서드
 	private void setSessionAndCookie(User user, HttpSession session, HttpServletResponse response) {
 		// 세션에 사용자 정보 저장
