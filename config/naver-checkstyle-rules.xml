@@ -117,8 +117,7 @@ The following rules in the Naver coding convention cannot be checked by this con
         <!-- [avoid-star-import] -->
         <module name="AvoidStarImport">
             <property name="allowStaticMemberImports" value="true"/>
-            <message key="import.avoidStar"
-                     value="[avoid-star-import] Using the ''.*'' form of import should be avoided - {0}."/>
+            <property name="allowClassImports" value="true"/>
         </module>
 
         <!-- [modifier-order] -->
@@ -285,22 +284,6 @@ The following rules in the Naver coding convention cannot be checked by this con
                 value="[blankline-after-package] ''{0}'' should be separated from previous statement."/>
         </module>
         -->
-
-        <!-- [import-grouping] -->
-        <module name="ImportOrder">
-            <property name="groups"
-                      value="java., javax., org., net., /com\.(?!nhncorp|navercorp|naver)/, /(?!java\.|javax\.|com\.|org\.|net\.)/, com.nhncorp., com.navercorp., com.naver."/>
-            <property name="ordered" value="true"/>
-            <property name="separated" value="true"/>
-            <property name="option" value="top"/>
-            <property name="sortStaticImportsAlphabetically" value="true"/>
-            <message key="import.groups.separated.internally"
-                     value="[import-grouping] Extra separation in import group before ''{0}''"/>
-            <message key="import.ordering"
-                     value="[import-grouping] Wrong order for ''{0}'' import."/>
-            <message key="import.separation"
-                     value="[import-grouping] ''{0}'' should be separated from previous imports."/>
-        </module>
 
         <!-- [blankline-between-methods] -->
         <module name="EmptyLineSeparator">
