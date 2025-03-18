@@ -20,6 +20,6 @@ public class PasswordValidator {
 	}
 
 	public static String getValidationMessage() {
-		return "비밀번호는 8-20자, 대문자, 소문자, 숫자, 특수문자(@$!%*?&)를 각각 최소 1개 포함해야 합니다.";
+		return "invalid_password_format";
 	}
 }

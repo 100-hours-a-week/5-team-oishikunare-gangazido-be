@@ -20,7 +20,7 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(RuntimeException.class)
 	public ResponseEntity<ApiResponse<Object>> handleRuntimeException(RuntimeException e) {
-		logger.warn("처리 중 오류 발생: {}", e.getMessage());
+		logger.warn("Runtime error occurred: {}", e.getMessage());
 		return ApiResponse.badRequest(e.getMessage());
 	}
 
@@ -32,13 +32,13 @@ public class GlobalExceptionHandler {
 			String errorMessage = error.getDefaultMessage();
 			errors.put(fieldName, errorMessage);
 		});
-		logger.warn("유효성 검증 실패: {}", errors);
+		logger.warn("Validation failed: {}", errors);
 		return ApiResponse.error(HttpStatus.BAD_REQUEST, ApiMessages.VALIDATION_ERROR, errors);
 	}
 
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ApiResponse<Object>> handleException(Exception e) {
-		logger.error("서버 오류 발생:", e);
+		logger.error("Server error occurred:", e);
 		return ApiResponse.internalError(ApiMessages.INTERNAL_ERROR);
 	}
 }
