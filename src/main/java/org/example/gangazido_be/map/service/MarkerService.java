@@ -78,7 +78,7 @@ public class MarkerService {
 	@Transactional(readOnly = true)
 	public MarkerResponseDto getMarkerById(UUID Id) {
 		MarkerEntity marker = markerRepository.findById(Id)
-			.orElseThrow(() -> new IllegalArgumentException("marker_not_found"));
+			.orElseThrow(() -> new IllegalArgumentException("marker_not_found")); // 마커 없으면 전역 예외처리로 던짐
 
 		return new MarkerResponseDto(
 				marker.getId(),

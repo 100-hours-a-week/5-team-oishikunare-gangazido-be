@@ -80,10 +80,10 @@ public class MarkerController {
 //            return ResponseEntity.badRequest().body(Map.of("message", "invalid_request", "data", null));
 //        }
 
-		// ✅ 마커 조회 실행
+		// 마커 조회 실행
         List<MarkerResponseDto> markers = markerService.findMarkersWithinRadius(latitude, longitude, radius);
 
-		// ✅ 응답 데이터 구성
+		// 응답 데이터 구성
         Map<String, Object> response = new LinkedHashMap<>();
 		response.put("message", "map_data_retrieved_success");
 
@@ -98,9 +98,10 @@ public class MarkerController {
 	}
 
 	@GetMapping("/{Id}")
-	public ResponseEntity<?> getMarkerById(@PathVariable UUID Id) {
+	public ResponseEntity<?> getMarkerById(@PathVariable String Id) {
+		UUID markerId = UUID.fromString(Id); // UUID 형식이 잘못되면 자동으로 IllegalArgumentException 발생
 		// 마커 정보 조회
-		MarkerResponseDto responseDto = markerService.getMarkerById(Id);
+		MarkerResponseDto responseDto = markerService.getMarkerById(markerId);
 
 		// 응답 데이터 구성
 		Map<String, Object> data = new LinkedHashMap<>();
