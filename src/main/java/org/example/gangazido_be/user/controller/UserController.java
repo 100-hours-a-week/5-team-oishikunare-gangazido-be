@@ -52,15 +52,15 @@ public class UserController {
 		try {
 			// 입력값 검증
 			if (email == null || email.isEmpty()) {
-				return ApiResponse.badRequest("이메일은 필수 입력 항목입니다.");
+				return ApiResponse.badRequest("email_required");
 			}
 
 			if (password == null || password.isEmpty()) {
-				return ApiResponse.badRequest("비밀번호는 필수 입력 항목입니다.");
+				return ApiResponse.badRequest("password_required");
 			}
 
 			if (nickname == null || nickname.isEmpty()) {
-				return ApiResponse.badRequest("닉네임은 필수 입력 항목입니다.");
+				return ApiResponse.badRequest("nickname_required");
 			}
 
 			// 비밀번호 복잡성 검증
@@ -232,14 +232,14 @@ public class UserController {
 
 				// 빈 문자열이 되면 처리
 				if (nickname.isEmpty()) {
-					return ApiResponse.badRequest("유효한 닉네임이 필요합니다.");
+					return ApiResponse.badRequest("valid_nickname_required");
 				}
 			}
 
 			// 정보 업데이트 (nickname 또는 profileImage 중 하나는 제공되어야 함)
 			if ((nickname == null || nickname.isEmpty()) &&
 				(profileImage == null || profileImage.isEmpty())) {
-				return ApiResponse.badRequest("닉네임 또는 프로필 이미지가 필요합니다.");
+				return ApiResponse.badRequest("profile_update_data_required");
 			}
 
 			User updatedUser = userService.updateUserInfo(user.getId(), nickname, profileImage);
@@ -315,7 +315,7 @@ public class UserController {
 		try {
 			// 새 비밀번호와 확인 비밀번호 일치 확인
 			if (!requestDTO.getNewPassword().equals(requestDTO.getConfirmPassword())) {
-				return ApiResponse.badRequest("새 비밀번호와 확인 비밀번호가 일치하지 않습니다.");
+				return ApiResponse.badRequest("password_mismatch");
 			}
 
 			User updatedUser = userService.changePassword(

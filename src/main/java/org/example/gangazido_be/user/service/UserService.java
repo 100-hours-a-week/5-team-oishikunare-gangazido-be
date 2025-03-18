@@ -36,12 +36,12 @@ public class UserService {
 	public User registerUser(UserDTO userDTO) {
 		// 이메일 중복 체크
 		if (isEmailDuplicate(userDTO.getEmail())) {
-			throw new RuntimeException("이미 존재하는 이메일입니다.");
+			throw new RuntimeException("duplicate_email");
 		}
 
 		// 닉네임 중복 체크
 		if (isNicknameDuplicate(userDTO.getNickname())) {
-			throw new RuntimeException("이미 존재하는 닉네임입니다.");
+			throw new RuntimeException("duplicate_nickname");
 		}
 
 		// 비밀번호 복잡성 검증
@@ -70,7 +70,7 @@ public class UserService {
 		User user = userRepository.findByEmailAndDeletedAtIsNull(email)
 			.orElseThrow(() -> {
 				logger.warn("로그인 실패: 이메일 {} 에 해당하는 사용자가 없습니다.", email);
-				return new RuntimeException("이메일 또는 비밀번호가 올바르지 않습니다.");
+				return new RuntimeException("missing_email");
 			});
 
 		// 입력된 패스워드 로깅 (실제 환경에서는 보안상 위험하므로 개발 환경에서만 사용)
@@ -80,7 +80,7 @@ public class UserService {
 		boolean matches = passwordEncoder.matches(password, user.getPassword());
 		if (!matches) {
 			logger.warn("로그인 실패: 이메일 {} 사용자의 비밀번호가 일치하지 않습니다.", email);
-			throw new RuntimeException("이메일 또는 비밀번호가 올바르지 않습니다.");
+			throw new RuntimeException("invalid_password");
 		}
 
 		return user;
@@ -99,8 +99,8 @@ public class UserService {
 	// 프로필 이미지 업데이트
 	@Transactional
 	public User updateProfileImage(Integer userId, MultipartFile newProfileImage) {
-		User user = userRepository.findById(userId)
-			.orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+		User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+			.orElseThrow(() -> new RuntimeException("missing_user"));
 
 		// 기존 이미지가 있으면 삭제
 		if (user.getProfileImage() != null && !user.getProfileImage().isEmpty()) {
@@ -116,8 +116,8 @@ public class UserService {
 
 	@Transactional
 	public User updateUserInfo(Integer userId, String nickname, MultipartFile profileImage) {
-		User user = userRepository.findById(userId)
-			.orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+		User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+			.orElseThrow(() -> new RuntimeException("missing_user"));
 
 		// 닉네임 업데이트 (변경 시에만)
 		if (nickname != null && !nickname.isEmpty() && !nickname.equals(user.getNickname())) {
@@ -126,12 +126,12 @@ public class UserService {
 
 			// 닉네임 유효성 검사 (선택적)
 			if (nickname.isEmpty()) {
-				throw new RuntimeException("유효한 닉네임이 필요합니다.");
+				throw new RuntimeException("invalid_nickname_format");
 			}
 
 			// 닉네임 중복 체크
 			if (isNicknameDuplicate(nickname)) {
-				throw new RuntimeException("이미 존재하는 닉네임입니다.");
+				throw new RuntimeException("duplicate_nickname");
 			}
 			user.setNickname(nickname);
 		}
@@ -154,7 +154,7 @@ public class UserService {
 	@Transactional
 	public void deleteUser(Integer userId) {
 		User user = userRepository.findById(userId)
-			.orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+			.orElseThrow(() -> new RuntimeException("missing_user"));
 
 		// 프로필 이미지 삭제
 		if (user.getProfileImage() != null && !user.getProfileImage().isEmpty()) {
@@ -169,11 +169,11 @@ public class UserService {
 	@Transactional
 	public User changePassword(Integer userId, String currentPassword, String newPassword) {
 		User user = userRepository.findById(userId)
-			.orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+			.orElseThrow(() -> new RuntimeException("missing_user"));
 
 		// 현재 비밀번호 확인
 		if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
-			throw new RuntimeException("현재 비밀번호가 일치하지 않습니다.");
+			throw new RuntimeException("invalid_current_password");
 		}
 
 		// 비밀번호 복잡성 검증
