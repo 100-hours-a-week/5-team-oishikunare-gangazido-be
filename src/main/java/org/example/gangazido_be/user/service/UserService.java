@@ -13,6 +13,7 @@ import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Service
@@ -66,7 +67,7 @@ public class UserService {
 
 	public User login(String email, String password) {
 		// 이메일로 사용자 조회
-		User user = userRepository.findByEmail(email)
+		User user = userRepository.findByEmailAndDeletedAtIsNull(email)
 			.orElseThrow(() -> {
 				logger.warn("로그인 실패: 이메일 {} 에 해당하는 사용자가 없습니다.", email);
 				return new RuntimeException("이메일 또는 비밀번호가 올바르지 않습니다.");
@@ -87,12 +88,12 @@ public class UserService {
 
 	// 중복 이메일 확인
 	public boolean isEmailDuplicate(String email) {
-		return userRepository.findByEmail(email).isPresent();
+		return userRepository.findByEmailAndDeletedAtIsNull(email).isPresent();
 	}
 
 	// 중복 닉네임 확인
 	public boolean isNicknameDuplicate(String nickname) {
-		return userRepository.findByNickname(nickname).isPresent();
+		return userRepository.findByNicknameAndDeletedAtIsNull(nickname).isPresent();
 	}
 
 	// 프로필 이미지 업데이트
@@ -111,5 +112,57 @@ public class UserService {
 		user.setProfileImage(newImage);
 
 		return userRepository.save(user);
+	}
+
+	@Transactional
+	public User updateUserInfo(Integer userId, String nickname, MultipartFile profileImage) {
+		User user = userRepository.findById(userId)
+			.orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+
+		// 닉네임 업데이트 (변경 시에만)
+		if (nickname != null && !nickname.isEmpty() && !nickname.equals(user.getNickname())) {
+			// 제어 문자 제거
+			nickname = nickname.replaceAll("[\\p{Cntrl}]", "");
+
+			// 닉네임 유효성 검사 (선택적)
+			if (nickname.isEmpty()) {
+				throw new RuntimeException("유효한 닉네임이 필요합니다.");
+			}
+
+			// 닉네임 중복 체크
+			if (isNicknameDuplicate(nickname)) {
+				throw new RuntimeException("이미 존재하는 닉네임입니다.");
+			}
+			user.setNickname(nickname);
+		}
+
+		// 프로필 이미지 업데이트 (첨부된 경우에만)
+		if (profileImage != null && !profileImage.isEmpty()) {
+			// 기존 이미지가 있으면 삭제
+			if (user.getProfileImage() != null && !user.getProfileImage().isEmpty()) {
+				userFileService.deleteImage(user.getProfileImage());
+			}
+
+			// 새 이미지 저장
+			String newImage = userFileService.saveProfileImage(profileImage);
+			user.setProfileImage(newImage);
+		}
+
+		return userRepository.save(user);
+	}
+
+	@Transactional
+	public void deleteUser(Integer userId) {
+		User user = userRepository.findById(userId)
+			.orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+
+		// 프로필 이미지 삭제
+		if (user.getProfileImage() != null && !user.getProfileImage().isEmpty()) {
+			userFileService.deleteImage(user.getProfileImage());
+		}
+
+		// 논리적 삭제 (deletedAt 설정)
+		user.setDeletedAt(LocalDateTime.now());
+		userRepository.save(user);
 	}
 }

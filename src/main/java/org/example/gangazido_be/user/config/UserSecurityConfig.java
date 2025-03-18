@@ -25,7 +25,7 @@ public class UserSecurityConfig {
 				.requestMatchers("/v1/users/signup").permitAll()  // 회원가입 API는 모두 허용
 				.requestMatchers("/v1/users/login").permitAll()   // 로그인 API는 모두 허용
 				.requestMatchers("/v1/users/logout").permitAll()   // 로그아웃 API는 모두 허용
-				.requestMatchers("/v1/users/me").permitAll()  // 로그인 상태 확인 API 허용
+				.requestMatchers("/v1/users/me").permitAll()  // 사용자 관련 API 허용
 				.requestMatchers("/v1/users/check-email").permitAll()  // 이메일 중복 확인 API 모두 허용
 				.requestMatchers("/v1/users/check-nickname").permitAll()  // 닉네임 중복 확인 API 모두 허용
 				.requestMatchers("/user-uploads/**").permitAll()  // 프로필 이미지 접근은 모두 허용
