@@ -7,8 +7,7 @@ import org.example.gangazido_be.map.service.MarkerService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 
 @RestController	// 이 클래스가 컨트롤러라는 것을 알림
 @RequestMapping("v1/markers")	// 기본 url 설정
@@ -25,7 +24,7 @@ public class MarkerController {
      * @param requestDto - 클라이언트에서 보내온 마커 정보
      * @return 성공 메시지와 등록된 마커 정보
      */
-	@PostMapping	// HTTP POST 요청 처리
+	@PostMapping	// POST 마커 등록 요청 처리
     public ResponseEntity<?> createMarker(@Valid @RequestBody MarkerRequestDto requestDto) {
 		// 위도, 경도 값이 누락된 경우 예외 발생
 		// 값이 없을 경우 ILLegalStateException 발생
@@ -51,4 +50,55 @@ public class MarkerController {
 		// 200 ok 응답 반환
         return ResponseEntity.ok(successResponse);
 	}
+
+	@DeleteMapping("/{Id}")	// DELETE 마커 삭제 요청 처리
+	public ResponseEntity<?> deleteMarker(@PathVariable UUID Id) {
+		// 서비스 계층에 마커 삭제 요청 위임
+		markerService.deleteMarker(Id);
+
+		// 성공적으로 삭제할 경우 응답 반환
+		return ResponseEntity.ok(Map.of("data", new HashMap<>(),"message", "marker_deleted_success"));
+	}
+
+	@GetMapping
+	public ResponseEntity<?> getMarkers(
+		@RequestParam("latitude") double latitude,
+		@RequestParam("longitude") double longitude,
+		@RequestParam(value = "radius", defaultValue = "5.0") double radius) {
+
+		// 위도/경도 범위 검증
+//        if (latitude < 33.1 || latitude > 38.7 || longitude < 125.0 || longitude > 132.0) {
+//            return ResponseEntity.badRequest().body(Map.of("message", "invalid_request", "data", null));
+//        }
+
+		// ✅ 마커 조회 실행
+        List<MarkerResponseDto> markers = markerService.findMarkersWithinRadius(latitude, longitude, radius);
+
+		// ✅ 응답 데이터 구성
+        Map<String, Object> response = new LinkedHashMap<>();
+		response.put("message", "map_data_retrieved_success");
+
+		Map<String, Object> data = new LinkedHashMap<>();
+        data.put("latitude", latitude);
+        data.put("longitude", longitude);
+        data.put("markers", markers);
+
+		response.put("data", data);
+
+		return ResponseEntity.ok(response);
+	}
+
+	@GetMapping("/{Id}")
+	public ResponseEntity<?> getMarkerById(@PathVariable UUID Id) {
+		// 마커 정보 조회
+		MarkerResponseDto responseDto = markerService.getMarkerById(Id);
+
+		// 응답 데이터 구성
+		Map<String, Object> data = new LinkedHashMap<>();
+		data.put("message", "map_data_retrieved_success");
+		data.put("data", responseDto);
+
+		return ResponseEntity.ok(data);
+	}
+
 }

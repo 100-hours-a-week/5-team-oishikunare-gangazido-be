@@ -34,6 +34,17 @@ public class MarkerExceptionHandler {
         return ResponseEntity.badRequest().body(errorResponse);	// 400 상태코드 설정, body에 에러 응답 JSON으로 반환
     }
 
+	@ExceptionHandler(IllegalArgumentException.class)
+	public ResponseEntity<Map<String, Object>> handleNotFoundException(IllegalArgumentException ex) {
+		Map<String, Object> response = new LinkedHashMap<>();
+		response.put("message", "marker_not_found");
+		response.put("data", new HashMap<>());
+		return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response); // 404 반환
+//		response.put("message", "invalid_request");
+//		response.put("data", null);
+//		return ResponseEntity.badRequest().body(response);
+	}
+
 	// 위도 또는 경도 값이 null인 경우 (400 Bad Request)
 	@ExceptionHandler(IllegalStateException.class)	// IllegalStateException이 발생시 이 메서드에서 처리
     public ResponseEntity<Map<String, Object>> handleInvalidLatitudeLongitude(IllegalStateException ex) {

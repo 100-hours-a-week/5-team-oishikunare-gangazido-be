@@ -3,8 +3,10 @@ package org.example.gangazido_be.map.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.GenericGenerator;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Getter
@@ -12,8 +14,10 @@ import java.time.LocalDateTime;
 @Table(name="marker") //테이블명 명시
 public class MarkerEntity {
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY) // Auto Increment 적용
-    private int id;  // 마커 ID (Primary Key)
+	@GeneratedValue(generator = "UUID")
+	@GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+	@Column(name = "id", updatable = false, nullable = false, columnDefinition = "BINARY(16)")
+    private UUID id;  // 마커 ID (Primary Key)
 
 	@Column(nullable = false)
     private int user_id;  // 마커를 등록한 사용자 ID
@@ -30,7 +34,8 @@ public class MarkerEntity {
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private LocalDateTime createdAt = LocalDateTime.now();
 
-	public MarkerEntity(int user_id, int type, double latitude, double longitude) {
+	public MarkerEntity(UUID id, int user_id, int type, double latitude, double longitude) {
+		this.id = id;
         this.user_id = user_id;
         this.type = type;
         this.latitude = latitude;

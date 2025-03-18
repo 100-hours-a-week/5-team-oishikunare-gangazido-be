@@ -7,6 +7,9 @@ import org.example.gangazido_be.map.repository.MarkerRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.UUID;
+
 @Service
 public class MarkerService {
 	private final MarkerRepository markerRepository; // 데이터베이스와 연결할 레포지토리
@@ -21,6 +24,7 @@ public class MarkerService {
 
 		// 1️⃣ DTO → 엔티티 변환 (DB 저장을 위해)
         MarkerEntity markerEntity = new MarkerEntity(
+				UUID.randomUUID(),	// UUID
                 requestDto.getUser_id(),
                 requestDto.getType(),
                 requestDto.getLatitude(),
@@ -39,5 +43,51 @@ public class MarkerService {
                 savedMarker.getLongitude(),
                 savedMarker.getCreatedAt().toString()
         );
+	}
+
+	// 마커 삭제
+	@Transactional
+	public void deleteMarker(UUID Id) {
+		// 존재하는지 확인 후 엔티티 조회
+		MarkerEntity marker = markerRepository.findById(Id)
+			.orElseThrow(() -> new IllegalArgumentException("marker_not_found"));
+
+		// 마커 삭제
+		markerRepository.deleteById(Id);
+	}
+
+	// 반경 내 마커 조회
+	@Transactional(readOnly = true)
+	public List<MarkerResponseDto> findMarkersWithinRadius(double latitude, double longitude, double radius) {
+		// DB에서 반경 내 마커를 조회
+		List<MarkerEntity> markers = markerRepository.findMarkersWithinRadius(latitude,longitude,radius);
+
+		// 조회된 엔티티 리스트를 DTO 리스트로 변환
+		return markers.stream()
+			.map(marker -> new MarkerResponseDto(
+				marker.getId(),
+				marker.getUser_id(),
+	            marker.getType(),
+	            marker.getLatitude(),
+	            marker.getLongitude(),
+	            marker.getCreatedAt().toString()
+			))
+			.toList();
+	}
+
+	// 특정 마커 조회 (id(UUID) 기반)
+	@Transactional(readOnly = true)
+	public MarkerResponseDto getMarkerById(UUID Id) {
+		MarkerEntity marker = markerRepository.findById(Id)
+			.orElseThrow(() -> new IllegalArgumentException("marker_not_found"));
+
+		return new MarkerResponseDto(
+				marker.getId(),
+                marker.getUser_id(),
+                marker.getType(),
+                marker.getLatitude(),
+                marker.getLongitude(),
+                marker.getCreatedAt().toString()
+		);
 	}
 }

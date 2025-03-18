@@ -5,13 +5,15 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.UUID;
+
 // 마커 등록 응답 (Server > Client)
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class MarkerResponseDto {
-	private int marker_id;      // 등록된 마커의 ID
+	private UUID id;      // 등록된 마커의 ID
     private int user_id;        // 마커를 등록한 사용자 ID
     private int marker_type;     // 마커 타입 (0~4)
     private double latitude;    // 위도 좌표
