@@ -1,10 +1,12 @@
 package org.example.gangazido_be.user.controller;
 
+import org.example.gangazido_be.user.dto.ApiResponse;
 import org.example.gangazido_be.user.dto.LoginRequestDTO;
 import org.example.gangazido_be.user.dto.PasswordChangeRequestDTO;
 import org.example.gangazido_be.user.dto.UserDTO;
 import org.example.gangazido_be.user.entity.User;
 import org.example.gangazido_be.user.service.UserService;
+import org.example.gangazido_be.user.util.ApiMessages;
 import org.example.gangazido_be.user.util.IdEncryptionUtil;
 import org.example.gangazido_be.user.validator.PasswordValidator;
 
@@ -40,7 +42,7 @@ public class UserController {
 	}
 
 	@PostMapping(value = "/signup", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	public ResponseEntity<Map<String, Object>> registerUser(
+	public ResponseEntity<ApiResponse<Map<String, Object>>> registerUser(
 		@RequestPart("user_email") String email,
 		@RequestPart("user_password") String password,
 		@RequestPart("user_nickname") String nickname,
@@ -50,20 +52,20 @@ public class UserController {
 		try {
 			// 입력값 검증
 			if (email == null || email.isEmpty()) {
-				return ResponseEntity.badRequest().body(Map.of("error", "이메일은 필수 입력 항목입니다."));
+				return ApiResponse.badRequest("이메일은 필수 입력 항목입니다.");
 			}
 
 			if (password == null || password.isEmpty()) {
-				return ResponseEntity.badRequest().body(Map.of("error", "비밀번호는 필수 입력 항목입니다."));
+				return ApiResponse.badRequest("비밀번호는 필수 입력 항목입니다.");
 			}
 
 			if (nickname == null || nickname.isEmpty()) {
-				return ResponseEntity.badRequest().body(Map.of("error", "닉네임은 필수 입력 항목입니다."));
+				return ApiResponse.badRequest("닉네임은 필수 입력 항목입니다.");
 			}
 
 			// 비밀번호 복잡성 검증
 			if (!PasswordValidator.isValid(password)) {
-				return ResponseEntity.badRequest().body(Map.of("error", PasswordValidator.getValidationMessage()));
+				return ApiResponse.badRequest(PasswordValidator.getValidationMessage());
 			}
 
 			// DTO 생성
@@ -83,24 +85,23 @@ public class UserController {
 			// 사용자 ID를 암호화하여 응답
 			String encryptedId = idEncryptionUtil.encrypt(registeredUser.getId());
 
-			Map<String, Object> responseBody = new HashMap<>();
-			responseBody.put("message", "회원가입 성공");
-			responseBody.put("userId", encryptedId);
-			responseBody.put("nickname", registeredUser.getNickname());
+			Map<String, Object> responseData = new HashMap<>();
+			responseData.put("userId", encryptedId);
+			responseData.put("nickname", registeredUser.getNickname());
 
-			return ResponseEntity.ok(responseBody);
+			return ApiResponse.success(ApiMessages.USER_CREATED, responseData);
 		} catch (RuntimeException e) {
 			logger.warn("회원가입 실패: {}", e.getMessage());
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+			return ApiResponse.badRequest(e.getMessage());
 		} catch (Exception e) {
 			logger.error("서버 오류: ", e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-				.body(Map.of("error", "서버 오류가 발생했습니다."));
+			return ApiResponse.internalError(ApiMessages.INTERNAL_ERROR);
 		}
 	}
 
 	@PostMapping("/login")
-	public ResponseEntity<Map<String, Object>> login(@Valid @RequestBody LoginRequestDTO loginRequest,
+	public ResponseEntity<ApiResponse<Map<String, Object>>> login(
+		@Valid @RequestBody LoginRequestDTO loginRequest,
 		HttpSession session,
 		HttpServletResponse response) {
 		try {
@@ -112,43 +113,41 @@ public class UserController {
 			// 사용자 ID를 암호화하여 응답
 			String encryptedId = idEncryptionUtil.encrypt(user.getId());
 
-			Map<String, Object> responseBody = new HashMap<>();
-			responseBody.put("message", "로그인 성공");
-			responseBody.put("userId", encryptedId);
-			responseBody.put("nickname", user.getNickname());
+			Map<String, Object> responseData = new HashMap<>();
+			responseData.put("userId", encryptedId);
+			responseData.put("nickname", user.getNickname());
 
-			return ResponseEntity.ok(responseBody);
+			return ApiResponse.success(ApiMessages.LOGIN_SUCCESS, responseData);
 		} catch (RuntimeException e) {
 			logger.warn("로그인 실패: {}", e.getMessage());
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+			return ApiResponse.badRequest(e.getMessage());
 		} catch (Exception e) {
 			logger.error("서버 오류: ", e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-				.body(Map.of("error", "서버 오류가 발생했습니다."));
+			return ApiResponse.internalError(ApiMessages.INTERNAL_ERROR);
 		}
 	}
 
 	// 로그인 상태 확인 API
 	@GetMapping("/me")
-	public ResponseEntity<Map<String, Object>> getCurrentUser(HttpSession session) {
+	public ResponseEntity<ApiResponse<Map<String, Object>>> getCurrentUser(HttpSession session) {
 		User user = (User) session.getAttribute("user");
 
 		if (user == null) {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-				.body(Map.of("error", "로그인이 필요합니다."));
+			return ApiResponse.unauthorized(ApiMessages.UNAUTHORIZED);
 		}
 
-		Map<String, Object> responseBody = new HashMap<>();
-		responseBody.put("userId", idEncryptionUtil.encrypt(user.getId()));
-		responseBody.put("email", user.getEmail());
-		responseBody.put("nickname", user.getNickname());
-		responseBody.put("profileImage", user.getProfileImage());
+		Map<String, Object> responseData = new HashMap<>();
+		responseData.put("userId", idEncryptionUtil.encrypt(user.getId()));
+		responseData.put("email", user.getEmail());
+		responseData.put("nickname", user.getNickname());
+		responseData.put("profileImage", user.getProfileImage());
 
-		return ResponseEntity.ok(responseBody);
+		return ApiResponse.success(ApiMessages.SUCCESS, responseData);
 	}
 
 	@PostMapping("/logout")
-	public ResponseEntity<Map<String, Object>> logout(HttpServletRequest request,
+	public ResponseEntity<ApiResponse<Object>> logout(
+		HttpServletRequest request,
 		HttpServletResponse response,
 		HttpSession session) {
 		try {
@@ -169,65 +168,61 @@ public class UserController {
 				}
 			}
 
-			return ResponseEntity.ok(Map.of("message", "로그아웃 성공"));
+			return ApiResponse.success(ApiMessages.LOGOUT_SUCCESS, null);
 		} catch (Exception e) {
 			logger.error("로그아웃 처리 중 오류: ", e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-				.body(Map.of("error", "로그아웃 처리 중 오류가 발생했습니다."));
+			return ApiResponse.internalError(ApiMessages.INTERNAL_ERROR);
 		}
 	}
 
 	// 중복 이메일 확인 API
 	@GetMapping("/check-email")
-	public ResponseEntity<Map<String, Object>> checkEmailDuplicate(@RequestParam String email) {
+	public ResponseEntity<ApiResponse<Map<String, Boolean>>> checkEmailDuplicate(@RequestParam String email) {
 		boolean isDuplicate = userService.isEmailDuplicate(email);
-		return ResponseEntity.ok(Map.of("isDuplicate", isDuplicate));
+		Map<String, Boolean> responseData = Map.of("isDuplicate", isDuplicate);
+		return ApiResponse.success(ApiMessages.SUCCESS, responseData);
 	}
 
 	// 중복 닉네임 확인 API
 	@GetMapping("/check-nickname")
-	public ResponseEntity<Map<String, Object>> checkNicknameDuplicate(@RequestParam String nickname) {
+	public ResponseEntity<ApiResponse<Map<String, Boolean>>> checkNicknameDuplicate(@RequestParam String nickname) {
 		boolean isDuplicate = userService.isNicknameDuplicate(nickname);
-		return ResponseEntity.ok(Map.of("isDuplicate", isDuplicate));
+		Map<String, Boolean> responseData = Map.of("isDuplicate", isDuplicate);
+		return ApiResponse.success(ApiMessages.SUCCESS, responseData);
 	}
 
 	// 프로필 이미지 업데이트 API
 	@PostMapping(value = "/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	public ResponseEntity<Map<String, Object>> updateProfileImage(
+	public ResponseEntity<ApiResponse<Map<String, Object>>> updateProfileImage(
 		@RequestPart("profileImage") MultipartFile profileImage,
 		HttpSession session) {
 
 		User user = (User) session.getAttribute("user");
 		if (user == null) {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-				.body(Map.of("error", "로그인이 필요합니다."));
+			return ApiResponse.unauthorized(ApiMessages.UNAUTHORIZED);
 		}
 
 		try {
 			User updatedUser = userService.updateProfileImage(user.getId(), profileImage);
 			session.setAttribute("user", updatedUser); // 세션 업데이트
 
-			return ResponseEntity.ok(Map.of(
-				"message", "프로필 이미지가 업데이트되었습니다.",
-				"profileImage", updatedUser.getProfileImage()
-			));
+			Map<String, Object> responseData = Map.of("profileImage", updatedUser.getProfileImage());
+			return ApiResponse.success(ApiMessages.PROFILE_UPDATED, responseData);
 		} catch (Exception e) {
 			logger.error("프로필 이미지 업데이트 중 오류: ", e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-				.body(Map.of("error", "프로필 이미지 업데이트 중 오류가 발생했습니다."));
+			return ApiResponse.internalError(ApiMessages.INTERNAL_ERROR);
 		}
 	}
 
 	@PatchMapping(value = "/me", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	public ResponseEntity<Map<String, Object>> updateMyInfo(
+	public ResponseEntity<ApiResponse<Map<String, Object>>> updateMyInfo(
 		@RequestPart(value = "user_nickname", required = false) String nickname,
 		@RequestPart(value = "user_profile_image", required = false) MultipartFile profileImage,
 		HttpSession session) {
 
 		User user = (User) session.getAttribute("user");
 		if (user == null) {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-				.body(Map.of("error", "로그인이 필요합니다."));
+			return ApiResponse.unauthorized(ApiMessages.UNAUTHORIZED);
 		}
 
 		try {
@@ -237,49 +232,43 @@ public class UserController {
 
 				// 빈 문자열이 되면 처리
 				if (nickname.isEmpty()) {
-					return ResponseEntity.badRequest()
-						.body(Map.of("error", "유효한 닉네임이 필요합니다."));
+					return ApiResponse.badRequest("유효한 닉네임이 필요합니다.");
 				}
 			}
 
 			// 정보 업데이트 (nickname 또는 profileImage 중 하나는 제공되어야 함)
 			if ((nickname == null || nickname.isEmpty()) &&
 				(profileImage == null || profileImage.isEmpty())) {
-				return ResponseEntity.badRequest()
-					.body(Map.of("error", "닉네임 또는 프로필 이미지가 필요합니다."));
+				return ApiResponse.badRequest("닉네임 또는 프로필 이미지가 필요합니다.");
 			}
 
 			User updatedUser = userService.updateUserInfo(user.getId(), nickname, profileImage);
 			session.setAttribute("user", updatedUser); // 세션 업데이트
 
-			Map<String, Object> responseBody = new HashMap<>();
-			responseBody.put("message", "사용자 정보가 성공적으로 업데이트되었습니다.");
-			responseBody.put("userId", idEncryptionUtil.encrypt(updatedUser.getId()));
-			responseBody.put("nickname", updatedUser.getNickname());
-			responseBody.put("profileImage", updatedUser.getProfileImage());
+			Map<String, Object> responseData = new HashMap<>();
+			responseData.put("userId", idEncryptionUtil.encrypt(updatedUser.getId()));
+			responseData.put("nickname", updatedUser.getNickname());
+			responseData.put("profileImage", updatedUser.getProfileImage());
 
-			return ResponseEntity.ok(responseBody);
+			return ApiResponse.success(ApiMessages.USER_UPDATED, responseData);
 		} catch (RuntimeException e) {
 			logger.warn("사용자 정보 업데이트 실패: {}", e.getMessage());
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-				.body(Map.of("error", e.getMessage()));
+			return ApiResponse.badRequest(e.getMessage());
 		} catch (Exception e) {
 			logger.error("서버 오류: ", e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-				.body(Map.of("error", "서버 오류가 발생했습니다."));
+			return ApiResponse.internalError(ApiMessages.INTERNAL_ERROR);
 		}
 	}
 
 	@DeleteMapping("/me")
-	public ResponseEntity<Map<String, Object>> deleteMyAccount(
+	public ResponseEntity<ApiResponse<Object>> deleteMyAccount(
 		HttpServletRequest request,
 		HttpServletResponse response,
 		HttpSession session) {
 
 		User user = (User) session.getAttribute("user");
 		if (user == null) {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-				.body(Map.of("error", "로그인이 필요합니다."));
+			return ApiResponse.unauthorized(ApiMessages.UNAUTHORIZED);
 		}
 
 		try {
@@ -303,34 +292,30 @@ public class UserController {
 				}
 			}
 
-			return ResponseEntity.ok(Map.of("message", "회원 탈퇴가 완료되었습니다."));
+			return ApiResponse.success(ApiMessages.USER_DELETED, null);
 		} catch (RuntimeException e) {
 			logger.warn("회원 탈퇴 실패: {}", e.getMessage());
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-				.body(Map.of("error", e.getMessage()));
+			return ApiResponse.badRequest(e.getMessage());
 		} catch (Exception e) {
 			logger.error("서버 오류: ", e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-				.body(Map.of("error", "서버 오류가 발생했습니다."));
+			return ApiResponse.internalError(ApiMessages.INTERNAL_ERROR);
 		}
 	}
 
 	@PatchMapping("/me/password")
-	public ResponseEntity<Map<String, Object>> changePassword(
+	public ResponseEntity<ApiResponse<Object>> changePassword(
 		@Valid @RequestBody PasswordChangeRequestDTO requestDTO,
 		HttpSession session) {
 
 		User user = (User) session.getAttribute("user");
 		if (user == null) {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-				.body(Map.of("error", "로그인이 필요합니다."));
+			return ApiResponse.unauthorized(ApiMessages.UNAUTHORIZED);
 		}
 
 		try {
 			// 새 비밀번호와 확인 비밀번호 일치 확인
 			if (!requestDTO.getNewPassword().equals(requestDTO.getConfirmPassword())) {
-				return ResponseEntity.badRequest()
-					.body(Map.of("error", "새 비밀번호와 확인 비밀번호가 일치하지 않습니다."));
+				return ApiResponse.badRequest("새 비밀번호와 확인 비밀번호가 일치하지 않습니다.");
 			}
 
 			User updatedUser = userService.changePassword(
@@ -341,15 +326,13 @@ public class UserController {
 
 			session.setAttribute("user", updatedUser); // 세션 업데이트
 
-			return ResponseEntity.ok(Map.of("message", "비밀번호가 성공적으로 변경되었습니다."));
+			return ApiResponse.success(ApiMessages.PASSWORD_CHANGED, null);
 		} catch (RuntimeException e) {
 			logger.warn("비밀번호 변경 실패: {}", e.getMessage());
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-				.body(Map.of("error", e.getMessage()));
+			return ApiResponse.badRequest(e.getMessage());
 		} catch (Exception e) {
 			logger.error("서버 오류: ", e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-				.body(Map.of("error", "서버 오류가 발생했습니다."));
+			return ApiResponse.internalError(ApiMessages.INTERNAL_ERROR);
 		}
 	}
 
