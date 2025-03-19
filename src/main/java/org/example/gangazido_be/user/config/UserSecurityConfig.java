@@ -22,7 +22,7 @@ public class UserSecurityConfig {
 		http
 			.csrf(csrf -> csrf.disable())  // API 서버이므로 CSRF 비활성화
 			.authorizeHttpRequests(auth -> auth
-				   .requestMatchers("/**").permitAll()
+					.requestMatchers("/**").permitAll()
 				// .requestMatchers("/v1/users/signup").permitAll()  // 회원가입 API는 모두 허용
 				// .requestMatchers("/v1/users/login").permitAll()   // 로그인 API는 모두 허용
 				// .requestMatchers("/v1/users/logout").permitAll()   // 로그아웃 API는 모두 허용
@@ -37,7 +37,7 @@ public class UserSecurityConfig {
 				// .requestMatchers("/v3/api-docs/").permitAll()
 				// .requestMatchers("/swagger-resources/").permitAll()
 				// .requestMatchers("/webjars/").permitAll()
-				.anyRequest().authenticated()  // 나머지 API는 인증 필요
+				// .anyRequest().authenticated()  // 나머지 API는 인증 필요
 			)
 			.formLogin(formLogin -> formLogin.disable())  // 폼 로그인 비활성화
 			.httpBasic(httpBasic -> httpBasic.disable());  // HTTP Basic 인증 비활성화
