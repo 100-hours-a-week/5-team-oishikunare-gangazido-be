@@ -19,6 +19,9 @@ jobs:
           distribution: 'corretto'
           java-version: '17'
 
+      - name: Ensure JAVA_HOME is set correctly
+        run: echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
