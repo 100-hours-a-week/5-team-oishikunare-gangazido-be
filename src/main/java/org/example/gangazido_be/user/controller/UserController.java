@@ -340,6 +340,7 @@ public class UserController {
 	private void setSessionAndCookie(User user, HttpSession session, HttpServletResponse response) {
 		// 세션에 사용자 정보 저장
 		session.setAttribute("user", user);
+		System.out.println("sadasd");
 		session.setMaxInactiveInterval(3600); // 세션 유효시간 1시간
 
 		// 쿠키 설정 (세션 ID 저장)

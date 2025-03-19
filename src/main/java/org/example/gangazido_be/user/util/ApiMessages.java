@@ -17,7 +17,7 @@ public class ApiMessages {
 	public static final String PROFILE_UPDATED = "profile_updated";
 
 	// 에러 메시지
-	public static final String BAD_REQUEST = "invalid_request";
+	public static final String BAD_REQUEST =  "invalid_request";
 	public static final String UNAUTHORIZED = "required_authentication";
 	public static final String FORBIDDEN = "access_denied";
 	public static final String NOT_FOUND = "resource_not_found";

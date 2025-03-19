@@ -31,6 +31,11 @@ public class UserSecurityConfig {
 				.requestMatchers("/v1/users/me/password").permitAll()  // 비밀번호 변경 API 허용
 				.requestMatchers("/user-uploads/**").permitAll()  // 프로필 이미지 접근은 모두 허용
 				.requestMatchers("/api/system/**").permitAll()    // 시스템 테스트 API
+				.requestMatchers("/swagger-ui/").permitAll()    // Swagger UI 및 API 문서 접근 허용 : 제리 추가
+				.requestMatchers("/swagger-ui.html").permitAll()
+				.requestMatchers("/v3/api-docs/").permitAll()
+				.requestMatchers("/swagger-resources/").permitAll()
+				.requestMatchers("/webjars/").permitAll()
 				.anyRequest().authenticated()  // 나머지 API는 인증 필요
 			)
 			.formLogin(formLogin -> formLogin.disable())  // 폼 로그인 비활성화
