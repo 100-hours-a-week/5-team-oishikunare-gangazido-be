@@ -15,11 +15,7 @@ import lombok.*;
 
 // 테스트용 더미
 public class User {
-
 	@Id
-	private Long id; // 사용자 PK (임시)
-
-	private String username; // 사용자 이름 (임시 더미 값)
-
+	private Long userId; // 사용자 PK (임시)
 	// 필요 시 더미 필드 추가
 }

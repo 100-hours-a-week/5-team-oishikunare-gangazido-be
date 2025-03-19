@@ -84,7 +84,7 @@ public class PetService {
 
 		// 해당 사용자의 반려견 정보 조회 (없으면 404 예외)
 		Pet pet = petRepository.findByUserId(userId)
-			.orElseThrow(() -> new PetNotFoundException());
+			.orElseThrow(PetNotFoundException::new);
 
 		return PetResponse.from(pet);
 	}
@@ -94,16 +94,16 @@ public class PetService {
 	public PetResponse updatePet(Long userId, PetCreateRequest request) {
 		// 사용자 존재 여부 확인 (없으면 404 예외)
 		User user = userRepository.findById(userId)
-			.orElseThrow(() -> new UserNotFoundException());
+			.orElseThrow(UserNotFoundException::new);
 
 		// 유저는 있지만 Pet 정보가 없는 경우 (404 예외)
 		Pet pet = petRepository.findByUserId(userId)
-			.orElseThrow(() -> new PetNotFoundException());
+			.orElseThrow(PetNotFoundException::new);
 
 		// 본인 반려견인지 확인 (403 예외)
-		// if (!pet.getUser().getUserId().equals(userId)) {
-		// 	throw new PetException(HttpStatus.FORBIDDEN, PetExceptionType.REQUIRED_PERMISSION.getMessage());
-		// }
+		if (!pet.getUser().getUserId().equals(userId)) {
+			throw new PetException(HttpStatus.FORBIDDEN, PetExceptionType.REQUIRED_PERMISSION.getMessage());
+		}
 
 		// 필수 값 검증
 		if (request.getName() == null || request.getName().isBlank()) {
@@ -139,20 +139,25 @@ public class PetService {
 			request.getBreed(),
 			request.getWeight()
 		);
-
 		return PetResponse.from(pet);
 	}
 
 	// 반려견 정보 삭제
 	@Transactional
 	public void deletePet(Long userId) {
-		// 1. 먼저 유저가 존재하는지 확인
-		if (!userRepository.existsById(userId)) {
-			throw new UserNotFoundException();
-		}
-		// 2. 유저는 있지만 Pet 정보가 없는 경우
+		// 사용자 존재 여부 확인 (없으면 404 예외)
+		User user = userRepository.findById(userId)
+			.orElseThrow(UserNotFoundException::new);
+
+		// 반려견 존재 여부 확인 (없으면 404 예외)
 		Pet pet = petRepository.findByUserId(userId)
-			.orElseThrow(() -> new PetNotFoundException());
+			.orElseThrow(PetNotFoundException::new);
+
+		// 본인 반려견인지 확인 (403 예외)
+		if (!pet.getUser().getUserId().equals(userId)) {
+			throw new PetException(HttpStatus.FORBIDDEN, PetExceptionType.REQUIRED_PERMISSION.getMessage());
+		}
+
 
 		pet.softDelete();
 	}

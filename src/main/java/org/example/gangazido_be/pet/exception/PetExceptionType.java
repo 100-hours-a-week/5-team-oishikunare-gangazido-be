@@ -20,6 +20,7 @@ public enum PetExceptionType {
 	REQUIRED_PET_GENDER("required_pet_gender"),
 
 	REQUIRED_AUTHORIZATION("required_authorization"),
+	REQUIRED_PERMISSION("required_permission"),
 	ALREADY_EXISTS_PET("already_exists_pet"),
 
 	NOT_FOUND_USER("not_found_user"),

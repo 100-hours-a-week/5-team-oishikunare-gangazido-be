@@ -14,7 +14,12 @@ public class PetCreateRequest {
 	@NotNull(message = "required_pet_age")
 	@Min(value = 0, message = "invalid_pet_age_value")
 	@Max(value = 50, message = "invalid_pet_age_value")
-	private Integer age;
+	@Pattern(regexp = "^[0-9]+$", message = "invalid_pet_age_format")
+	private String age;
+
+	public Integer getAge() {
+		return Integer.parseInt(age); // 정수 변환 후 반환
+	}
 
 	@NotNull(message = "required_pet_gender")
 	private Integer gender;

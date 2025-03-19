@@ -60,7 +60,13 @@ public class PetController {
 	// 반려견 정보 수정 (PATCH)
 	@PatchMapping
 	public ResponseEntity<ApiResponse> updatePet(@RequestBody PetCreateRequest request, HttpSession session) {
-		Long userId = (Long)session.getAttribute("userId");
+		// 세션에서 userId 가져오기
+		Long userId = (Long) session.getAttribute("userId");
+
+		// 세션에 userId가 없으면 401 Unauthorized 응답
+		if (userId == null) {
+			return ResponseEntity.status(401).body(ApiResponse.of("required_authorization", null));
+		}
 
 		PetResponse petResponse = petService.updatePet(userId, request);
 		return ResponseEntity.status(HttpStatus.OK)
@@ -70,8 +76,13 @@ public class PetController {
 	// 반려견 정보 삭제 (DELETE)
 	@DeleteMapping
 	public ResponseEntity<ApiResponse> deletePet(HttpSession session) {
-		Long userId = (Long)session.getAttribute("userId");
+		// 세션에서 userId 가져오기
+		Long userId = (Long) session.getAttribute("userId");
 
+		// 세션이 없으면 401 응답
+		if (userId == null) {
+			return ResponseEntity.status(401).body(ApiResponse.of("required_authorization", null));
+		}
 		petService.deletePet(userId);
 		return ResponseEntity.ok(ApiResponse.of("delete_pet_success", null));
 	}
