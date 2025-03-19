@@ -15,14 +15,14 @@ public interface MarkerRepository extends JpaRepository<MarkerEntity, UUID> {
 
 	// 위도/경도를 기준으로 반경(radius) 내 마커 조회
 	// latitude, longitude
-    @Query(value = "SELECT * FROM marker " +
-                   "WHERE (6371 * acos(cos(radians(:latitude)) * cos(radians(latitude)) " +
-                   "* cos(radians(longitude) - radians(:longitude)) + sin(radians(:latitude)) * sin(radians(latitude)))) <= :radius",
-           nativeQuery = true)
+	@Query(value = "SELECT * FROM marker " +
+		"WHERE (6371 * acos(cos(radians(:latitude)) * cos(radians(latitude)) " +
+		"* cos(radians(longitude) - radians(:longitude)) + sin(radians(:latitude)) * sin(radians(latitude)))) <= :radius",
+		nativeQuery = true)
 	List<MarkerEntity> findMarkersWithinRadius(
-        @Param("latitude") double latitude,
-        @Param("longitude") double longitude,
-        @Param("radius") double radius
-    );
+		@Param("latitude") double latitude,
+		@Param("longitude") double longitude,
+		@Param("radius") double radius
+	);
 }
 

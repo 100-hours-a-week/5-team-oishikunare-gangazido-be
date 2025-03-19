@@ -15,34 +15,34 @@ public class MarkerService {
 	private final MarkerRepository markerRepository; // 데이터베이스와 연결할 레포지토리
 
 	public MarkerService(MarkerRepository markerRepository) {
-        this.markerRepository = markerRepository;
-    }
+		this.markerRepository = markerRepository;
+	}
 
 	// 트랜잭션, DB 저장 문제 생기면 롤백
 	@Transactional
 	public MarkerResponseDto createMarker(MarkerRequestDto requestDto) {
 
 		// 1️⃣ DTO → 엔티티 변환 (DB 저장을 위해)
-        MarkerEntity markerEntity = new MarkerEntity(
-				UUID.randomUUID(),	// UUID
-                requestDto.getUser_id(),
-                requestDto.getType(),
-                requestDto.getLatitude(),
-                requestDto.getLongitude()
-        );
+		MarkerEntity markerEntity = new MarkerEntity(
+			UUID.randomUUID(),    // UUID
+			requestDto.getUser_id(),
+			requestDto.getType(),
+			requestDto.getLatitude(),
+			requestDto.getLongitude()
+		);
 
 		// 2️⃣ 데이터베이스에 마커 저장
-        MarkerEntity savedMarker = markerRepository.save(markerEntity);
+		MarkerEntity savedMarker = markerRepository.save(markerEntity);
 
 		// 3️⃣ 저장된 데이터를 ResponseDto로 변환하여 반환
-        return new MarkerResponseDto(
-                savedMarker.getId(),
-                savedMarker.getUser_id(),
-                savedMarker.getType(),
-                savedMarker.getLatitude(),
-                savedMarker.getLongitude(),
-                savedMarker.getCreatedAt().toString()
-        );
+		return new MarkerResponseDto(
+			savedMarker.getId(),
+			savedMarker.getUser_id(),
+			savedMarker.getType(),
+			savedMarker.getLatitude(),
+			savedMarker.getLongitude(),
+			savedMarker.getCreatedAt().toString()
+		);
 	}
 
 	// 마커 삭제
@@ -59,17 +59,17 @@ public class MarkerService {
 	@Transactional(readOnly = true)
 	public List<MarkerResponseDto> findMarkersWithinRadius(double latitude, double longitude, double radius) {
 		// DB에서 반경 내 마커를 조회
-		List<MarkerEntity> markers = markerRepository.findMarkersWithinRadius(latitude,longitude,radius);
+		List<MarkerEntity> markers = markerRepository.findMarkersWithinRadius(latitude, longitude, radius);
 
 		// 조회된 엔티티 리스트를 DTO 리스트로 변환
 		return markers.stream()
 			.map(marker -> new MarkerResponseDto(
 				marker.getId(),
 				marker.getUser_id(),
-	            marker.getType(),
-	            marker.getLatitude(),
-	            marker.getLongitude(),
-	            marker.getCreatedAt().toString()
+				marker.getType(),
+				marker.getLatitude(),
+				marker.getLongitude(),
+				marker.getCreatedAt().toString()
 			))
 			.toList();
 	}
@@ -81,12 +81,12 @@ public class MarkerService {
 			.orElseThrow(() -> new IllegalArgumentException("marker_not_found")); // 마커 없으면 전역 예외처리로 던짐
 
 		return new MarkerResponseDto(
-				marker.getId(),
-                marker.getUser_id(),
-                marker.getType(),
-                marker.getLatitude(),
-                marker.getLongitude(),
-                marker.getCreatedAt().toString()
+			marker.getId(),
+			marker.getUser_id(),
+			marker.getType(),
+			marker.getLatitude(),
+			marker.getLongitude(),
+			marker.getCreatedAt().toString()
 		);
 	}
 }

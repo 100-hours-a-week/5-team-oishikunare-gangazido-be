@@ -14,14 +14,14 @@ import lombok.Setter;
 @AllArgsConstructor
 public class MarkerRequestDto {
 	@NotNull(message = "required_authorization")
-    private Integer user_id;   // 유저 아이디
+	private Integer user_id;   // 유저 아이디
 
 	@NotNull(message = "invalid_marker_type")
-    private Integer type;   // 마커 타입 (0: 댕플, 1: 들개, 2: 빙판길, 3: 염화칼슘, 4: 공사중)
+	private Integer type;   // 마커 타입 (0: 댕플, 1: 들개, 2: 빙판길, 3: 염화칼슘, 4: 공사중)
 
-    @NotNull(message = "invalid_latitude")
-    private Double latitude;  // 마커의 위도 좌표
+	@NotNull(message = "invalid_latitude")
+	private Double latitude;  // 마커의 위도 좌표
 
-    @NotNull(message = "invalid_longitude")
-    private Double longitude; // 마커의 경도 좌표
+	@NotNull(message = "invalid_longitude")
+	private Double longitude; // 마커의 경도 좌표
 }
