@@ -1,4 +1,3 @@
-//llmcontroller
 package org.example.gangazido_be.llm.controller;
 
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,23 +21,20 @@ public class LlmController {
 		this.llmService = llmService;
 	}
 
-	// ✅ POST 요청: GPT 응답 생성 후 저장
+	// ✅ POST 요청: GPT 응답 생성
 	@PostMapping("/chat")
 	public ResponseEntity<LlmResponse> generateChat(@RequestBody LlmRequest request,
 		HttpServletRequest httpServletRequest) {
 		String sessionId = extractSessionId(httpServletRequest);
 		if (sessionId == null) {
-			return ResponseEntity.badRequest().body(new LlmResponse("session_error", "❌ 세션 ID가 없습니다."));
+			return ResponseEntity.badRequest()
+				.body(new LlmResponse("session_error", "❌ 세션 ID가 없습니다."));
 		}
 
-		return ResponseEntity.ok(
-			llmService.generateChat(
-				httpServletRequest,
-				request.getLatitude(),
-				request.getLongitude(),
-				request.getMessage()
-			)
-		);
+		// ❗ 여기서 GPT 응답을 가져와야 함
+		String gptResponse = llmService.generateChat(httpServletRequest, request.getLatitude(), request.getLongitude(), request.getMessage()).getBody().getMessage();
+
+		return ResponseEntity.ok(new LlmResponse("llm_success", gptResponse));
 	}
 
 	// ✅ 세션 ID 추출
@@ -50,4 +46,3 @@ public class LlmController {
 		return cookie.split("connect.sid=")[1].split(";")[0];
 	}
 }
-
