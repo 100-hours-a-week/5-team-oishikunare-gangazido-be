@@ -22,6 +22,9 @@ jobs:
       - name: Ensure JAVA_HOME is set correctly
         run: echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
 
+      - name: Debug JAVA_HOME
+        run: echo $JAVA_HOME  # 현재 JAVA_HOME 경로 출력 (디버깅용)
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -44,6 +47,6 @@ jobs:
           ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-northeast-2.amazonaws.com
           ECR_REPOSITORY: gangazido-backend
         run: |
-          ./gradlew bootJar  # JAR 파일 빌드
+          JAVA_HOME=$JAVA_HOME ./gradlew bootJar  # JAR 파일 빌드
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .  # Docker 이미지 빌드
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest  # Docker 이미지 푸시
