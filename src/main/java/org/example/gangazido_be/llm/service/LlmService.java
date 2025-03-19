@@ -34,7 +34,7 @@ public class LlmService {
 	}
 
 	@SuppressWarnings("checkstyle:OperatorWrap")
-	public LlmResponse generateChat(HttpServletRequest request, double latitude, double longitude, String message) {
+	public ResponseEntity<LlmResponse> generateChat(HttpServletRequest request, double latitude, double longitude, String message) {
 		String sessionId = extractSessionId(request);
 		int userId;
 		try {
@@ -49,8 +49,10 @@ public class LlmService {
 			pets = petRepository.findByUserId(userId);
 		} catch (Exception e) {
 			System.err.println("❌ [에러] 반려견 정보를 조회하는 중 오류 발생: " + e.getMessage());
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+			ResponseEntity<LlmResponse> response = ResponseEntity
+				.status(HttpStatus.INTERNAL_SERVER_ERROR)
 				.body(new LlmResponse("failed_to_retrieve_pet_info", "❌ 반려견 정보를 가져오는 중 오류가 발생했습니다."));
+			return response;
 		}
 
 		if (pets.isEmpty()) {
@@ -185,7 +187,7 @@ public class LlmService {
 				.body(new LlmResponse("failed_to_fetch_gpt_response", "❌ AI 응답을 가져오는 중 오류가 발생했습니다."));
 		}
 
-		return new LlmResponse("llm_success", gptResponse);
+		return ResponseEntity.ok(new LlmResponse("llm_success", gptResponse));
 	}
 
 	private String extractSessionId(HttpServletRequest request) {
