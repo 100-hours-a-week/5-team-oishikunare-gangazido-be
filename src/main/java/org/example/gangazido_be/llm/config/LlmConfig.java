@@ -26,3 +26,4 @@ public class LlmConfig {
 		this.model = model;
 	}
 }
+

@@ -1,6 +1,6 @@
-//WeatherService
 package org.example.gangazido_be.gpt.service;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -8,28 +8,39 @@ import org.json.JSONObject;
 
 @Service
 public class WeatherService {
-	private static final String API_KEY = "5c1a2dea8139784195e2f93082ac3b97"; // 🔥 실제 API 키 사용!
+
+	@Value("${weather.api.key}") // application.yml에서 API 키 가져오기
+	private String apiKey;
+
 	private static final String WEATHER_API_URL = "https://api.openweathermap.org/data/2.5/weather";
 	private static final String AIR_POLLUTION_API_URL = "https://api.openweathermap.org/data/2.5/air_pollution";
 
 	public String getWeather(double latitude, double longitude) {
-		// ✅ 날씨 및 대기질 정보 가져오기
-		JSONObject weatherJson = fetchWeatherData(latitude, longitude);
-		JSONObject airQualityJson = fetchAirPollutionData(latitude, longitude);
+		if (apiKey == null || apiKey.isEmpty()) {
+			return "❌ API 키가 설정되지 않았습니다. 환경 변수를 확인하세요.";
+		}
 
-		// ✅ JSON 형태로 응답 반환
-		JSONObject responseJson = new JSONObject();
-		responseJson.put("weather", weatherJson);
-		responseJson.put("air_quality", airQualityJson);
+		try {
+			// ✅ 날씨 및 대기질 정보 가져오기
+			JSONObject weatherJson = fetchWeatherData(latitude, longitude);
+			JSONObject airQualityJson = fetchAirPollutionData(latitude, longitude);
 
-		return responseJson.toString(2); // JSON 예쁘게 포맷
+			// ✅ JSON 형태로 응답 반환
+			JSONObject responseJson = new JSONObject();
+			responseJson.put("weather", weatherJson);
+			responseJson.put("air_quality", airQualityJson);
+
+			return responseJson.toString(2); // JSON 예쁘게 포맷
+		} catch (Exception e) {
+			return "❌ 데이터 요청 중 오류 발생: " + e.getMessage();
+		}
 	}
 
 	private JSONObject fetchWeatherData(double latitude, double longitude) {
 		String url = UriComponentsBuilder.fromHttpUrl(WEATHER_API_URL)
 			.queryParam("lat", latitude)
 			.queryParam("lon", longitude)
-			.queryParam("appid", API_KEY)
+			.queryParam("appid", apiKey) // 🔥 환경 변수에서 불러온 API 키 사용
 			.queryParam("units", "metric") // 섭씨 온도 반환
 			.toUriString();
 
@@ -49,7 +60,7 @@ public class WeatherService {
 		String url = UriComponentsBuilder.fromHttpUrl(AIR_POLLUTION_API_URL)
 			.queryParam("lat", latitude)
 			.queryParam("lon", longitude)
-			.queryParam("appid", API_KEY)
+			.queryParam("appid", apiKey) // 🔥 환경 변수에서 불러온 API 키 사용
 			.toUriString();
 
 		RestTemplate restTemplate = new RestTemplate();

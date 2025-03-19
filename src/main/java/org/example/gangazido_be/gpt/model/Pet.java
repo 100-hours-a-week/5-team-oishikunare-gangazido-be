@@ -44,3 +44,4 @@ public class Pet {
 		return weight;
 	}
 }
+

@@ -2,6 +2,7 @@
 
 package org.example.gangazido_be.llm.service;
 
+import org.springframework.http.HttpStatus;
 import org.example.gangazido_be.llm.model.LlmResponse;
 import org.example.gangazido_be.gpt.service.GptService;
 import org.example.gangazido_be.gpt.service.WeatherService;
@@ -21,7 +22,6 @@ public class LlmService {
 	private final GptService gptService;
 	private final WeatherService weatherService;
 	private final PetRepository petRepository;
-
 	private final Map<String, LlmResponse> responseCache = new HashMap<>();
 
 	public LlmService(GptService gptService, WeatherService weatherService, PetRepository petRepository) {
@@ -31,105 +31,158 @@ public class LlmService {
 	}
 
 	@SuppressWarnings("checkstyle:OperatorWrap")
-	public LlmResponse generateChat(HttpServletRequest request, double latitude, double longitude) {
+	public LlmResponse generateChat(HttpServletRequest request, double latitude, double longitude, String message) {
 		String sessionId = extractSessionId(request);
 		int userId;
 		try {
 			userId = (sessionId != null) ? Integer.parseInt(sessionId) : 2;
 		} catch (NumberFormatException e) {
+			System.err.println("⚠️ [경고] 세션 ID가 잘못되었습니다. 기본값(2) 사용.");
 			userId = 2; // 기본값 사용
 		}
 
 		List<Pet> pets = petRepository.findByUserId(userId);
+		try {
+			pets = petRepository.findByUserId(userId);
+		} catch (Exception e) {
+			System.err.println("❌ [에러] 반려견 정보를 조회하는 중 오류 발생: " + e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+				.body(new LlmResponse("failed_to_retrieve_pet_info", "❌ 반려견 정보를 가져오는 중 오류가 발생했습니다."));
+		}
+
 		if (pets.isEmpty()) {
-			return new LlmResponse("no_pet_found", "❌ 반려견 정보를 찾을 수 없습니다.");
+			return ResponseEntity.status(HttpStatus.NOT_FOUND)
+				.body(new LlmResponse("not_found_pet", "❌ 반려견 정보를 찾을 수 없습니다."));
 		}
 
 		Pet pet = pets.get(0);
 
-		String weatherInfo = weatherService.getWeather(latitude, longitude);
-		if (weatherInfo == null || weatherInfo.isEmpty()) {
-			return new LlmResponse("weather_fetch_error", "날씨 정보를 가져오는 중 오류가 발생했습니다.");
+		String weatherInfo;
+		try {
+			weatherInfo = weatherService.getWeather(latitude, longitude);
+			if (weatherInfo == null || weatherInfo.isEmpty()) {
+				throw new Exception("Weather API returned an empty response.");
+			}
+		} catch (Exception e) {
+			System.err.println("❌ [에러] 날씨 정보를 가져오는 중 오류 발생: " + e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+				.body(new LlmResponse("failed_to_fetch_weather", "❌ 날씨 정보를 가져오는 중 오류가 발생했습니다."));
+
 		}
 
-		JSONObject weatherJson = new JSONObject(weatherInfo);
-		// ✅ JSON 객체로 바로 가져오기
-		JSONObject weatherData = weatherJson.getJSONObject("weather");
+		JSONObject weatherJson;
+		try {
+			weatherJson = new JSONObject(weatherInfo);
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body(new LlmResponse("invalid_weather_json", "❌ 날씨 데이터 처리 중 오류가 발생했습니다."));
+		}
 
-		JSONObject airQualityData = weatherJson.getJSONObject("air_quality");
+		// ✅ JSON에서 필요한 데이터 추출 (예외 처리 포함)
+		JSONObject weatherData = weatherJson.optJSONObject("weather");
+		JSONObject airQualityData = weatherJson.optJSONObject("air_quality");
 
-		String weatherCondition = weatherData.getString("condition");
-		double temperature = weatherData.getDouble("temperature"); // ✅ Double 타입 유지
-		double pm10 = airQualityData.getDouble("pm10");
-		double pm2_5 = airQualityData.getDouble("pm2_5");
+		String weatherCondition = (weatherData != null && weatherData.has("condition")) ? convertWeatherToKorean(weatherData.getString("condition")) : "알 수 없음";
+		double temperature = (weatherData != null) ? weatherData.optDouble("temperature", 0.0) : 0.0;
+		double pm10 = (airQualityData != null) ? airQualityData.optDouble("pm10", -1.0) : -1.0;
+		double pm25 = (airQualityData != null) ? airQualityData.optDouble("pm2_5", -1.0) : -1.0;
 
-		String petName = (pet.getName() != null) ? pet.getName() : "이름 없음";
-		String petBreed = (pet.getBreed() != null) ? pet.getBreed() : "견종 정보 없음";
-		int petAge = (pet.getAge() > 0) ? pet.getAge() : 1;
-		double petWeight = (pet.getWeight() > 0) ? pet.getWeight() : 5.0;
-		// 🌟 날씨 & 미세먼지 정보 직접 출력
-		System.out.println("🌤️ [현재 날씨 정보]");
-		System.out.println("- 날씨 상태: " + weatherCondition);
-		System.out.println("- 기온: " + String.format("%.1f°C", temperature));
-		System.out.println("- 미세먼지(PM10): " + String.format("%.1f µg/m³", pm10));
-		System.out.println("- 초미세먼지(PM2.5): " + String.format("%.1f µg/m³", pm2_5));
+		String petName = pet.getName();
+		String petBreed = convertBreedToKorean(pet.getBreed());
+		int petAge = pet.getAge();
+		double petWeight = pet.getWeight();
 
-		System.out.println("\n🐶 [반려견 정보]");
-		System.out.println("- 이름: " + petName);
-		System.out.println("- 견종: " + petBreed);
-		System.out.println("- 나이: " + petAge + "살");
-		System.out.println("- 무게: " + String.format("%.1fkg", petWeight));
+		System.out.println("🌤️ [날씨 상태]: " + weatherCondition);
+		System.out.println("🌡️ [기온]: " + temperature);
+		System.out.println("💨 [미세먼지 PM10]: " + pm10);
+		System.out.println("💨 [초미세먼지 PM2.5]: " + pm25);
 
-		System.out.println("\n📢 [산책 추천 결과]\n");
+		// 📌 **질문 유형에 따라 다른 프롬프트 생성**
+		String prompt;
+		String lowerMessage = message.toLowerCase();
+		if (lowerMessage.contains("미세먼지") || lowerMessage.contains("공기질") || lowerMessage.contains("대기") || lowerMessage.contains("미먼")) {
+			prompt = String.format(
+				"당신은 반려견 산책 추천 AI입니다. **반드시 JSON 형식으로만 답변하세요.** HTML이나 마크다운, 자연어 문장만 있는 응답은 허용되지 않습니다.\\n" +
+					"미세먼지 데이터와 반려견 정보를 바탕으로 **%s**의 산책 가능 여부를 판단하고 그 결과를 제공해주세요" +
+					"📌 **현재 환경 데이터:**\n" +
+					"- 날씨 상태: %s\n" +
+					"- 기온: %.1f°C\n" +
+					"- 미세먼지(PM10): %.1f µg/m³\n" +
+					"- 초미세먼지(PM2.5): %.1f µg/m³\n" +
+					"- 반려견 정보:\n" +
+					"  - 이름: %s\n" +
+					"  - 견종: %s\n" +
+					"  - 나이: %d살\n" +
+					"  - 무게: %.1fkg\n\n" +
+					"📌 **미세먼지가 반려견 산책에 미치는 영향을 고려하여 JSON 형식으로 답변해주세요:**\n" +
+					"```json\n" +
+					"{\n" +
+					"  \"recommendation\": \"산책 추천 또는 비추천\",\n" +
+					"  \"reason\": \"산책 추천 또는 비추천 사유 (미세먼지 영향 포함)\",\n" +
+					"  \"safety_tips\": [\"산책 시 유의 사항\"]\n" +
+					"}\n" +
+					"```\n" +
+					"**반드시 위 JSON 형식을 지켜서 응답하세요.**",
+				petName, weatherCondition, temperature, pm10, pm25, petName, petBreed, petAge, petWeight
+			);
+		} else if (lowerMessage.contains("산책") || lowerMessage.contains("산책 가능") || lowerMessage.contains("외출")) {
+			prompt = String.format(
+				"당신은 반려견 산책 추천 AI입니다. **반드시 JSON 형식으로만 답변하세요.** HTML이나 마크다운, 자연어 문장만 있는 응답은 허용되지 않습니다.\\n" +
+					" 날씨와 대기질, 반려견 정보를 바탕으로 **%s**의 산책 가능 여부를 판단하고, JSON 형식으로 추천 결과를 제공해주세요.\n\n" +
+					"📌 **현재 환경 데이터:**\n" +
+					"- 날씨 상태: %s\n" +
+					"- 기온: %.1f°C\n" +
+					"- 미세먼지(PM10): %.1f µg/m³\n" +
+					"- 초미세먼지(PM2.5): %.1f µg/m³\n" +
+					"- 반려견 정보:\n" +
+					"  - 이름: %s\n" +
+					"  - 견종: %s\n" +
+					"  - 나이: %d살\n" +
+					"  - 무게: %.1fkg\n\n" +
+					"📌 **응답은 JSON 형식으로 다음과 같이 제공해주세요:**\n" +
+					"```json\n" +
+					"{\n" +
+					"  \"recommendation\": \"산책 추천 또는 비추천\",\n" +
+					"  \"reason\": \"산책 추천 또는 비추천 사유\",\n" +
+					"  \"safety_tips\": [\"산책 시 유의 사항\"]\n" +
+					"}\n" +
+					"```\n",
+				petName, weatherCondition, temperature, pm10, pm25, petName, petBreed, petAge, petWeight
+			);
+		} else if (message.contains("옷") || message.contains("입어야") || lowerMessage.contains("외출 옷") || lowerMessage.contains("방한")) {
+			prompt = String.format(
+				"당신은 반려견 산책 추천 AI입니다. **반드시 JSON 형식으로만 답변하세요.** HTML이나 마크다운, 자연어 문장만 있는 응답은 허용되지 않습니다.\\n" +
+					"날씨 데이터와 반려견 정보를 바탕으로 **%s**의 산책 가능 여부를 판단하고 그 결과를 제공해주세요" +
+					"반려견이 외출 시 옷을 입어야 할까요? 현재 날씨를 분석하고, 반려견의 체형을 고려하여 적절한 답변을 제공해주세요.\n\n" +
+					"📌 **현재 환경 데이터:**\n" +
+					"- 날씨 상태: %s\n" +
+					"- 기온: %.1f°C\n" +
+					"- 반려견 견종: %s\n" +
+					"- 반려견 체중: %.1fkg\n\n" +
+					"📌 **옷을 입어야 하는지 여부와 이유를 한글로 설명해주세요.**",
+				weatherCondition, temperature, petBreed, petWeight
+			);
+		} else {
+			prompt = "제가 도와드릴 수 있는 질문이 아닙니다.";
+		}
 
-		String prompt = String.format(
-			"당신은 반려견 산책 추천 AI입니다. 아래 데이터를 참고하여 반려견이 안전하게 산책할 수 있는지 판단하고, " +
-				"**반드시 반려견의 이름을 포함하여** 산책 추천 여부와 이유, 안전 팁을 JSON 형식으로 응답하세요.\n\n" +
-				"**응답 시 반드시 한글로 작성해야 합니다! 영어 단어는 사용하지 마세요.**" +
-				"📌 **주어진 환경 데이터:**\n" +
-				"- 현재 날씨 상태: %s\n" +
-				"- 현재 기온: %.1f°C\n" +
-				"- 미세먼지(PM10): %.1f µg/m³\n" +
-				"- 초미세먼지(PM2.5): %.1f µg/m³\n" +
-				"- 반려견 정보:\n" +
-				"  - 이름: %s\n" +
-				"  - 견종: %s\n" +
-				"  - 나이: %d살\n" +
-				"  - 무게: %.1fkg\n\n" +
-				"📌 **반려견의 이름(%s)을 반드시 포함하여 응답해야 합니다!**\n" +
-				"예를 들어, 반려견 이름이 '%s'이면 다음과 같이 응답하세요:\n\n" +
-				"```json\n" +
-				"{\n" +
-				"    \"recommendation\": \"산책 추천\",\n" +
-				"    \"reason\": \"날씨 상태가 %s이고 기온이 %.1f°C로 %s. 미세먼지 수치도 %s. %s에게 딱 알맞은 산책 환경이군요!\",\n" +
-				"    \"safety_tips\": [\n" +
-				"        \"%s는 %s이므로, 산책 후 충분한 휴식과 물을 제공해야 합니다.\",\n" +
-				"        \"%d살이라는 나이는 %s 시기이므로, 산책 중에는 반려견의 에너지를 잘 조절하도록 해주세요.\",\n" +
-				"        \"산책 도중 갑자기 뛰어다니는 등의 행동에 주의하여 안전을 유지해주세요.\"\n" +
-				"    ]\n" +
-				"}\n" +
-				"```\n\n",
+		System.out.println("📝 [DEBUG] 최종 GPT 프롬프트:\n" + prompt);
 
-			// ✅ `String.format()`에서 올바른 타입을 사용하도록 수정
-			weatherCondition, temperature, pm10, pm2_5,
-			petName, petBreed, petAge, petWeight,
+		// 🔥 GPT 호출
+		String gptResponse;
 
-			petName, petName,
+		try {
+			gptResponse = gptService.generateText(prompt);
+			if (gptResponse == null || gptResponse.isEmpty()) {
+				throw new Exception("GPT service returned an invalid or empty response.");
+			}
+		} catch (Exception e) {
+			System.err.println("❌ [에러] GPT 응답 오류: " + e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+				.body(new LlmResponse("failed_to_fetch_gpt_response", "❌ AI 응답을 가져오는 중 오류가 발생했습니다."));
+		}
 
-			weatherCondition, temperature,
-			(temperature < 10) ? "쌀쌀합니다" : "적당합니다",
-			(pm10 < 50 && pm2_5 < 25) ? "좋습니다" : "조금 높습니다",
-			petName,
-
-			petName, petBreed, petAge,
-			(petAge <= 2) ? "활발한 활동을 즐기는" : "적당한 운동이 필요한"
-		);
-
-		String gptResponse = gptService.generateText(prompt);
-		LlmResponse response = new LlmResponse("llm_success", gptResponse);
-		responseCache.put(sessionId, response);
-
-		return response;
+		return new LlmResponse("llm_success", gptResponse);
 	}
 
 	private String extractSessionId(HttpServletRequest request) {
@@ -149,16 +202,22 @@ public class LlmService {
 	private String convertWeatherToKorean(String weather) {
 		switch (weather.toLowerCase()) {
 			case "clear":
+			case "sunny":
 				return "맑음";
+			case "clouds":
 			case "cloudy":
 				return "흐림";
 			case "rain":
+			case "drizzle":
 				return "비";
 			case "snow":
 				return "눈";
 			case "fog":
+			case "haze":
+			case "mist":
 				return "안개";
 			case "storm":
+			case "thunderstorm":
 				return "폭풍";
 			default:
 				return weather; // 변환할 수 없는 경우 원래 값 유지
@@ -167,32 +226,37 @@ public class LlmService {
 
 	private String convertBreedToKorean(String breed) {
 		switch (breed.toLowerCase()) {
+			case "poodle":
+				return "푸들";
+			case "bichon":
+				return "비숑 프리제";
 			case "pomeranian":
 				return "포메라니안";
-			case "golden retriever":
+			case "maltese":
+				return "말티즈";
+			case "welshcorgi":
+				return "웰시코기";
+			case "goldenretriever":
 				return "골든 리트리버";
-			case "bulldog":
-				return "불독";
-			case "shiba inu":
-				return "시바 이누";
-			case "border collie":
-				return "보더 콜리";
-			case "labrador retriever":
+			case "labradorretriever":
 				return "래브라도 리트리버";
-			case "beagle":
-				return "비글";
-			case "siberian husky":
+			case "bordercollie":
+				return "보더 콜리";
+			case "siberianhusky":
 				return "시베리안 허스키";
-			case "german shepherd":
-				return "저먼 셰퍼드";
-			case "chihuahua":
-				return "치와와";
+			case "jindodog":
+				return "진돗개";
+			case "mixedbreed":
+				return "믹스견";
+			case "others":
+				return "기타";
 			default:
 				return breed; // 변환할 수 없는 경우 원래 값 유지
 		}
 	}
 
 }
+
 
 
 
