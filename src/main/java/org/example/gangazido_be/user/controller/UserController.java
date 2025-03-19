@@ -42,12 +42,9 @@ public class UserController {
 	}
 
 	@PostMapping(value = "/signup", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	public ResponseEntity<ApiResponse<Map<String, Object>>> registerUser(
-		@RequestPart("user_email") String email,
-		@RequestPart("user_password") String password,
-		@RequestPart("user_nickname") String nickname,
-		@RequestPart(value = "user_profileImage", required = false) MultipartFile profileImage,
-		HttpSession session,
+	public ResponseEntity<ApiResponse<Map<String, Object>>> registerUser(@RequestPart("user_email") String email,
+		@RequestPart("user_password") String password, @RequestPart("user_nickname") String nickname,
+		@RequestPart(value = "user_profileImage", required = false) MultipartFile profileImage, HttpSession session,
 		HttpServletResponse response) {
 		try {
 			// 입력값 검증
@@ -100,10 +97,8 @@ public class UserController {
 	}
 
 	@PostMapping("/login")
-	public ResponseEntity<ApiResponse<Map<String, Object>>> login(
-		@Valid @RequestBody LoginRequestDTO loginRequest,
-		HttpSession session,
-		HttpServletResponse response) {
+	public ResponseEntity<ApiResponse<Map<String, Object>>> login(@Valid @RequestBody LoginRequestDTO loginRequest,
+		HttpSession session, HttpServletResponse response) {
 		try {
 			User user = userService.login(loginRequest.getEmail(), loginRequest.getPassword());
 
@@ -130,7 +125,7 @@ public class UserController {
 	// 로그인 상태 확인 API
 	@GetMapping("/me")
 	public ResponseEntity<ApiResponse<Map<String, Object>>> getCurrentUser(HttpSession session) {
-		User user = (User) session.getAttribute("user");
+		User user = (User)session.getAttribute("user");
 
 		if (user == null) {
 			return ApiResponse.unauthorized(ApiMessages.UNAUTHORIZED);
@@ -146,9 +141,7 @@ public class UserController {
 	}
 
 	@PostMapping("/logout")
-	public ResponseEntity<ApiResponse<Object>> logout(
-		HttpServletRequest request,
-		HttpServletResponse response,
+	public ResponseEntity<ApiResponse<Object>> logout(HttpServletRequest request, HttpServletResponse response,
 		HttpSession session) {
 		try {
 			// 세션 무효화
@@ -194,10 +187,9 @@ public class UserController {
 	// 프로필 이미지 업데이트 API
 	@PostMapping(value = "/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseEntity<ApiResponse<Map<String, Object>>> updateProfileImage(
-		@RequestPart("profileImage") MultipartFile profileImage,
-		HttpSession session) {
+		@RequestPart("profileImage") MultipartFile profileImage, HttpSession session) {
 
-		User user = (User) session.getAttribute("user");
+		User user = (User)session.getAttribute("user");
 		if (user == null) {
 			return ApiResponse.unauthorized(ApiMessages.UNAUTHORIZED);
 		}
@@ -217,10 +209,9 @@ public class UserController {
 	@PatchMapping(value = "/me", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseEntity<ApiResponse<Map<String, Object>>> updateMyInfo(
 		@RequestPart(value = "user_nickname", required = false) String nickname,
-		@RequestPart(value = "user_profile_image", required = false) MultipartFile profileImage,
-		HttpSession session) {
+		@RequestPart(value = "user_profile_image", required = false) MultipartFile profileImage, HttpSession session) {
 
-		User user = (User) session.getAttribute("user");
+		User user = (User)session.getAttribute("user");
 		if (user == null) {
 			return ApiResponse.unauthorized(ApiMessages.UNAUTHORIZED);
 		}
@@ -237,8 +228,7 @@ public class UserController {
 			}
 
 			// 정보 업데이트 (nickname 또는 profileImage 중 하나는 제공되어야 함)
-			if ((nickname == null || nickname.isEmpty()) &&
-				(profileImage == null || profileImage.isEmpty())) {
+			if ((nickname == null || nickname.isEmpty()) && (profileImage == null || profileImage.isEmpty())) {
 				return ApiResponse.badRequest("profile_update_data_required");
 			}
 
@@ -261,12 +251,10 @@ public class UserController {
 	}
 
 	@DeleteMapping("/me")
-	public ResponseEntity<ApiResponse<Object>> deleteMyAccount(
-		HttpServletRequest request,
-		HttpServletResponse response,
+	public ResponseEntity<ApiResponse<Object>> deleteMyAccount(HttpServletRequest request, HttpServletResponse response,
 		HttpSession session) {
 
-		User user = (User) session.getAttribute("user");
+		User user = (User)session.getAttribute("user");
 		if (user == null) {
 			return ApiResponse.unauthorized(ApiMessages.UNAUTHORIZED);
 		}
@@ -303,11 +291,10 @@ public class UserController {
 	}
 
 	@PatchMapping("/me/password")
-	public ResponseEntity<ApiResponse<Object>> changePassword(
-		@Valid @RequestBody PasswordChangeRequestDTO requestDTO,
+	public ResponseEntity<ApiResponse<Object>> changePassword(@Valid @RequestBody PasswordChangeRequestDTO requestDTO,
 		HttpSession session) {
 
-		User user = (User) session.getAttribute("user");
+		User user = (User)session.getAttribute("user");
 		if (user == null) {
 			return ApiResponse.unauthorized(ApiMessages.UNAUTHORIZED);
 		}
@@ -318,11 +305,8 @@ public class UserController {
 				return ApiResponse.badRequest("password_mismatch");
 			}
 
-			User updatedUser = userService.changePassword(
-				user.getId(),
-				requestDTO.getCurrentPassword(),
-				requestDTO.getNewPassword()
-			);
+			User updatedUser = userService.changePassword(user.getId(), requestDTO.getCurrentPassword(),
+				requestDTO.getNewPassword());
 
 			session.setAttribute("user", updatedUser); // 세션 업데이트
 
