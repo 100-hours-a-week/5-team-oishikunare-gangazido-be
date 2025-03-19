@@ -47,6 +47,6 @@ jobs:
           ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-northeast-2.amazonaws.com
           ECR_REPOSITORY: gangazido-backend
         run: |
-          JAVA_HOME=$JAVA_HOME ./gradlew bootJar  # JAR 파일 빌드
+          JAVA_HOME=/opt/hostedtoolcache/Java_Corretto_jdk/17.0.14-7.1/x64 ./gradlew bootJar  # 올바른 JAVA_HOME 사용
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .  # Docker 이미지 빌드
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest  # Docker 이미지 푸시
