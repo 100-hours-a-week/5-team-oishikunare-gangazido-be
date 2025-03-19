@@ -33,9 +33,12 @@ public class LlmController {
 
 		return ResponseEntity.ok(
 			llmService.generateChat(
-				httpServletRequest,  // ✅ 세션 ID를 반영하도록 수정
+				httpServletRequest,
 				request.getLatitude(),
-				request.getLongitude()));
+				request.getLongitude(),
+				request.getMessage()
+			)
+		);
 	}
 
 	// ✅ 세션 ID 추출
@@ -47,3 +50,4 @@ public class LlmController {
 		return cookie.split("connect.sid=")[1].split(";")[0];
 	}
 }
+

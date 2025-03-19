@@ -27,3 +27,4 @@ public class LlmRequest {
 		return longitude;
 	}
 }
+
