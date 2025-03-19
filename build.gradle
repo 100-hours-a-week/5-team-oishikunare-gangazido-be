@@ -80,16 +80,36 @@ repositories {
 }
 
 dependencies {
+    // Spring Boot 기본 의존성
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-web'
+
+    // 개발용 도구
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    // 테스트 관련 의존성
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // MariaDB 드라이버
+    implementation 'org.mariadb.jdbc:mariadb-java-client:3.3.2'
+
+    // H2 데이터베이스 (테스트용)
     runtimeOnly 'com.h2database:h2'
+
+    // Spring Security
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    testImplementation 'org.springframework.security:spring-security-test'
+
+    // OpenAPI(Swagger)
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
-    implementation 'org.mariadb.jdbc:mariadb-java-client:3.3.2' // MariaDB 드라이버 추가
-    compileOnly 'org.projectlombok:lombok:1.18.26' // Lombok 추가
-    annotationProcessor 'org.projectlombok:lombok:1.18.26'
+
+    // Argon2 해싱 (암호화)
+    implementation 'org.bouncycastle:bcpkix-jdk15on:1.70'
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
 }
 
 tasks.named('test') {
