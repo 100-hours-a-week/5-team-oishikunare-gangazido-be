@@ -1,0 +1,95 @@
+on:
+  push:
+    branches:
+      - feature/map  # main 브랜치에 푸시될 때 실행
+
+name: 🚀 Blue-Green Deployment (Auto-Switch)
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'corretto'
+          java-version: '17'
+
+      - name: Ensure JAVA_HOME is set correctly
+        run: echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+
+      - name: Debug JAVA_HOME
+        run: echo $JAVA_HOME  # 현재 JAVA_HOME 경로 출력 (디버깅용)
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-2
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          mask-password: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Determine Active Environment
+        id: active_env
+        run: |
+          CURRENT_TARGET_GROUP=$(aws elbv2 describe-listeners --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+          --query 'Listeners[0].DefaultActions[0].TargetGroupArn' --output text)
+
+          echo "Current Target Group: $CURRENT_TARGET_GROUP"
+
+          if [[ "$CURRENT_TARGET_GROUP" == "${{ secrets.BLUE_TARGET_GROUP_ARN }}" ]]; then
+            echo "BLUE is active, switching to GREEN"
+            echo "DEPLOY_ENV=GREEN" >> $GITHUB_ENV
+            echo "NEW_ASG=green-autoscaling-group" >> $GITHUB_ENV
+            echo "NEW_TARGET_GROUP=${{ secrets.GREEN_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
+            echo "OLD_ASG=blue-autoscaling-group" >> $GITHUB_ENV
+          else
+            echo "GREEN is active, switching to BLUE"
+            echo "DEPLOY_ENV=BLUE" >> $GITHUB_ENV
+            echo "NEW_ASG=blue-autoscaling-group" >> $GITHUB_ENV
+            echo "NEW_TARGET_GROUP=${{ secrets.BLUE_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
+            echo "OLD_ASG=green-autoscaling-group" >> $GITHUB_ENV
+          fi
+
+      - name: Build Spring Boot Application
+        run: |
+          JAVA_HOME=/opt/hostedtoolcache/Java_Corretto_jdk/17.0.14-7.1/x64 ./gradlew bootJar  # 올바른 JAVA_HOME 사용
+
+      - name: Build and Push Docker Image
+        env:
+          ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-northeast-2.amazonaws.com
+          ECR_REPOSITORY: gangazido-backend
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY-${{ env.DEPLOY_ENV }}:latest .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY-${{ env.DEPLOY_ENV }}:latest
+
+      - name: Update New Auto Scaling Group (${{ env.NEW_ASG }})
+        run: |
+          aws autoscaling start-instance-refresh --auto-scaling-group-name ${{ env.NEW_ASG }}
+
+      - name: Wait for New ASG to be Healthy
+        run: |
+          sleep 120  # 인스턴스 헬스체크 대기
+
+      - name: Switch ALB to New Target Group (${{ env.NEW_TARGET_GROUP }})
+        run: |
+          aws elbv2 modify-listener --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+            --default-actions Type=forward,TargetGroupArn=${{ env.NEW_TARGET_GROUP }}
+
+      - name: Terminate Old Auto Scaling Group (${{ env.OLD_ASG }})
+        run: |
+          sleep 30  # 안정성 확인을 위해 약간의 대기 시간 추가
+          aws autoscaling update-auto-scaling-group \
+            --auto-scaling-group-name ${{ env.OLD_ASG }} \
+            --desired-capacity 0 --min-size 0 --max-size 0
