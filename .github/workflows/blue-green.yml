@@ -108,14 +108,18 @@ jobs:
           aws elbv2 modify-listener --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
             --default-actions Type=forward,TargetGroupArn=${{ env.NEW_TARGET_GROUP }}
 
-      - name: Validate Deployment
+      - name: Health Check after Deployment
         run: |
+          ALB_URL="https://gangazido-alb-2142561859.ap-northeast-2.elb.amazonaws.com"
+
           for i in {1..10}; do
-            STATUS=$(curl -o /dev/null -s -w "%{http_code}" https://gangazido-alb-2142561859.ap-northeast-2.elb.amazonaws.com
+            STATUS=$(curl -o /dev/null -s -w "%{http_code}" $ALB_URL)
+
             if [[ "$STATUS" == "200" ]]; then
               echo "✅ 배포 성공: HTTP 200"
               exit 0
             fi
+
             echo "⏳ 헬스 체크 대기 중... ($i/10)"
             sleep 10
           done
