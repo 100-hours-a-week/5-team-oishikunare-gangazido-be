@@ -72,8 +72,10 @@ jobs:
           ECR_REPOSITORY: gangazido-backend
         run: |
           DEPLOY_ENV_LOWER=$(echo "${DEPLOY_ENV}" | tr '[:upper:]' '[:lower:]')
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY-${{ env.DEPLOY_ENV }}:latest .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY-${{ env.DEPLOY_ENV }}:latest
+          echo "Deploying to $DEPLOY_ENV_LOWER environment..."
+
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY-$DEPLOY_ENV_LOWER:latest .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY-$DEPLOY_ENV_LOWER:latest
 
       - name: Update New Auto Scaling Group (${{ env.NEW_ASG }})
         run: |
