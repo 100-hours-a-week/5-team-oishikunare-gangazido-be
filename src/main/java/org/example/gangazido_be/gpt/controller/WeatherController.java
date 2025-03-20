@@ -12,8 +12,9 @@ public class WeatherController {
 		this.weatherService = weatherService;
 	}
 
+	// ✅ 날씨 및 대기질 정보 가져오기 (위도, 경도 기반)
 	@GetMapping("/weather")
 	public String getWeather(@RequestParam double lat, @RequestParam double lon) {
-		return weatherService.getWeather(lat, lon);
+		return weatherService.getWeather(lat, lon); // ✅ OpenWeather API 사용
 	}
 }
