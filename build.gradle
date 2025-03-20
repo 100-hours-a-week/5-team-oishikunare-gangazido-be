@@ -82,7 +82,6 @@ repositories {
 dependencies {
     annotationProcessor 'org.projectlombok:lombok:1.18.26'//여니
     implementation 'org.json:json:20210307'//여니 추가
-    implementation 'org.mariadb.jdbc:mariadb-java-client:3.1.4'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
@@ -93,16 +92,13 @@ dependencies {
     implementation 'org.mariadb.jdbc:mariadb-java-client:3.3.2'
     // lombok 관련 의존성 추가
     implementation 'org.projectlombok:lombok'
-    annotationProcessor 'org.projectlombok:lombok'
     // Spring Security 관련 지원
     implementation 'org.springframework.boot:spring-boot-starter-security'
     // Spring Security 관련 테스트 지원
     testImplementation 'org.springframework.security:spring-security-test'
     // Argon2 관련 bouncycastle 라이브러리 의존성 추가
-    implementation 'org.bouncycastle:bcpkix-jdk15on:1.70'
-}
+    //implementation 'org.bouncycastle:bcpkix-jdk15on:8.20'
+    implementation 'org.bouncycastle:bcprov-jdk18on:1.77'
 
-tasks.named('test') {
-    useJUnitPlatform()
 }
 
