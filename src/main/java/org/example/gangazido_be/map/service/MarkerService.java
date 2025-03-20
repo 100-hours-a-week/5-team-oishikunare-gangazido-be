@@ -47,12 +47,18 @@ public class MarkerService {
 
 	// 마커 삭제
 	@Transactional
-	public void deleteMarker(UUID Id) {
+	public void deleteMarker(UUID markerId, Integer sessionUserId) {
 		// 존재하는지 확인 후 엔티티 조회
-		MarkerEntity marker = markerRepository.findById(Id)
+		MarkerEntity marker = markerRepository.findById(markerId)
 			.orElseThrow(() -> new IllegalArgumentException("marker_not_found"));
+
+		// 마커 등록자와 현재 로그인 유저 비교
+		if (!marker.getUserId().equals(sessionUserId)) {
+			throw new SecurityException("required_permission"); // 예외 던지기 (403)
+		}
+
 		// 마커 삭제
-		markerRepository.deleteById(Id);
+		markerRepository.deleteById(markerId);
 	}
 
 	// 반경 내 마커 조회

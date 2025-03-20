@@ -59,6 +59,11 @@ public class MarkerExceptionHandler {
 	@ExceptionHandler(SecurityException.class)
 	public ResponseEntity<Map<String, Object>> handleUnauthorizedException(SecurityException ex) {
 		Map<String, Object> response = new LinkedHashMap<>();
+		if ("required_permission".equals(ex.getMessage())) {
+			response.put("message", "required_permission");
+			response.put("data", new HashMap<>());
+			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response); // 403 반환
+		}
 		response.put("message", "required_authorization");
 		response.put("data", new HashMap<>());
 		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);    // 401

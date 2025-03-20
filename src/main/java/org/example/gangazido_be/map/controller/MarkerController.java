@@ -2,10 +2,12 @@ package org.example.gangazido_be.map.controller;
 
 import java.util.*;
 
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.example.gangazido_be.map.dto.MarkerRequestDto;
 import org.example.gangazido_be.map.dto.MarkerResponseDto;
 import org.example.gangazido_be.map.service.MarkerService;
+import org.example.gangazido_be.user.entity.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -54,16 +56,33 @@ public class MarkerController {
 	}
 
 	@DeleteMapping("/{Id}")    // DELETE 마커 삭제 요청 처리
-	public ResponseEntity<?> deleteMarker(@PathVariable String Id) {
+	public ResponseEntity<?> deleteMarker(
+		@PathVariable String Id, // URL의 ID 수신
+		HttpSession session	// 세션에서 로그인 된 사용자 정보 가져오기
+	) {
+		// UUID 변환 (유효하지 않은 UUID 처리)
 		UUID markerId;
 		try {
-			markerId = UUID.fromString(Id);
+			markerId = UUID.fromString(Id);	// 가져온 String Id를 UUID로 변환
 		} catch (IllegalArgumentException e) {
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "invalid_marker_id", "data", new HashMap<>()));
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body(Map.of("message", "invalid_marker_id", "data", new HashMap<>()));
 		}
 
-		// 서비스 계층에 마커 삭제 요청 위임
-		markerService.deleteMarker(markerId);
+		// 세션에서 user_id 가져오기 (로그인 상태 확인)
+		Object userObj = session.getAttribute("user");
+
+		if (userObj == null) {
+			return ResponseEntity.status(HttpStatus.NOT_FOUND)
+				.body(Map.of("message", "required_authorization", "data", new HashMap<>()));
+		}
+
+		// User 객체에서 ID 추출
+		Integer sessionUserId = ((User) userObj).getId();
+		System.out.println("세션 user_id: " + sessionUserId); // 콘솔 디버깅
+
+		// 서비스 계층에 마커 삭제 요청 위임, 마커 삭제 진행
+		markerService.deleteMarker(markerId, sessionUserId);
 
 		// 성공적으로 삭제할 경우 응답 반환
 		return ResponseEntity.ok(Map.of("data", new HashMap<>(), "message", "marker_deleted_success"));

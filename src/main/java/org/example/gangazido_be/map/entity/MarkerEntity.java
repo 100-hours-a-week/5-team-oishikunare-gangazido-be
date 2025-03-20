@@ -1,6 +1,7 @@
 package org.example.gangazido_be.map.entity;
 
 import jakarta.persistence.*;
+import jakarta.servlet.http.HttpSession;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.GenericGenerator;
@@ -20,7 +21,7 @@ public class MarkerEntity {
 	private UUID id;  // 마커 ID (Primary Key)
 
 	@Column(nullable = false)
-	private int user_id;  // 마커를 등록한 사용자 ID
+	private Integer user_id;  // 마커를 등록한 사용자 ID
 
 	@Column(nullable = false)
 	private int type;  // 마커 타입 (0: 댕플, 1: 들개, 2: 빙판길, 3: 염화칼슘, 4: 공사중)
@@ -34,12 +35,16 @@ public class MarkerEntity {
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private LocalDateTime createdAt = LocalDateTime.now();
 
-	public MarkerEntity(UUID id, int user_id, int type, double latitude, double longitude) {
+	public MarkerEntity(UUID id, Integer user_id, int type, double latitude, double longitude) {
 		this.id = id;
 		this.user_id = user_id;
 		this.type = type;
-		this.latitude = latitude;
+		this.latitude = latitude;	// 제리추가
 		this.longitude = longitude;
 		this.createdAt = LocalDateTime.now(); // 현재 시간 저장
 	}
+	 // 유저 ID 반환 메서드 추가
+    public Integer getUserId() {
+        return user_id;
+    }
 }
