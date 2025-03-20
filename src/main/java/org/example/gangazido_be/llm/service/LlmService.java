@@ -118,9 +118,7 @@ public class LlmService {
 
 		// ✅ 날씨 정보 파싱
 		JSONObject weatherData = weatherJson.optJSONObject("weather");
-		String weatherCondition = (weatherData != null && weatherData.has("condition"))
-			? convertWeatherToKorean(weatherData.getString("condition"))
-			: "알 수 없음";
+		String weatherCondition = (weatherData != null && weatherData.has("condition")) ? convertWeatherToKorean(weatherData.getString("condition")) : "알 수 없음";
 
 		double temperature = (weatherData != null) ? weatherData.optDouble("temperature", 0.0) : 0.0;
 

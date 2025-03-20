@@ -5,7 +5,7 @@ public class LlmRequest {
 	private double longitude;
 	private String message;
 
-	public LlmRequest() {}  // 기본 생성자
+	//public LlmRequest() {}  // 기본 생성자
 
 	public LlmRequest(double latitude, double longitude, String message) {
 		this.latitude = latitude;
