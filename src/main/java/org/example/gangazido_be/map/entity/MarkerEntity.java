@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import jakarta.servlet.http.HttpSession;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
 import org.hibernate.annotations.GenericGenerator;
 
 import java.time.LocalDateTime;
@@ -39,12 +40,13 @@ public class MarkerEntity {
 		this.id = id;
 		this.user_id = user_id;
 		this.type = type;
-		this.latitude = latitude;	// 제리추가
+		this.latitude = latitude;    // 제리추가
 		this.longitude = longitude;
 		this.createdAt = LocalDateTime.now(); // 현재 시간 저장
 	}
-	 // 유저 ID 반환 메서드 추가
-    public Integer getUserId() {
-        return user_id;
-    }
+
+	// 유저 ID 반환 메서드 추가
+	public Integer getUserId() {
+		return user_id;
+	}
 }
