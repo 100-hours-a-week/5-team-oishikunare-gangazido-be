@@ -64,10 +64,25 @@ jobs:
           if [[ "$CURRENT_TARGET_GROUP" == "${{ secrets.BLUE_TARGET_GROUP_ARN }}" ]]; then
             echo "BLUE is active, switching to GREEN"
             echo "DEPLOY_ENV=GREEN" >> $GITHUB_ENV
+            echo "NEW_ASG=gangazido-prod-green" >> $GITHUB_ENV
           else
             echo "GREEN is active, switching to BLUE"
             echo "DEPLOY_ENV=BLUE" >> $GITHUB_ENV
+            echo "NEW_ASG=gangazido-prod-blue" >> $GITHUB_ENV
           fi
+
+      - name: Debug NEW_ASG Variable
+        run: |
+          echo "🚀 ASG 전환 대상: $NEW_ASG"
+
+          if [[ -z "$NEW_ASG" ]]; then
+            echo "🚨 NEW_ASG 값이 비어 있습니다! 배포를 중단합니다."
+            exit 1
+          fi
+
+      - name: Update New Auto Scaling Group (${{ env.NEW_ASG }})
+        run: |
+          aws autoscaling start-instance-refresh --auto-scaling-group-name ${{ env.NEW_ASG }}
 
       - name: Verify DEPLOY_ENV Variable
         run: |
