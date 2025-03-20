@@ -23,6 +23,10 @@ public class UserDTO {
 	@JsonProperty("user_password")
 	private String password;
 
+	@NotEmpty(message = "required_password")
+	@JsonProperty("user_password_confirm")
+	private String passwordConfirm;
+
 	@NotEmpty(message = "required_nickname")
 	@JsonProperty("user_nickname")
 	private String nickname;
