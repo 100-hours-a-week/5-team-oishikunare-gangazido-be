@@ -64,41 +64,34 @@ jobs:
           if [[ "$CURRENT_TARGET_GROUP" == "${{ secrets.BLUE_TARGET_GROUP_ARN }}" ]]; then
             echo "BLUE is active, switching to GREEN"
             echo "DEPLOY_ENV=GREEN" >> $GITHUB_ENV
-            echo "NEW_ASG=gangazido-prod-green" >> $GITHUB_ENV
-            echo "NEW_TARGET_GROUP=${{ secrets.GREEN_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
-            echo "OLD_ASG=gangazido-prod-blue" >> $GITHUB_ENV
           else
             echo "GREEN is active, switching to BLUE"
             echo "DEPLOY_ENV=BLUE" >> $GITHUB_ENV
-            echo "NEW_ASG=gangazido-prod-blue" >> $GITHUB_ENV
-            echo "NEW_TARGET_GROUP=${{ secrets.BLUE_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
-            echo "OLD_ASG=gangazido-prod-green" >> $GITHUB_ENV
           fi
 
-      - name: Scale Up Active Auto Scaling Group (${{ env.OLD_ASG }})
+      - name: Verify DEPLOY_ENV Variable
         run: |
-          aws autoscaling update-auto-scaling-group \
-            --auto-scaling-group-name ${{ env.OLD_ASG }} \
-            --desired-capacity 4 --min-size 2 --max-size 5  # 트래픽 처리량 증가
+          if [[ -z "$DEPLOY_ENV" ]]; then
+            echo "⚠️ DEPLOY_ENV 변수가 설정되지 않음. 기본값 'blue' 사용"
+            echo "DEPLOY_ENV=blue" >> $GITHUB_ENV
+          fi
 
       - name: Build and Push Docker Image
         env:
           ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-northeast-2.amazonaws.com
           ECR_REPOSITORY: gangazido-backend
         run: |
-          # 현재 배포 환경 확인 (비어있을 경우 기본값 설정)
           DEPLOY_ENV_LOWER=$(echo "${DEPLOY_ENV}" | tr '[:upper:]' '[:lower:]')
-          IMAGE_TAG=${DEPLOY_ENV_LOWER:-"blue"}  # 기본값을 'blue'로 설정
-
-          echo "🔄 Checking existing ECR images..."
-          EXISTING_TAGS=$(aws ecr list-images --repository-name $ECR_REPOSITORY --region ap-northeast-2 --query "imageIds[*].imageTag" --output text)
-
-          if [[ ! " $EXISTING_TAGS " =~ " $IMAGE_TAG " ]]; then
-            echo "⚠️ 지정된 태그($IMAGE_TAG)가 존재하지 않음. 기본값 'blue'로 설정."
-            IMAGE_TAG="blue"
-          fi
+          IMAGE_TAG=$DEPLOY_ENV_LOWER
 
           echo "🐳 Building Docker image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+          # 태그가 비어 있는 경우 방지
+          if [[ -z "$IMAGE_TAG" ]]; then
+            echo "🚨 IMAGE_TAG 값이 비어 있습니다!"
+            exit 1
+          fi
+
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
 
           echo "📤 Pushing Docker image..."
