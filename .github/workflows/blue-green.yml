@@ -110,7 +110,7 @@ jobs:
 
       - name: Health Check after Deployment
         run: |
-          ALB_URL="https://gangazido-alb-2142561859.ap-northeast-2.elb.amazonaws.com"
+          ALB_URL="http://gangazido-alb-2142561859.ap-northeast-2.elb.amazonaws.com"
 
           for i in {1..10}; do
             STATUS=$(curl -o /dev/null -s -w "%{http_code}" $ALB_URL)
