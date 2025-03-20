@@ -51,15 +51,15 @@ jobs:
           if [[ "$CURRENT_TARGET_GROUP" == "${{ secrets.BLUE_TARGET_GROUP_ARN }}" ]]; then
             echo "BLUE is active, switching to GREEN"
             echo "DEPLOY_ENV=GREEN" >> $GITHUB_ENV
-            echo "NEW_ASG=green-autoscaling-group" >> $GITHUB_ENV
+            echo "NEW_ASG=gangazido-prod-green" >> $GITHUB_ENV
             echo "NEW_TARGET_GROUP=${{ secrets.GREEN_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
-            echo "OLD_ASG=blue-autoscaling-group" >> $GITHUB_ENV
+            echo "OLD_ASG=gangazido-prod-blue" >> $GITHUB_ENV
           else
             echo "GREEN is active, switching to BLUE"
             echo "DEPLOY_ENV=BLUE" >> $GITHUB_ENV
-            echo "NEW_ASG=blue-autoscaling-group" >> $GITHUB_ENV
+            echo "NEW_ASG=gangazido-prod-blue" >> $GITHUB_ENV
             echo "NEW_TARGET_GROUP=${{ secrets.BLUE_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
-            echo "OLD_ASG=green-autoscaling-group" >> $GITHUB_ENV
+            echo "OLD_ASG=gangazido-prod-green" >> $GITHUB_ENV
           fi
 
       - name: Build Spring Boot Application
