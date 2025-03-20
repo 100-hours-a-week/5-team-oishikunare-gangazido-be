@@ -103,7 +103,7 @@ jobs:
 
           # 태그가 비어 있는 경우 방지
           if [[ -z "$IMAGE_TAG" ]]; then
-            echo "🚨 IMAGE_TAG 값이 비어 있습니다!"
+            echo "🚨 IMAGE_TAG 값이 비어 있습니다!!!"
             exit 1
           fi
 
