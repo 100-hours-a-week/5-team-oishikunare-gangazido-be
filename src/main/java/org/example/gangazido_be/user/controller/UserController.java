@@ -46,7 +46,7 @@ public class UserController {
 	public ResponseEntity<UserApiResponse<Map<String, Object>>> registerUser(
 		@RequestPart("user_email") String email,
 		@RequestPart("user_password") String password,
-		@RequestPart("user_password_confirm") String passwordConfirm, // 비밀번호 확인 추가
+		@RequestPart("user_password_confirm") String passwordConfirm,
 		@RequestPart("user_nickname") String nickname,
 		@RequestPart(value = "user_profileImage", required = false) MultipartFile profileImage,
 		HttpSession session,
@@ -57,21 +57,32 @@ public class UserController {
 				return UserApiResponse.badRequest("required_email");
 			}
 
+			// 이메일 형식 검증
+			if (!email.matches("^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$")) {
+				return UserApiResponse.badRequest("invalid_email_format");
+			}
+
 			if (password == null || password.isEmpty()) {
 				return UserApiResponse.badRequest("required_password");
 			}
 
-			if (passwordConfirm == null || passwordConfirm.isEmpty()) {
-				return UserApiResponse.badRequest("required_password");
-			}
-
-			// 비밀번호 일치 확인
-			if (!password.equals(passwordConfirm)) {
-				return UserApiResponse.badRequest("passwords_do_not_matched");
-			}
-
 			if (nickname == null || nickname.isEmpty()) {
 				return UserApiResponse.badRequest("required_nickname");
+			}
+
+			// 닉네임 길이 검증
+			if (nickname.length() < 2 || nickname.length() > 20) {
+				return UserApiResponse.badRequest("invalid_nickname_length");
+			}
+
+			// 비밀번호 확인 처리 추가
+			if (passwordConfirm == null || passwordConfirm.isEmpty()) {
+				return UserApiResponse.badRequest("required_password_confirm");
+			}
+
+			// 비밀번호 확인 유효성 검사
+			if (!UserPasswordValidator.isValid(passwordConfirm)) {
+				return UserApiResponse.badRequest("invalid_password_confirm");
 			}
 
 			// 비밀번호 복잡성 검증
@@ -102,30 +113,25 @@ public class UserController {
 
 			return UserApiResponse.success(UserApiMessages.USER_CREATED, responseData);
 		} catch (RuntimeException e) {
-			// 구체적인 예외 메시지 처리
+			logger.warn("회원가입 실패: {}", e.getMessage());
+
+			// 예외 메시지에 따른 처리
 			String errorMessage = e.getMessage();
 
-			// 예외 타입에 따른 처리
 			if ("duplicate_email".equals(errorMessage)) {
 				return UserApiResponse.badRequest("duplicate_email");
 			} else if ("duplicate_nickname".equals(errorMessage)) {
 				return UserApiResponse.badRequest("duplicate_nickname");
+			} else if (errorMessage != null && errorMessage.contains("Data too long for column 'nickname'")) {
+				return UserApiResponse.badRequest("invalid_nickname_length");
 			} else if ("invalid_password_format".equals(errorMessage)) {
 				return UserApiResponse.badRequest("invalid_password_format");
-			} else if ("invalid_password_length".equals(errorMessage)) {
-				return UserApiResponse.badRequest("invalid_password_length");
-			} else if ("invalid_nickname_format".equals(errorMessage)) {
-				return UserApiResponse.badRequest("invaild_nickname_format");
-			} else if ("invalid_nickname_length".equals(errorMessage)) {
-				return UserApiResponse.badRequest("invaild_nickname_length");
 			} else {
-				// 기타 RuntimeException
-				logger.warn("회원가입 실패: {}", e.getMessage());
-				return UserApiResponse.badRequest(e.getMessage());
+				return UserApiResponse.badRequest(errorMessage);
 			}
 		} catch (Exception e) {
 			logger.error("서버 오류: ", e);
-			return UserApiResponse.internalError("internal_server_error");
+			return UserApiResponse.internalError(UserApiMessages.INTERNAL_ERROR);
 		}
 	}
 
@@ -323,20 +329,36 @@ public class UserController {
 		}
 
 		try {
-			// 닉네임 정제 - 제어 문자 제거
+			// 닉네임과 프로필 이미지가 둘 다 제공되지 않은 경우 처리
+			if ((nickname == null || nickname.isEmpty()) &&
+				(profileImage == null || profileImage.isEmpty())) {
+				return UserApiResponse.badRequest("profile_update_data_required");
+			}
+
+			// 닉네임 유효성 검사
 			if (nickname != null && !nickname.isEmpty()) {
+				// 제어 문자 제거
 				nickname = nickname.replaceAll("[\\p{Cntrl}]", "");
 
 				// 빈 문자열이 되면 처리
 				if (nickname.isEmpty()) {
 					return UserApiResponse.badRequest("valid_nickname_required");
 				}
+
+				// 길이 제한 검사
+				if (nickname.length() < 2 || nickname.length() > 20) {
+					return UserApiResponse.badRequest("invalid_nickname_length");
+				}
+
+				// 닉네임 중복 검사 (현재 사용자의 닉네임은 제외)
+				if (!nickname.equals(user.getNickname()) && userService.isNicknameDuplicate(nickname)) {
+					return UserApiResponse.badRequest("duplicate_nickname");
+				}
 			}
 
-			// 정보 업데이트 (nickname 또는 profileImage 중 하나는 제공되어야 함)
-			if ((nickname == null || nickname.isEmpty()) &&
-				(profileImage == null || profileImage.isEmpty())) {
-				return UserApiResponse.badRequest("profile_update_data_required");
+			// 프로필 이미지 파일 크기 검사 (예: 5MB 제한)
+			if (profileImage != null && !profileImage.isEmpty() && profileImage.getSize() > 5 * 1024 * 1024) {
+				return UserApiResponse.badRequest("profile_image_too_large");
 			}
 
 			User updatedUser = userService.updateUserInfo(user.getId(), nickname, profileImage);
@@ -350,7 +372,21 @@ public class UserController {
 			return UserApiResponse.success(UserApiMessages.USER_UPDATED, responseData);
 		} catch (RuntimeException e) {
 			logger.warn("사용자 정보 업데이트 실패: {}", e.getMessage());
-			return UserApiResponse.badRequest(e.getMessage());
+
+			// 구체적인 예외 메시지 처리
+			String errorMessage = e.getMessage();
+
+			if ("duplicate_nickname".equals(errorMessage)) {
+				return UserApiResponse.badRequest("duplicate_nickname");
+			} else if ("invalid_nickname_format".equals(errorMessage)) {
+				return UserApiResponse.badRequest("invalid_nickname_format");
+			} else if ("invalid_nickname_length".equals(errorMessage)) {
+				return UserApiResponse.badRequest("invalid_nickname_length");
+			} else if (errorMessage != null && errorMessage.contains("Data too long for column 'nickname'")) {
+				return UserApiResponse.badRequest("invalid_nickname_length");
+			} else {
+				return UserApiResponse.badRequest(errorMessage);
+			}
 		} catch (Exception e) {
 			logger.error("서버 오류: ", e);
 			return UserApiResponse.internalError(UserApiMessages.INTERNAL_ERROR);

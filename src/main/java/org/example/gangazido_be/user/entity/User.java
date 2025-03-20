@@ -22,7 +22,7 @@ public class User {
 	@Column(nullable = false)
 	private String password;
 
-	@Column(nullable = false, unique = true)
+	@Column(nullable = false, unique = true, length = 20)
 	private String nickname;
 
 	@Column(name = "profile_image")

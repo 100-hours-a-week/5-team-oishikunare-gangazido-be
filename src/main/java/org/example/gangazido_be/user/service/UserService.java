@@ -33,6 +33,16 @@ public class UserService {
 
 	@Transactional
 	public User registerUser(UserDTO userDTO) {
+		// 이메일 형식 유효성 검사
+		if (userDTO.getEmail() == null || !userDTO.getEmail().matches("^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$")) {
+			throw new RuntimeException("invalid_email_format");
+		}
+
+		// 닉네임 길이 검사
+		if (userDTO.getNickname() == null || userDTO.getNickname().length() < 2 || userDTO.getNickname().length() > 20) {
+			throw new RuntimeException("invalid_nickname_length");
+		}
+
 		// 이메일 중복 체크
 		if (isEmailDuplicate(userDTO.getEmail())) {
 			throw new RuntimeException("duplicate_email");
@@ -41,12 +51,6 @@ public class UserService {
 		// 닉네임 중복 체크
 		if (isNicknameDuplicate(userDTO.getNickname())) {
 			throw new RuntimeException("duplicate_nickname");
-		}
-
-		// 비밀번호와 비밀번호 확인이 일치하는지 검사
-		if (userDTO.getPasswordConfirm() != null &&
-			!userDTO.getPassword().equals(userDTO.getPasswordConfirm())) {
-			throw new RuntimeException("passwords_do_not_matched");
 		}
 
 		// 비밀번호 복잡성 검증
@@ -129,9 +133,14 @@ public class UserService {
 			// 제어 문자 제거
 			nickname = nickname.replaceAll("[\\p{Cntrl}]", "");
 
-			// 닉네임 유효성 검사 (선택적)
+			// 닉네임 유효성 검사
 			if (nickname.isEmpty()) {
 				throw new RuntimeException("invalid_nickname_format");
+			}
+
+			// 길이 제한 검사
+			if (nickname.length() < 2 || nickname.length() > 20) {
+				throw new RuntimeException("invalid_nickname_length");
 			}
 
 			// 닉네임 중복 체크
@@ -143,6 +152,17 @@ public class UserService {
 
 		// 프로필 이미지 업데이트 (첨부된 경우에만)
 		if (profileImage != null && !profileImage.isEmpty()) {
+			// 파일 크기 검사 (예: 5MB 제한)
+			if (profileImage.getSize() > 5 * 1024 * 1024) {
+				throw new RuntimeException("profile_image_too_large");
+			}
+
+			// 파일 형식 검사 (이미지 파일만 허용)
+			String contentType = profileImage.getContentType();
+			if (contentType == null || !contentType.startsWith("image/")) {
+				throw new RuntimeException("invalid_file_type");
+			}
+
 			// 기존 이미지가 있으면 삭제
 			if (user.getProfileImage() != null && !user.getProfileImage().isEmpty()) {
 				userFileService.deleteImage(user.getProfileImage());
