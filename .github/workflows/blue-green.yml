@@ -86,8 +86,17 @@ jobs:
           ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-northeast-2.amazonaws.com
           ECR_REPOSITORY: gangazido-backend
         run: |
+          # 현재 배포 환경 확인 (비어있을 경우 기본값 설정)
           DEPLOY_ENV_LOWER=$(echo "${DEPLOY_ENV}" | tr '[:upper:]' '[:lower:]')
-          IMAGE_TAG=$DEPLOY_ENV_LOWER
+          IMAGE_TAG=${DEPLOY_ENV_LOWER:-"blue"}  # 기본값을 'blue'로 설정
+
+          echo "🔄 Checking existing ECR images..."
+          EXISTING_TAGS=$(aws ecr list-images --repository-name $ECR_REPOSITORY --region ap-northeast-2 --query "imageIds[*].imageTag" --output text)
+
+          if [[ ! " $EXISTING_TAGS " =~ " $IMAGE_TAG " ]]; then
+            echo "⚠️ 지정된 태그($IMAGE_TAG)가 존재하지 않음. 기본값 'blue'로 설정."
+            IMAGE_TAG="blue"
+          fi
 
           echo "🐳 Building Docker image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
@@ -108,17 +117,22 @@ jobs:
           aws elbv2 modify-listener --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
             --default-actions Type=forward,TargetGroupArn=${{ env.NEW_TARGET_GROUP }}
 
-      - name: Validate Deployment
+      - name: Health Check after Deployment
         run: |
+          ALB_URL="http://gangazido-alb-2142561859.ap-northeast-2.elb.amazonaws.com"
+
           for i in {1..10}; do
-            STATUS=$(curl -o /dev/null -s -w "%{http_code}" http://your-load-balancer-url)
+            STATUS=$(curl -o /dev/null -s -w "%{http_code}" $ALB_URL)
+
             if [[ "$STATUS" == "200" ]]; then
               echo "✅ 배포 성공: HTTP 200"
               exit 0
             fi
+
             echo "⏳ 헬스 체크 대기 중... ($i/10)"
             sleep 10
           done
+
           echo "🚨 배포 실패: 정상 응답 없음"
           exit 1
 
