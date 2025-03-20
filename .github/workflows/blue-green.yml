@@ -153,3 +153,4 @@ jobs:
       - name: Refresh Old Auto Scaling Group (${{ env.OLD_ASG }})
         run: |
           aws autoscaling start-instance-refresh --auto-scaling-group-name ${{ env.OLD_ASG }}
+# 작업 이후 다시 진행
