@@ -12,13 +12,13 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class LoginRequestDTO {
-	@NotEmpty(message = "이메일은 필수 입력 항목입니다.")
-	@Email(message = "유효한 이메일 형식이 아닙니다.")
+public class UserLoginRequestDTO {
+	@NotEmpty(message = "required_email")
+	@Email(message = "invalid_email_format")
 	@JsonProperty("user_email")
 	private String email;
 
-	@NotEmpty(message = "비밀번호는 필수 입력 항목입니다.")
+	@NotEmpty(message = "required_password")
 	@JsonProperty("user_password")
 	private String password;
 }

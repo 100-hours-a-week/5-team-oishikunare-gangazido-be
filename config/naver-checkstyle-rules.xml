@@ -59,6 +59,7 @@ The following rules in the Naver coding convention cannot be checked by this con
             <property name="allowedAbbreviations" value="DTO,DAO,VO" />
         </module>
 
+
         <!-- [package-lowercase] -->
         <module name="PackageName">
             <property name="format" value="^[a-z]+(\.[a-z][a-z0-9]*)*$"/>
@@ -261,6 +262,7 @@ The following rules in the Naver coding convention cannot be checked by this con
         This module always requires an empty line between header and package.
         But it is not forced in the Naver guide.
         See https://github.com/checkstyle/checkstyle/issues/1035
+
         <module name="EmptyLineSeparator">
             <property name="tokens" value="PACKAGE_DEF"/>
             <message key="empty.line.separator"
@@ -275,11 +277,12 @@ The following rules in the Naver coding convention cannot be checked by this con
         <!--        </module>-->
 
         <!-- [blankline-between-methods] -->
-        <module name="EmptyLineSeparator">
-            <property name="tokens" value="METHOD_DEF"/>
-            <message key="empty.line.separator"
-                     value="[blankline-between-methods] ''{0}'' should be separated from previous statement."/>
-        </module>
+
+<!--        <module name="EmptyLineSeparator">-->
+<!--            <property name="tokens" value="METHOD_DEF"/>-->
+<!--            <message key="empty.line.separator"-->
+<!--                     value="[blankline-between-methods] ''{0}'' should be separated from previous statement."/>-->
+<!--        </module>-->
 
         <!-- End of Blank lines chapter -->
 

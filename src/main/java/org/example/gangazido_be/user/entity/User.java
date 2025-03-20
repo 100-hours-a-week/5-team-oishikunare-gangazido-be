@@ -9,12 +9,11 @@ import java.time.LocalDateTime;
 @Table(name = "users")
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	// pk 컬럼명은 따로 지정해주는게 더 명확(같긴 하지만)
 	@Column(name = "id", updatable = false, nullable = false)
 	private Integer id;
 
@@ -33,6 +32,14 @@ public class User {
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
 	private LocalDateTime deletedAt;
+
+	@Builder
+	protected User(String email, String password, String nickname, String profileImage) {
+		this.email = email;
+		this.password = password;
+		this.nickname = nickname;
+		this.profileImage = profileImage;
+	}
 
 	@PrePersist
 	protected void onCreate() {

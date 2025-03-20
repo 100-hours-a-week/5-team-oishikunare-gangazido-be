@@ -10,7 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 @Component
-public class IdEncryptionUtil {
+public class UserIdEncryptionUtil {
 
 	@Value("${app.encryption.key}")  // 기본값 제거
 	private String encryptionKey;
