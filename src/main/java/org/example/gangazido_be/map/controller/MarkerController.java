@@ -29,21 +29,29 @@ public class MarkerController {
 	 * @return 성공 메시지와 등록된 마커 정보
 	 */
 	@PostMapping    // POST 마커 등록 요청 처리
-	public ResponseEntity<?> createMarker(@Valid @RequestBody MarkerRequestDto requestDto) {
+	public ResponseEntity<?> createMarker(
+		HttpSession session,
+		@RequestBody MarkerRequestDto requestDto) {
+		Object userObj = session.getAttribute("user");
+		if (userObj == null) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+					.body(Map.of("message", "required_authorization", "data", new HashMap<>()));
+		}
+
+		// User 객체에서 ID 추출
+		User user = (User) userObj;
+		Integer sessionUserId = user.getId();
+		System.out.println("세션 user_id: " + sessionUserId); // 콘솔 디버깅
+
+		// DTO에서 user_id 제거 (세션에서 가져오기 때문)
+		// 마커 저장 로직 호출
+		// requestDto를 서비스 계층으로 넘겨 마커를 저장, 저장된 마커 정보를 반환받는다.
+		MarkerResponseDto responseDto = markerService.createMarker(sessionUserId, requestDto);
 		// 위도, 경도 값이 누락된 경우 예외 발생
 		// 값이 없을 경우 ILLegalStateException 발생
 		if (requestDto.getLatitude() == null || requestDto.getLongitude() == null) {
 			throw new IllegalStateException("invalid_latitude_longitude");    // MarkerExceptionHandler로 넘기기
 		}
-
-		// user_id 없을 시 SecurityException 발생
-		if (requestDto.getUser_id() == null) {
-			throw new SecurityException(("required_authorization"));
-		}
-
-		// 마커 저장 로직 호출
-		// requestDto를 서비스 계층으로 넘겨 마커를 저장, 저장된 마커 정보를 반환받는다.
-		MarkerResponseDto responseDto = markerService.createMarker(requestDto);
 
 		// 정상적으로 저장된 경우
 		// 응답 데이터는 JSON 형태로 클라이언트에 전달
@@ -91,10 +99,10 @@ public class MarkerController {
 	@GetMapping
 	public ResponseEntity<?> getMarkers(@RequestParam("latitude") double latitude, @RequestParam("longitude") double longitude, @RequestParam(value = "radius", defaultValue = "5.0") double radius) {
 
-		// 위도/경도 범위 검증
-//        if (latitude < 33.1 || latitude > 38.7 || longitude < 125.0 || longitude > 132.0) {
-//            return ResponseEntity.badRequest().body(Map.of("message", "invalid_request", "data", null));
-//        }
+	// 위도/경도 범위 검증
+	//        if (latitude < 33.1 || latitude > 38.7 || longitude < 125.0 || longitude > 132.0) {
+	//            return ResponseEntity.badRequest().body(Map.of("message", "invalid_request", "data", null));
+	//        }
 
 		// 마커 조회 실행
 		List<MarkerResponseDto> markers = markerService.findMarkersWithinRadius(latitude, longitude, radius);

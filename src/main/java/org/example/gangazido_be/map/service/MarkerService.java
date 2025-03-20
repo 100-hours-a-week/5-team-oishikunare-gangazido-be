@@ -20,12 +20,12 @@ public class MarkerService {
 
 	// 트랜잭션, DB 저장 문제 생기면 롤백
 	@Transactional
-	public MarkerResponseDto createMarker(MarkerRequestDto requestDto) {
+	public MarkerResponseDto createMarker(Integer userId, MarkerRequestDto requestDto) {
 
 		// 1️⃣ DTO → 엔티티 변환 (DB 저장을 위해)
 		MarkerEntity markerEntity = new MarkerEntity(
 			UUID.randomUUID(),    // UUID
-			requestDto.getUser_id(),
+			userId,
 			requestDto.getType(),
 			requestDto.getLatitude(),
 			requestDto.getLongitude()
