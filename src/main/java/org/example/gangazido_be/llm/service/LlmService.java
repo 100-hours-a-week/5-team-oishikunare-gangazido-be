@@ -1,5 +1,5 @@
 //llmservice
-
+//String airQualityInfo;
 package org.example.gangazido_be.llm.service;
 
 import org.springframework.http.HttpStatus;
@@ -27,6 +27,18 @@ public class LlmService {
 	private final PetRepository petRepository;
 	private final Map<String, LlmResponse> responseCache = new HashMap<>();
 
+	private static final Map<String, String> BREED_CHARACTERISTICS = new HashMap<>();
+	static {
+		BREED_CHARACTERISTICS.put("siberian husky", "추운 날씨에서 활동하기 적합한 견종입니다.");
+		BREED_CHARACTERISTICS.put("golden retriever", "추위에 비교적 강하지만, 너무 추운 날씨에는 보호가 필요할 수 있습니다.");
+		BREED_CHARACTERISTICS.put("pomeranian", "추위에 약하므로 따뜻한 옷을 입히는 것이 좋습니다.");
+		BREED_CHARACTERISTICS.put("maltese", "추위에 약한 견종이므로 외출 시 방한복이 필요합니다.");
+		BREED_CHARACTERISTICS.put("bichon", "포근한 털이 있지만 추위에 약한 편이라 옷을 입히는 것이 좋아요.");
+		BREED_CHARACTERISTICS.put("jindodog", "적당한 기온에서는 산책이 가능하지만, 너무 추운 날씨에는 주의해야 합니다.");
+		BREED_CHARACTERISTICS.put("mixedbreed", "견종에 따라 차이가 있지만 일반적으로 기온 변화에 적응할 수 있습니다.");
+		BREED_CHARACTERISTICS.put("others", "견종별 특성을 고려하여 산책 여부를 결정하세요.");
+	}
+
 	public LlmService(GptService gptService, WeatherService weatherService, PetRepository petRepository) {
 		this.gptService = gptService;
 		this.weatherService = weatherService;
@@ -35,63 +47,85 @@ public class LlmService {
 
 	@SuppressWarnings("checkstyle:OperatorWrap")
 	public ResponseEntity<LlmResponse> generateChat(HttpServletRequest request, double latitude, double longitude, String message) {
+
 		String sessionId = extractSessionId(request);
-		int userId;
+		if (sessionId == null) {
+			return ResponseEntity.status(HttpStatus.NOT_FOUND)
+				.body(new LlmResponse("not_found_session", "null"));
+		}
+		int userId = 2; // 기본값
 		try {
-			userId = (sessionId != null) ? Integer.parseInt(sessionId) : 2;
+			userId = Integer.parseInt(sessionId);
 		} catch (NumberFormatException e) {
-			System.err.println("⚠️ [경고] 세션 ID가 잘못되었습니다. 기본값(2) 사용.");
-			userId = 2; // 기본값 사용
+			System.err.println("[ERROR] invalid_session: 올바르지 않은 세션 ID.");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body(new LlmResponse("invalid_session", "null"));
 		}
 
-		List<Pet> pets = petRepository.findByUserId(userId);
+
+		// 🐶 반려견 정보 조회
+		List<Pet> pets;
 		try {
 			pets = petRepository.findByUserId(userId);
+			if (pets.isEmpty()) {
+				return ResponseEntity.status(HttpStatus.NOT_FOUND)
+					.body(new LlmResponse("not_found_pet", "반려견 정보를 찾을 수 없습니다."));
+			}
 		} catch (Exception e) {
-			System.err.println("❌ [에러] 반려견 정보를 조회하는 중 오류 발생: " + e.getMessage());
-			ResponseEntity<LlmResponse> response = ResponseEntity
-				.status(HttpStatus.INTERNAL_SERVER_ERROR)
-				.body(new LlmResponse("failed_to_retrieve_pet_info", "❌ 반려견 정보를 가져오는 중 오류가 발생했습니다."));
-			return response;
-		}
-
-		if (pets.isEmpty()) {
-			return ResponseEntity.status(HttpStatus.NOT_FOUND)
-				.body(new LlmResponse("not_found_pet", "❌ 반려견 정보를 찾을 수 없습니다."));
+			System.err.println("[ERROR] failed_to_get_pet_info: " + e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+				.body(new LlmResponse("failed_to_get_pet_info", "서버 오류로 인해 반려견 정보를 가져올 수 없습니다."));
 		}
 
 		Pet pet = pets.get(0);
 
+
+		// 🌤️ 날씨 정보 가져오기
 		String weatherInfo;
 		try {
 			weatherInfo = weatherService.getWeather(latitude, longitude);
 			if (weatherInfo == null || weatherInfo.isEmpty()) {
-				throw new Exception("Weather API returned an empty response.");
+				System.err.println("[ERROR] failed_to_get_weather: 날씨 정보 응답이 비어 있음");
+				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body(new LlmResponse("failed_to_get_weather", "날씨 정보를 가져오지 못했습니다."));
 			}
 		} catch (Exception e) {
-			System.err.println("❌ [에러] 날씨 정보를 가져오는 중 오류 발생: " + e.getMessage());
+			System.err.println("[ERROR] failed_to_get_weather: " + e.getMessage());
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-				.body(new LlmResponse("failed_to_fetch_weather", "❌ 날씨 정보를 가져오는 중 오류가 발생했습니다."));
-
+				.body(new LlmResponse("failed_to_get_weather", "서버 오류로 인해 날씨 정보를 가져올 수 없습니다."));
 		}
 
+		// 🌫️ 미세먼지 정보 가져오기 (OpenWeather API 사용)
 		JSONObject weatherJson;
 		try {
 			weatherJson = new JSONObject(weatherInfo);
 		} catch (Exception e) {
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-				.body(new LlmResponse("invalid_weather_json", "❌ 날씨 데이터 처리 중 오류가 발생했습니다."));
+				.body(new LlmResponse("invalid_weather_data", "internal_server_error"));
 		}
 
-		// ✅ JSON에서 필요한 데이터 추출 (예외 처리 포함)
+		// ✅ OpenWeather API 기반 미세먼지 데이터 가져오기
+		JSONObject airQualityJson = weatherJson.optJSONObject("air_quality");
+		if (airQualityJson == null) {
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body(new LlmResponse("invalid_air_quality_data", "internal_server_error"));
+		}
+
+		// ✅ OpenWeather API 응답 파싱 (PM10, PM2.5 값 가져오기)
+		JSONObject components = airQualityJson.optJSONObject("components");
+		double pm10 = (components != null) ? components.optDouble("pm10", -1.0) : -1.0;
+		double pm25 = (components != null) ? components.optDouble("pm2_5", -1.0) : -1.0;
+
+		// ✅ 날씨 정보 파싱
 		JSONObject weatherData = weatherJson.optJSONObject("weather");
-		JSONObject airQualityData = weatherJson.optJSONObject("air_quality");
+		String weatherCondition = (weatherData != null && weatherData.has("condition"))
+			? convertWeatherToKorean(weatherData.getString("condition"))
+			: "알 수 없음";
 
-		String weatherCondition = (weatherData != null && weatherData.has("condition")) ? convertWeatherToKorean(weatherData.getString("condition")) : "알 수 없음";
 		double temperature = (weatherData != null) ? weatherData.optDouble("temperature", 0.0) : 0.0;
-		double pm10 = (airQualityData != null) ? airQualityData.optDouble("pm10", -1.0) : -1.0;
-		double pm25 = (airQualityData != null) ? airQualityData.optDouble("pm2_5", -1.0) : -1.0;
 
+
+		// ✅ 반려견 정보
 		String petName = pet.getName();
 		String petBreed = convertBreedToKorean(pet.getBreed());
 		int petAge = pet.getAge();
@@ -102,13 +136,14 @@ public class LlmService {
 		System.out.println("💨 [미세먼지 PM10]: " + pm10);
 		System.out.println("💨 [초미세먼지 PM2.5]: " + pm25);
 
-		// 📌 **질문 유형에 따라 다른 프롬프트 생성**
+		// ✅ GPT 프롬프트 생성 (산책 가능 여부)
 		String prompt;
 		String lowerMessage = message.toLowerCase();
-		if (lowerMessage.contains("미세먼지") || lowerMessage.contains("공기질") || lowerMessage.contains("대기") || lowerMessage.contains("미먼")) {
+		if (lowerMessage.contains("미세먼지") || lowerMessage.contains("공기") || lowerMessage.contains("대기") || lowerMessage.contains("날씨")) {
 			prompt = String.format(
 				"당신은 반려견 산책 추천 AI입니다. **반드시 JSON 형식으로만 답변하세요.** HTML이나 마크다운, 자연어 문장만 있는 응답은 허용되지 않습니다.\\n" +
 					"미세먼지 데이터와 반려견 정보를 바탕으로 **%s**의 산책 가능 여부를 판단하고 그 결과를 제공해주세요" +
+					"응답에 반드시 반려견 이름을 포함해주세요." +
 					"📌 **현재 환경 데이터:**\n" +
 					"- 날씨 상태: %s\n" +
 					"- 기온: %.1f°C\n" +
@@ -134,6 +169,7 @@ public class LlmService {
 			prompt = String.format(
 				"당신은 반려견 산책 추천 AI입니다. **반드시 JSON 형식으로만 답변하세요.** HTML이나 마크다운, 자연어 문장만 있는 응답은 허용되지 않습니다.\\n" +
 					" 날씨와 대기질, 반려견 정보를 바탕으로 **%s**의 산책 가능 여부를 판단하고, JSON 형식으로 추천 결과를 제공해주세요.\n\n" +
+					"응답에 반드시 반려견 이름을 포함해주세요." +
 					"📌 **현재 환경 데이터:**\n" +
 					"- 날씨 상태: %s\n" +
 					"- 기온: %.1f°C\n" +
@@ -159,6 +195,7 @@ public class LlmService {
 				"당신은 반려견 산책 추천 AI입니다. **반드시 JSON 형식으로만 답변하세요.** HTML이나 마크다운, 자연어 문장만 있는 응답은 허용되지 않습니다.\\n" +
 					"날씨 데이터와 반려견 정보를 바탕으로 **%s**의 산책 가능 여부를 판단하고 그 결과를 제공해주세요" +
 					"반려견이 외출 시 옷을 입어야 할까요? 현재 날씨를 분석하고, 반려견의 체형을 고려하여 적절한 답변을 제공해주세요.\n\n" +
+					"응답에 반드시 반려견 이름을 포함해주세요." +
 					"📌 **현재 환경 데이터:**\n" +
 					"- 날씨 상태: %s\n" +
 					"- 기온: %.1f°C\n" +
@@ -168,23 +205,23 @@ public class LlmService {
 				weatherCondition, temperature, petBreed, petWeight
 			);
 		} else {
-			prompt = "제가 도와드릴 수 있는 질문이 아닙니다.";
+			prompt = "제가 도와드릴 수 있는 질문이 아니라고 답해.";
 		}
 
 		System.out.println("📝 [DEBUG] 최종 GPT 프롬프트:\n" + prompt);
 
 		// 🔥 GPT 호출
 		String gptResponse;
-
 		try {
 			gptResponse = gptService.generateText(prompt);
+			System.out.println("response: " + gptResponse);  // 🔍 GPT 응답 확인
 			if (gptResponse == null || gptResponse.isEmpty()) {
-				throw new Exception("GPT service returned an invalid or empty response.");
+				throw new Exception("GPT 서비스에서 응답이 비어 있습니다.");
 			}
 		} catch (Exception e) {
-			System.err.println("❌ [에러] GPT 응답 오류: " + e.getMessage());
+			System.err.println("[ERROR]: " + e.getMessage());
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-				.body(new LlmResponse("failed_to_fetch_gpt_response", "❌ AI 응답을 가져오는 중 오류가 발생했습니다."));
+				.body(new LlmResponse("failed_to_get_gpt_response", "failed_to_get_gpt_response"));
 		}
 
 		return ResponseEntity.ok(new LlmResponse("llm_success", gptResponse));

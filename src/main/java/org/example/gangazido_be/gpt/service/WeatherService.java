@@ -9,11 +9,11 @@ import org.json.JSONObject;
 @Service
 public class WeatherService {
 
-	@Value("${weather.api.key}") // application.yml에서 API 키 가져오기
+	@Value("${weather.api.key}") // application.yml에서 OpenWeather API 키 가져오기
 	private String apiKey;
 
 	private static final String WEATHER_API_URL = "https://api.openweathermap.org/data/2.5/weather";
-	private static final String AIR_POLLUTION_API_URL = "https://api.openweathermap.org/data/2.5/air_pollution";
+	private static final String AIR_POLLUTION_API_URL = "https://api.openweathermap.org/data/2.5/air_pollution"; // ✅ OpenWeather 공기질 API 사용
 
 	public String getWeather(double latitude, double longitude) {
 		if (apiKey == null || apiKey.isEmpty()) {
@@ -23,12 +23,12 @@ public class WeatherService {
 		try {
 			// ✅ 날씨 및 대기질 정보 가져오기
 			JSONObject weatherJson = fetchWeatherData(latitude, longitude);
-			JSONObject airQualityJson = fetchAirPollutionData(latitude, longitude);
+			JSONObject airQualityJson = fetchAirPollutionData(latitude, longitude); // ✅ OpenWeather API로 대기질 정보 가져오기
 
 			// ✅ JSON 형태로 응답 반환
 			JSONObject responseJson = new JSONObject();
 			responseJson.put("weather", weatherJson);
-			responseJson.put("air_quality", airQualityJson);
+			responseJson.put("air_quality", airQualityJson); // ✅ OpenWeather API 사용
 
 			return responseJson.toString(2); // JSON 예쁘게 포맷
 		} catch (Exception e) {
@@ -60,16 +60,16 @@ public class WeatherService {
 		String url = UriComponentsBuilder.fromHttpUrl(AIR_POLLUTION_API_URL)
 			.queryParam("lat", latitude)
 			.queryParam("lon", longitude)
-			.queryParam("appid", apiKey) // 🔥 환경 변수에서 불러온 API 키 사용
+			.queryParam("appid", apiKey) // 🔥 OpenWeather API 키 사용
 			.toUriString();
 
 		RestTemplate restTemplate = new RestTemplate();
 		String response = restTemplate.getForObject(url, String.class);
 		JSONObject json = new JSONObject(response);
 
+		// ✅ OpenWeather API 응답에서 미세먼지 데이터 파싱
 		JSONObject pollution = json.getJSONArray("list").getJSONObject(0).getJSONObject("components");
 
-		// ✅ 미세먼지 데이터 파싱
 		JSONObject airQualityJson = new JSONObject();
 		airQualityJson.put("pm10", pollution.getDouble("pm10"));   // 미세먼지 (PM10)
 		airQualityJson.put("pm2_5", pollution.getDouble("pm2_5")); // 초미세먼지 (PM2.5)

@@ -5,9 +5,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.ResponseEntity;
-
 import jakarta.servlet.http.HttpServletRequest;
-
 import org.example.gangazido_be.llm.model.LlmRequest;
 import org.example.gangazido_be.llm.model.LlmResponse;
 import org.example.gangazido_be.llm.service.LlmService;
@@ -21,28 +19,46 @@ public class LlmController {
 		this.llmService = llmService;
 	}
 
-	// ✅ POST 요청: GPT 응답 생성
+	private String extractSessionId(HttpServletRequest request) {
+		String cookie = request.getHeader("Cookie");
+
+		if (cookie == null) {
+			System.err.println("[ERROR] required_session_id: 세션 쿠키가 존재하지 않습니다.");
+			return null;
+		}
+
+		String[] parts = cookie.split("connect.sid=");
+		if (parts.length < 2) {
+			System.err.println("[ERROR] invalid_session_id: 세션 쿠키 형식이 올바르지 않습니다.");
+			return null;
+		}
+
+		String sessionId = parts[1].split(";")[0].trim();
+
+		if (!sessionId.matches("\\d+")) { // 숫자가 아니면 예외 방지
+			System.err.println("[ERROR] invalid_session_id: 세션 ID가 숫자가 아닙니다.");
+			return null;
+		}
+
+		return sessionId;
+	}
+
+
 	@PostMapping("/chat")
 	public ResponseEntity<LlmResponse> generateChat(@RequestBody LlmRequest request,
 		HttpServletRequest httpServletRequest) {
-		String sessionId = extractSessionId(httpServletRequest);
-		if (sessionId == null) {
-			return ResponseEntity.badRequest()
-				.body(new LlmResponse("session_error", "❌ 세션 ID가 없습니다."));
+		ResponseEntity<LlmResponse> responseEntity =
+			llmService.generateChat(httpServletRequest, request.getLatitude(), request.getLongitude(), request.getMessage());
+
+		LlmResponse responseBody = responseEntity.getBody();
+
+		if (responseBody == null) {
+			return ResponseEntity.status(500)
+				.body(new LlmResponse("failed_to_fetch_gpt_response", "GPT 응답이 없습니다."));
 		}
 
-		// ❗ 여기서 GPT 응답을 가져와야 함
-		String gptResponse = llmService.generateChat(httpServletRequest, request.getLatitude(), request.getLongitude(), request.getMessage()).getBody().getMessage();
+		System.out.println("✅ [DEBUG] 최종 응답: " + responseBody.getResponse());
 
-		return ResponseEntity.ok(new LlmResponse("llm_success", gptResponse));
-	}
-
-	// ✅ 세션 ID 추출
-	private String extractSessionId(HttpServletRequest request) {
-		String cookie = request.getHeader("Cookie");
-		if (cookie == null || !cookie.contains("connect.sid=")) {
-			return null;
-		}
-		return cookie.split("connect.sid=")[1].split(";")[0];
+		return ResponseEntity.ok(responseBody);
 	}
 }
