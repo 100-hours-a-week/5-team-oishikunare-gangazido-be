@@ -12,7 +12,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class LoginRequestDTO {
+public class UserLoginRequestDTO {
 	@NotEmpty(message = "required_email")
 	@Email(message = "invalid_email_format")
 	@JsonProperty("user_email")

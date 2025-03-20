@@ -5,7 +5,7 @@ import java.util.regex.Pattern;
 /**
  * 비밀번호의 유효성을 검사하는 유틸리티 클래스입니다.
  */
-public class PasswordValidator {
+public class UserPasswordValidator {
 
 	private static final int MIN_LENGTH = 8;
 	private static final int MAX_LENGTH = 20;
@@ -16,7 +16,7 @@ public class PasswordValidator {
 	private static final Pattern HAS_SPECIAL_CHAR = Pattern.compile("[@$!%*?&]");
 
 	// 인스턴스 생성 방지
-	private PasswordValidator() {
+	private UserPasswordValidator() {
 		throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
 	}
 

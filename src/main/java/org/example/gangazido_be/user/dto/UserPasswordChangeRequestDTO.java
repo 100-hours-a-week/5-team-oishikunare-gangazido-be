@@ -11,7 +11,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class PasswordChangeRequestDTO {
+public class UserPasswordChangeRequestDTO {
 	@NotEmpty(message = "required_current_password")
 	@JsonProperty("current_password")
 	private String currentPassword;

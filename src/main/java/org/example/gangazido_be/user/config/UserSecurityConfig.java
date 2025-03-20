@@ -21,7 +21,7 @@ public class UserSecurityConfig {
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		http
 			.csrf(csrf -> csrf.disable())  // API 서버이므로 CSRF 비활성화
-			.authorizeHttpRequests(auth -> auth
+			.authorizeHttpRequests( auth -> auth
 					.requestMatchers("/**").permitAll()
 				// .requestMatchers("/v1/users/signup").permitAll()  // 회원가입 API는 모두 허용
 				// .requestMatchers("/v1/users/login").permitAll()   // 로그인 API는 모두 허용
