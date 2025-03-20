@@ -56,11 +56,7 @@ The following rules in the Naver coding convention cannot be checked by this con
 
         <!-- [list-uppercase-abbr] -->
         <module name="AbbreviationAsWordInName">
-            <property name="ignoreFinal" value="false"/>
-            <property name="allowedAbbreviationLength" value="1"/>
-            <message key="abbreviation.as.word"
-                     value="[list-uppercase-abbr] Abbreviation in name ''{0}'' must contain no more than {1}"/>
-            <property name="allowedAbbreviations" value="DAO,BO"/>
+            <property name="allowedAbbreviations" value="DTO,DAO,VO" />
         </module>
 
         <!-- [package-lowercase] -->
@@ -72,38 +68,31 @@ The following rules in the Naver coding convention cannot be checked by this con
 
 
         <!-- [class-interface-lower-camelcase] -->
-        <module name="TypeName">
-            <message key="name.invalidPattern"
-                     value="[class-interface-lower-camelcase] Type name ''{0}'' must match pattern ''{1}''."/>
-        </module>
+        <module name="TypeName"/>
 
         <!-- [method-lower-camelcase] -->
-        <module name="MethodName">
-            <property name="format" value="^[a-z][a-z0-9][a-zA-Z0-9_]*$"/>
-            <message key="name.invalidPattern"
-                     value="[method-lower-camelcase] Method name ''{0}'' must match pattern ''{1}''."/>
-        </module>
+        <module name="MethodName"/>
 
         <!-- [var-lower-camelcase] -->
-        <module name="MemberName">
-            <property name="format" value="^[a-z][a-zA-Z0-9][a-zA-Z0-9]*$"/>
-            <message key="name.invalidPattern"
-                     value="[var-lower-camelcase] Member name ''{0}'' must match pattern ''{1}''."/>
-        </module>
-        <module name="ParameterName">
-            <property name="format" value="^[a-z][a-zA-Z0-9][a-zA-Z0-9]*$"/>
-            <message key="name.invalidPattern"
-                     value="[var-lower-camelcase] Parameter name ''{0}'' must match pattern ''{1}''."/>
-        </module>
+        <!--    <module name="MemberName">-->
+        <!--        <property name="format" value="^[a-z][a-zA-Z0-9_]*$"/>-->
+        <!--        <message key="name.invalidPattern"-->
+        <!--                 value="[var-lower-camelcase] Member name ''{0}'' must match pattern ''{1}''."/>-->
+        <!--    </module>-->
+        <!--        <module name="ParameterName">-->
+        <!--            <property name="format" value="^[a-z][a-zA-Z0-9][a-zA-Z0-9]*$"/>-->
+        <!--            <message key="name.invalidPattern"-->
+        <!--                     value="[var-lower-camelcase] Parameter name ''{0}'' must match pattern ''{1}''."/>-->
+        <!--        </module>-->
 
-        <!-- [var-lower-camelcase], [avoid-1-char-var] -->
-        <module name="LocalVariableName">
-            <property name="tokens" value="VARIABLE_DEF"/>
-            <property name="format" value="^[a-z][a-zA-Z0-9][a-zA-Z0-9]*$"/>
-            <property name="allowOneCharVarInForLoop" value="true"/>
-            <message key="name.invalidPattern"
-                     value="[var-lower-camelcase][avoid-1-char-var] Local variable name ''{0}'' must match pattern ''{1}''."/>
-        </module>
+        <!--        &lt;!&ndash; [var-lower-camelcase], [avoid-1-char-var] &ndash;&gt;-->
+        <!--        <module name="LocalVariableName">-->
+        <!--            <property name="tokens" value="VARIABLE_DEF"/>-->
+        <!--            <property name="format" value="^[a-z][a-zA-Z0-9][a-zA-Z0-9]*$"/>-->
+        <!--            <property name="allowOneCharVarInForLoop" value="true"/>-->
+        <!--            <message key="name.invalidPattern"-->
+        <!--                     value="[var-lower-camelcase][avoid-1-char-var] Local variable name ''{0}'' must match pattern ''{1}''."/>-->
+        <!--        </module>-->
 
         <!-- End of Naming chapter -->
 
@@ -233,8 +222,6 @@ The following rules in the Naver coding convention cannot be checked by this con
         <!-- [1-line-package-import]-->
         <module name="NoLineWrap">
             <property name="tokens" value="PACKAGE_DEF, IMPORT"/>
-            <message key="no.line.wrap"
-                     value="[1-line-package-import] {0} statement should not be line-wrapped."/>
         </module>
 
         <!-- [block-indentation][indentation-after-line-wrapping] -->
@@ -281,12 +268,19 @@ The following rules in the Naver coding convention cannot be checked by this con
         </module>
         -->
 
+        <!-- [import-grouping] -->
+        <!--        <module name="ImportOrder">-->
+        <!--            <property name="ordered" value="false"/>  &lt;!&ndash; import 순서 검사 비활성화 &ndash;&gt;-->
+        <!--            <property name="separated" value="false"/>  &lt;!&ndash; import 그룹 사이의 공백 줄 검사 비활성화 &ndash;&gt;-->
+        <!--        </module>-->
+
         <!-- [blankline-between-methods] -->
-        <module name="EmptyLineSeparator">
-            <property name="tokens" value="METHOD_DEF"/>
-            <message key="empty.line.separator"
-                     value="[blankline-between-methods] ''{0}'' should be separated from previous statement."/>
-        </module>
+
+<!--        <module name="EmptyLineSeparator">-->
+<!--            <property name="tokens" value="METHOD_DEF"/>-->
+<!--            <message key="empty.line.separator"-->
+<!--                     value="[blankline-between-methods] ''{0}'' should be separated from previous statement."/>-->
+<!--        </module>-->
 
         <!-- End of Blank lines chapter -->
 
