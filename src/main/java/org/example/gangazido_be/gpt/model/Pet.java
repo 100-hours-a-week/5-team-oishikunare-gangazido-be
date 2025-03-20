@@ -23,10 +23,10 @@ public class Pet {
 	private LocalDateTime updatedAt;
 	private LocalDateTime deletedAt;
 
-	// ✅ Getter 추가
+
 	public int getUserId() {
 		return userId;
-	}  // 🔥 기본키 getter
+	}
 
 	public String getName() {
 		return name;

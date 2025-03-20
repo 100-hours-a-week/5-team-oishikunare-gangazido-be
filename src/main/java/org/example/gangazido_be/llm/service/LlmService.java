@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.json.JSONObject;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -45,28 +46,15 @@ public class LlmService {
 		this.petRepository = petRepository;
 	}
 
+
+	//세션 id 받아오기
 	@SuppressWarnings("checkstyle:OperatorWrap")
-	public ResponseEntity<LlmResponse> generateChat(HttpServletRequest request, double latitude, double longitude, String message) {
-
-		String sessionId = extractSessionId(request);
-		if (sessionId == null) {
-			return ResponseEntity.status(HttpStatus.NOT_FOUND)
-				.body(new LlmResponse("not_found_session", "null"));
-		}
-		int userId = 2; // 기본값
-		try {
-			userId = Integer.parseInt(sessionId);
-		} catch (NumberFormatException e) {
-			System.err.println("[ERROR] invalid_session: 올바르지 않은 세션 ID.");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-				.body(new LlmResponse("invalid_session", "null"));
-		}
-
+	public ResponseEntity<LlmResponse> generateChat(Integer sessionUserId, HttpServletRequest request, double latitude, double longitude, String message) {
 
 		// 🐶 반려견 정보 조회
 		List<Pet> pets;
 		try {
-			pets = petRepository.findByUserId(userId);
+			pets = petRepository.findByUserId(sessionUserId);
 			if (pets.isEmpty()) {
 				return ResponseEntity.status(HttpStatus.NOT_FOUND)
 					.body(new LlmResponse("not_found_pet", "반려견 정보를 찾을 수 없습니다."));
@@ -294,6 +282,8 @@ public class LlmService {
 				return breed; // 변환할 수 없는 경우 원래 값 유지
 		}
 	}
+
+
 
 }
 
