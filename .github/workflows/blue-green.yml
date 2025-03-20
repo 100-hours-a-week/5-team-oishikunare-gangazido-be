@@ -1,9 +1,9 @@
 on:
   push:
     branches:
-      - feature/map  # main 브랜치에 푸시될 때 실행
+      - main
 
-name: 🚀 Blue-Green Deployment (Auto-Switch)
+name: 🚀 Blue-Green Deployment (Auto-Sync Latest Version)
 
 jobs:
   deploy:
@@ -18,12 +18,6 @@ jobs:
           distribution: 'corretto'
           java-version: '17'
 
-      - name: Ensure JAVA_HOME is set correctly
-        run: echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
-
-      - name: Debug JAVA_HOME
-        run: echo $JAVA_HOME  # 현재 JAVA_HOME 경로 출력 (디버깅용)
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -32,13 +26,9 @@ jobs:
           aws-region: ap-northeast-2
 
       - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-        with:
-          mask-password: true
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        run: |
+          aws ecr get-login-password --region ap-northeast-2 | \
+          docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-northeast-2.amazonaws.com
 
       - name: Determine Active Environment
         id: active_env
@@ -62,18 +52,19 @@ jobs:
             echo "OLD_ASG=gangazido-prod-green" >> $GITHUB_ENV
           fi
 
-      - name: Build Spring Boot Application
+      - name: Scale Up Active ASG (${{ env.OLD_ASG }})
         run: |
-          JAVA_HOME=/opt/hostedtoolcache/Java_Corretto_jdk/17.0.14-7.1/x64 ./gradlew bootJar  # 올바른 JAVA_HOME 사용
+          echo "🔄 Scaling up ${{ env.OLD_ASG }} for handling traffic..."
+          aws autoscaling update-auto-scaling-group \
+            --auto-scaling-group-name ${{ env.OLD_ASG }} \
+            --desired-capacity 4 \
+            --min-size 4 \
+            --max-size 6
 
       - name: Build and Push Docker Image
-        env:
-          ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-northeast-2.amazonaws.com
-          ECR_REPOSITORY: gangazido-backend
         run: |
-          DEPLOY_ENV_LOWER=$(echo "${DEPLOY_ENV}" | tr '[:upper:]' '[:lower:]')
-          docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-northeast-2.amazonaws.com/gangazido-backend:$DEPLOY_ENV_LOWER .
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-northeast-2.amazonaws.com/gangazido-backend:$DEPLOY_ENV_LOWER
+          docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-northeast-2.amazonaws.com/gangazido-backend:latest .
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-northeast-2.amazonaws.com/gangazido-backend:latest
 
       - name: Update New Auto Scaling Group (${{ env.NEW_ASG }})
         run: |
@@ -81,17 +72,25 @@ jobs:
 
       - name: Wait for New ASG to be Healthy
         run: |
-          sleep 120  # 인스턴스 헬스체크 대기
+          sleep 180  # 인스턴스 헬스체크 대기
 
       - name: Switch ALB to New Target Group (${{ env.NEW_TARGET_GROUP }})
         run: |
           aws elbv2 modify-listener --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
             --default-actions Type=forward,TargetGroupArn=${{ env.NEW_TARGET_GROUP }}
 
-      - name: Terminate Old Auto Scaling Group (${{ env.OLD_ASG }})
+      # ✅ 배포 완료 후, OLD ASG도 최신 버전으로 업데이트
+      - name: Sync OLD ASG to Latest Version (${{ env.OLD_ASG }})
         run: |
-          sleep 30  # 안정성 확인을 위해 약간의 대기 시간 추가
+          echo "🔄 Syncing ${{ env.OLD_ASG }} with latest version..."
+          aws autoscaling start-instance-refresh --auto-scaling-group-name ${{ env.OLD_ASG }}
+
+      # ✅ 인스턴스 업데이트 후 OLD ASG를 다시 0으로 설정
+      - name: Restore OLD ASG to 0 (${{ env.OLD_ASG }})
+        run: |
+          sleep 60  # 안정성 확인을 위해 대기 시간 추가
           aws autoscaling update-auto-scaling-group \
             --auto-scaling-group-name ${{ env.OLD_ASG }} \
-            --desired-capacity 0 --min-size 0 --max-size 0
-#이게 맞나?
+            --desired-capacity 0 \
+            --min-size 0 \
+            --max-size 0
