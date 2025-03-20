@@ -86,8 +86,17 @@ jobs:
           ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-northeast-2.amazonaws.com
           ECR_REPOSITORY: gangazido-backend
         run: |
+          # 현재 배포 환경 확인 (비어있을 경우 기본값 설정)
           DEPLOY_ENV_LOWER=$(echo "${DEPLOY_ENV}" | tr '[:upper:]' '[:lower:]')
-          IMAGE_TAG=$DEPLOY_ENV_LOWER
+          IMAGE_TAG=${DEPLOY_ENV_LOWER:-"blue"}  # 기본값을 'blue'로 설정
+
+          echo "🔄 Checking existing ECR images..."
+          EXISTING_TAGS=$(aws ecr list-images --repository-name $ECR_REPOSITORY --region ap-northeast-2 --query "imageIds[*].imageTag" --output text)
+
+          if [[ ! " $EXISTING_TAGS " =~ " $IMAGE_TAG " ]]; then
+            echo "⚠️ 지정된 태그($IMAGE_TAG)가 존재하지 않음. 기본값 'blue'로 설정."
+            IMAGE_TAG="blue"
+          fi
 
           echo "🐳 Building Docker image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
