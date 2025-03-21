@@ -1,5 +1,6 @@
 //llmservice
 //String airQualityInfo;
+// ✅ LlmService: GPT 기반 반려견 산책 추천 및 대화 생성 서비스
 package org.example.gangazido_be.llm.service;
 
 import org.springframework.http.HttpStatus;
@@ -21,13 +22,18 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 
+
+
+// ✅ 이 클래스가 Spring의 Service Bean으로 등록됨
 @Service
 public class LlmService {
-	private final GptService gptService;
-	private final WeatherService weatherService;
-	private final PetRepository petRepository;
+	private final GptService gptService; // ✅ GPT API를 호출하는 서비스
+	private final WeatherService weatherService; // ✅ 날씨 데이터를 가져오는 서비스
+	private final PetRepository petRepository; // ✅ 반려견 정보를 DB에서 조회하는 Repository
+	// ✅ 캐시를 사용하여 GPT 응답을 저장하여 성능 최적화
 	private final Map<String, LlmResponse> responseCache = new HashMap<>();
 
+	// ✅ 견종별 특성을 정의 (추위에 대한 내성)
 	private static final Map<String, String> BREED_CHARACTERISTICS = new HashMap<>();
 	static {
 		BREED_CHARACTERISTICS.put("siberian husky", "추운 날씨에서 활동하기 적합한 견종입니다.");
@@ -40,13 +46,19 @@ public class LlmService {
 		BREED_CHARACTERISTICS.put("others", "견종별 특성을 고려하여 산책 여부를 결정하세요.");
 	}
 
+	// ✅ 생성자 주입 방식으로 의존성 주입 (Spring이 자동으로 관리)
 	public LlmService(GptService gptService, WeatherService weatherService, PetRepository petRepository) {
 		this.gptService = gptService;
 		this.weatherService = weatherService;
 		this.petRepository = petRepository;
 	}
 
-
+	/**
+	 * ✅ GPT 기반 반려견 산책 추천 API
+	 * - 세션에서 사용자 ID를 가져와 반려견 정보를 조회
+	 * - OpenWeather API를 호출하여 날씨 및 공기질 정보를 가져옴
+	 * - 반려견 정보 + 날씨 데이터를 조합하여 GPT에 질문을 보내 응답을 생성
+	 */
 	//세션 id 받아오기
 	@SuppressWarnings("checkstyle:OperatorWrap")
 	public ResponseEntity<LlmResponse> generateChat(Integer sessionUserId, HttpServletRequest request, double latitude, double longitude, String message) {
@@ -83,7 +95,7 @@ public class LlmService {
 				.body(new LlmResponse("failed_to_get_weather", "서버 오류로 인해 날씨 정보를 가져올 수 없습니다."));
 		}
 
-		// 🌫️ 미세먼지 정보 가져오기 (OpenWeather API 사용)
+		// ✅ 날씨 JSON 데이터 파싱
 		JSONObject weatherJson;
 		try {
 			weatherJson = new JSONObject(weatherInfo);
@@ -92,14 +104,13 @@ public class LlmService {
 				.body(new LlmResponse("invalid_weather_data", "internal_server_error"));
 		}
 
-		// ✅ OpenWeather API 기반 미세먼지 데이터 가져오기
+		// ✅ 미세먼지 데이터 추출
 		JSONObject airQualityJson = weatherJson.optJSONObject("air_quality");
 		if (airQualityJson == null) {
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
 				.body(new LlmResponse("invalid_air_quality_data", "internal_server_error"));
 		}
 
-		// ✅ OpenWeather API 응답 파싱 (PM10, PM2.5 값 가져오기)
 		JSONObject components = airQualityJson.optJSONObject("components");
 		double pm10 = (components != null) ? components.optDouble("pm10", -1.0) : -1.0;
 		double pm25 = (components != null) ? components.optDouble("pm2_5", -1.0) : -1.0;
@@ -191,7 +202,7 @@ public class LlmService {
 				weatherCondition, temperature, petBreed, petWeight
 			);
 		} else {
-			prompt = "제가 도와드릴 수 있는 질문이 아니라고 답해.";
+			prompt = "'제가 도와드릴 수 있는 질문이 아닙니다'라고 답해.";
 		}
 
 		System.out.println("📝 [DEBUG] 최종 GPT 프롬프트:\n" + prompt);
@@ -227,6 +238,7 @@ public class LlmService {
 		return parts[1].split(";")[0].trim();
 	}
 
+	// ✅ 영어 날씨명을 한글로 변환
 	private String convertWeatherToKorean(String weather) {
 		switch (weather.toLowerCase()) {
 			case "clear":
@@ -251,7 +263,7 @@ public class LlmService {
 				return weather; // 변환할 수 없는 경우 원래 값 유지
 		}
 	}
-
+	// ✅ 견종명을 한글로 변환
 	private String convertBreedToKorean(String breed) {
 		switch (breed.toLowerCase()) {
 			case "poodle":
