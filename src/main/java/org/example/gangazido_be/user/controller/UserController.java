@@ -288,7 +288,7 @@ public class UserController {
 		return UserApiResponse.success(UserApiMessages.SUCCESS, responseData);
 	}
 
-	// 프로필 이미지 업데이트 API
+	// 프로필 이미지 업데이트 API (안 쓰고있음)
 	@PostMapping(value = "/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseEntity<UserApiResponse<Map<String, Object>>> updateProfileImage(
 		@RequestPart("profileImage") MultipartFile profileImage,

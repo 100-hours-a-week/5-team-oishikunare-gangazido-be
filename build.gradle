@@ -3,43 +3,7 @@ plugins {
     id 'checkstyle'
     id 'org.springframework.boot' version '3.2.2'
     id 'io.spring.dependency-management' version '1.1.7'
-    id 'org.ec4j.editorconfig' version '0.1.0'
-    id 'pl.allegro.tech.build.axion-release' version '1.18.18'
-}
-
-scmVersion {
-    tag {
-        prefix = 'v'    // 태그 접두사 설정 (예: v1.0.3)
-    }
-
-    repository {
-        pushTagsOnly = true
-    }
-
-    ignoreUncommittedChanges = true
-
-    versionIncrementer 'incrementPatch'
-
-    checks {
-        aheadOfRemote = false
-        uncommittedChanges = false
-        snapshotDependencies = false
-    }
-
-    tasks.register('printVersion') {
-        doLast {
-            println project.scmVersion.version  // 정확한 버전 출력
-        }
-    }
-
-    hooks {
-        pre 'commit', { context ->
-            def version = context.currentVersion
-            println("🔍 Setting release commit message: chore(release): release version ${version}")
-            "git commit --amend -m 'chore(release): ${version}'".execute()
-        }
-        pre 'push'
-    }
+    id 'org.ec4j.editorconfig' version '0.0.3'
 }
 
 checkstyle {
@@ -117,4 +81,8 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+tasks.named('editorconfigCheck') {
+    enabled = false // 누가 넣음? (레<>제 병합 중 레에 생김)
 }
