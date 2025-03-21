@@ -56,19 +56,28 @@ jobs:
       - name: Determine Active Environment
         id: active_env
         run: |
-          CURRENT_TARGET_GROUP=$(aws elbv2 describe-listeners --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
-          --query 'Listeners[0].DefaultActions[0].TargetGroupArn' --output text)
+          # 현재 100% 트래픽을 받고 있는 타겟 그룹 ARN 가져오기
+          CURRENT_ACTIVE_TARGET_GROUP=$(aws elbv2 describe-listeners \
+            --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+            --query 'Listeners[0].DefaultActions[0].ForwardConfig.TargetGroups[?Weight==`100`].TargetGroupArn' \
+            --output text)
 
-          echo "현재 활성화된 Target Group: $CURRENT_TARGET_GROUP"
+          echo "현재 활성화된 Target Group ARN: $CURRENT_ACTIVE_TARGET_GROUP"
 
-          if [[ "$CURRENT_TARGET_GROUP" == "${{ secrets.BLUE_TARGET_GROUP_ARN }}" ]]; then
+          if [[ "$CURRENT_ACTIVE_TARGET_GROUP" == "${{ secrets.BLUE_TARGET_GROUP_ARN }}" ]]; then
             echo "BLUE가 활성화됨, GREEN에 배포"
             echo "DEPLOY_ENV=GREEN" >> $GITHUB_ENV
             echo "NEW_ASG=gangazido-prod-green" >> $GITHUB_ENV
             echo "NEW_TARGET_GROUP=${{ secrets.GREEN_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
             echo "OLD_ASG=gangazido-prod-blue" >> $GITHUB_ENV
-          else
+          elif [[ "$CURRENT_ACTIVE_TARGET_GROUP" == "${{ secrets.GREEN_TARGET_GROUP_ARN }}" ]]; then
             echo "GREEN이 활성화됨, BLUE에 배포"
+            echo "DEPLOY_ENV=BLUE" >> $GITHUB_ENV
+            echo "NEW_ASG=gangazido-prod-blue" >> $GITHUB_ENV
+            echo "NEW_TARGET_GROUP=${{ secrets.BLUE_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
+            echo "OLD_ASG=gangazido-prod-green" >> $GITHUB_ENV
+          else
+            echo "🚨 활성화된 Target Group을 판별할 수 없습니다. 기본값을 사용합니다 (BLUE)"
             echo "DEPLOY_ENV=BLUE" >> $GITHUB_ENV
             echo "NEW_ASG=gangazido-prod-blue" >> $GITHUB_ENV
             echo "NEW_TARGET_GROUP=${{ secrets.BLUE_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
@@ -80,6 +89,7 @@ jobs:
           echo "🚀 배포 대상 ASG: $NEW_ASG"
           echo "🎯 새로운 Target Group: $NEW_TARGET_GROUP"
           echo "🛑 기존 운영 ASG: $OLD_ASG"
+          echo "📌 배포할 이미지 태그: $DEPLOY_ENV"
 
       # 1. Green 환경 스케일 업 및 헬스체크 준비
       - name: Scale Up Temporary (Green) Auto Scaling Group (${{ env.NEW_ASG }})
@@ -134,19 +144,32 @@ jobs:
           done
 
       # 2. ALB를 Green으로 전환
-      - name: Switch ALB to Green Target Group
+      - name: Gradually Shift Traffic to New Environment
         run: |
-          echo "🔄 ALB를 Green Target Group($NEW_TARGET_GROUP)으로 전환 중..."
+          echo "🔄 ALB의 트래픽을 절반씩 나누어 새 환경으로 이동"
           aws elbv2 modify-listener --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
-            --default-actions Type=forward,TargetGroupArn=$NEW_TARGET_GROUP
+            --default-actions '[{"Type": "forward", "ForwardConfig": {"TargetGroups": [
+              {"TargetGroupArn": "'${{ secrets.BLUE_TARGET_GROUP_ARN }}'", "Weight": 50},
+              {"TargetGroupArn": "'$NEW_TARGET_GROUP'", "Weight": 50}
+            ]}}]'
 
-      # 3. Blue ASG 인스턴스를 모두 제거 (트래픽 차단)
-      - name: Scale Down Current (Blue) ASG (${{ env.OLD_ASG }})
+          sleep 30  # 트래픽 분배 대기
+
+      - name: Fully Shift Traffic to New Environment
         run: |
-          echo "🧹 Blue ASG($OLD_ASG) 인스턴스 수를 0으로 조정 중..."
-          aws autoscaling update-auto-scaling-group \
-            --auto-scaling-group-name ${{ env.OLD_ASG }} \
-            --desired-capacity 0 --min-size 0 --max-size 5
+          echo "🔄 ALB 트래픽을 완전히 새로운 환경($DEPLOY_ENV)으로 전환"
+          aws elbv2 modify-listener --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+            --default-actions '[{"Type": "forward", "ForwardConfig": {"TargetGroups": [
+              {"TargetGroupArn": "'$NEW_TARGET_GROUP'", "Weight": 100}
+            ]}}]'
+
+#      # 3. Blue ASG 인스턴스를 모두 제거 (트래픽 차단)
+#      - name: Scale Down Current (Blue) ASG (${{ env.OLD_ASG }})
+#        run: |
+#          echo "🧹 Blue ASG($OLD_ASG) 인스턴스 수를 0으로 조정 중..."
+#          aws autoscaling update-auto-scaling-group \
+#            --auto-scaling-group-name ${{ env.OLD_ASG }} \
+#            --desired-capacity 0 --min-size 0 --max-size 5
 
       # 4. Blue ASG에 새로운 코드 배포
       - name: Build and Push Docker Image to Blue
