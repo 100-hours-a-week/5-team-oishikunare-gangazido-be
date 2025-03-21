@@ -61,7 +61,7 @@ jobs:
           CURRENT_ACTIVE_TARGET_GROUP=$(aws elbv2 describe-rules \
           --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
           --region ap-northeast-2 \
-          --query 'Rules[*].Actions[0].ForwardConfig.TargetGroups[*] | [].[] | [?Weight==`1`].TargetGroupArn' \
+          --query 'Rules[*].Actions[0].ForwardConfig.TargetGroups[*][?Weight==`1`].TargetGroupArn' \
           --output text | head -n 1)
 
           echo "현재 활성화된 Target Group ARN: $CURRENT_ACTIVE_TARGET_GROUP"
