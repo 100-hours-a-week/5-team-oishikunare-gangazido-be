@@ -1,6 +1,6 @@
 package org.example.gangazido_be.user.util;
 
-public class ApiMessages {
+public class UserApiMessages {
 	// 성공 메시지
 	public static final String SUCCESS = "request_success";
 	public static final String CREATED = "resource_created";

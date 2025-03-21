@@ -10,5 +10,7 @@ public interface PetRepository extends JpaRepository<Pet, Long> {
 	Optional<Pet> findByUserId(Integer userId);
 
 	boolean existsByUserId(Integer userId);
+
+	boolean existsByUserIdAndDeletedAtIsNull(Integer userId);
 }
 

@@ -55,7 +55,7 @@ public class PetService {
 			.orElseThrow(() -> new PetException(HttpStatus.NOT_FOUND, PetExceptionType.NOT_FOUND_USER.getMessage()));
 
 		// 이미 해당 userId로 pet이 존재한다면 예외 처리
-		if (petRepository.existsByUserId(userId)) {
+		if (petRepository.existsByUserIdAndDeletedAtIsNull(userId)) {
 			throw new PetException(HttpStatus.CONFLICT, PetExceptionType.ALREADY_EXISTS_PET.getMessage());
 		}
 
@@ -134,7 +134,6 @@ public class PetService {
 		if (file == null || file.isEmpty()) {
 			return null;
 		}
-
 		String originalFileName = file.getOriginalFilename();
 		if (originalFileName == null) {
 			throw new RuntimeException("❌ 업로드된 파일 이름이 null입니다.");
