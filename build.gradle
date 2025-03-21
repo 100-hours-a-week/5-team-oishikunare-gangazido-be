@@ -18,6 +18,7 @@ compileTestJava.options.encoding = 'UTF-8'
 
 editorconfig {
     excludes = ['build']
+    excludes = ['**/node_modules/**'] // 레이첼 추가
 }
 
 check.dependsOn editorconfigCheck

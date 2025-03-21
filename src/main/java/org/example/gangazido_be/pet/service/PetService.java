@@ -131,7 +131,9 @@ public class PetService {
 	}
 
 	private String saveFile(MultipartFile file) {
-		if (file == null || file.isEmpty()) return null;
+		if (file == null || file.isEmpty()) {
+			return null;
+		}
 
 		String originalFileName = file.getOriginalFilename();
 		if (originalFileName == null) {
