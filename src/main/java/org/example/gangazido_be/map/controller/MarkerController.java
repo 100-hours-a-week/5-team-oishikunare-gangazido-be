@@ -134,5 +134,4 @@ public class MarkerController {
 
 		return ResponseEntity.ok(data);
 	}
-
 }
