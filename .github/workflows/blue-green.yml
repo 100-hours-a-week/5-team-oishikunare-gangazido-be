@@ -103,7 +103,7 @@ jobs:
 
       - name: Wait Until Green ASG is Healthy
         run: |
-          MAX_WAIT=600  # 최대 10분
+          MAX_WAIT=720  # 최대 12분
           INTERVAL=10
           ELAPSED=0
 
