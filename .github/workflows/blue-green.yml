@@ -192,35 +192,38 @@ jobs:
 
           # 최신 트래픽 정보를 가져와 JSON 형식으로 확인
           RAW_AWS_RESPONSE=$(aws elbv2 describe-rules \
-          --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
-          --query 'Rules[?Conditions[?Field==`host-header`]].Actions[0].ForwardConfig.TargetGroups' \
-          --output json)
+            --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+            --query 'Rules[?Conditions[?Field==`host-header`]].Actions[0].ForwardConfig.TargetGroups' \
+            --output json)
 
           echo "🔍 [DEBUG] AWS CLI 응답(JSON):"
           echo "$RAW_AWS_RESPONSE"
 
-          # Weight 값이 가장 높은 Target Group ARN 가져오기
-          CURRENT_ACTIVE_TARGET_GROUP=$(echo "$RAW_AWS_RESPONSE" | jq -r '[.[][] | max_by(.Weight)].TargetGroupArn')
+          # Weight 값이 가장 높은 Target Group ARN 가져오기 (jq 사용)
+          CURRENT_ACTIVE_TARGET_GROUP=$(echo "$RAW_AWS_RESPONSE" | jq -r '[.[][] | max_by(.Weight)] | .[0].TargetGroupArn')
+
+          # jq 없이 처리하는 방법 (AWS 환경에서 사용 가능)
+          # CURRENT_ACTIVE_TARGET_GROUP=$(echo "$RAW_AWS_RESPONSE" | grep -B1 '"Weight": 1' | grep 'TargetGroupArn' | awk -F '"' '{print $4}')
 
           echo "🎯 현재 활성화된 Target Group ARN: $CURRENT_ACTIVE_TARGET_GROUP"
 
           # 값이 비어 있는 경우 오류 발생
           if [[ -z "$CURRENT_ACTIVE_TARGET_GROUP" ]]; then
-          echo "🚨 오류: CURRENT_ACTIVE_TARGET_GROUP이 비어 있습니다. 트래픽을 변경할 수 없습니다."
-          exit 1
+            echo "🚨 오류: CURRENT_ACTIVE_TARGET_GROUP이 비어 있습니다. 트래픽을 변경할 수 없습니다."
+            exit 1
           fi
 
           # NEW_TARGET_GROUP이 이미 100% 트래픽을 받고 있으면 변경하지 않음
           if [[ "$CURRENT_ACTIVE_TARGET_GROUP" == "$NEW_TARGET_GROUP" ]]; then
-          echo "⚠️ 이미 $NEW_TARGET_GROUP이 100% 트래픽을 받고 있습니다. 변경하지 않습니다."
+            echo "⚠️ 이미 $NEW_TARGET_GROUP이 100% 트래픽을 받고 있습니다. 변경하지 않습니다."
           else
-          echo "🚀 ALB 트래픽을 완전히 $NEW_TARGET_GROUP으로 이동 중..."
-          aws elbv2 modify-listener --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
-           --default-actions '[{"Type": "forward", "ForwardConfig": {"TargetGroups": [
-             {"TargetGroupArn": "'$NEW_TARGET_GROUP'", "Weight": 100}
-           ]}}]' || { echo "🚨 [ERROR] 최종 트래픽 변경 실패: modify-listener 실행 중 오류 발생"; exit 1; }
+            echo "🚀 ALB 트래픽을 완전히 $NEW_TARGET_GROUP으로 이동 중..."
+            aws elbv2 modify-listener --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+              --default-actions '[{"Type": "forward", "ForwardConfig": {"TargetGroups": [
+                {"TargetGroupArn": "'$NEW_TARGET_GROUP'", "Weight": 100}
+              ]}}]' || { echo "🚨 [ERROR] 최종 트래픽 변경 실패: modify-listener 실행 중 오류 발생"; exit 1; }
 
-          echo "✅ 트래픽이 완전히 새로운 환경($DEPLOY_ENV)으로 이동했습니다."
+            echo "✅ 트래픽이 완전히 새로운 환경($DEPLOY_ENV)으로 이동했습니다."
           fi
 
 #      # 3. Blue ASG 인스턴스를 모두 제거 (트래픽 차단)
