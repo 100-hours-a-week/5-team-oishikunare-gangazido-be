@@ -13,7 +13,7 @@ import org.springframework.http.ResponseEntity; // ✅ 응답 객체
 import jakarta.servlet.http.HttpServletRequest; // ✅ 클라이언트 요청 정보
 import jakarta.servlet.http.HttpSession; // ✅ 세션 접근을 위한 객체
 import org.example.gangazido_be.llm.model.LlmRequest; // ✅ 클라이언트에서 오는 요청 데이터
-import org.example.gangazido_be.llm.model.LlmResponse;// ✅ 응답 데이터 포맷
+import org.example.gangazido_be.llm.model.LlmResponse; // ✅ 응답 데이터 포맷
 import org.example.gangazido_be.llm.service.LlmService; // ✅ GPT 호출 로직이 있는 서비스
 
 
@@ -27,10 +27,9 @@ public class LlmController {
 		this.llmService = llmService;
 	}
 
-	@PostMapping("/chat")
+	@PostMapping("")
 	public ResponseEntity<LlmResponse> generateChat(@RequestBody LlmRequest request,
-		HttpServletRequest httpServletRequest, HttpSession session
-		) {
+		HttpServletRequest httpServletRequest, HttpSession session) {
 
 		// 세션에서 "user" 객체 가져오기
 		User user = (User) session.getAttribute("user");

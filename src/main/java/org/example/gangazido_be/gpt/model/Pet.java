@@ -13,9 +13,9 @@ public class Pet {
 	@Column(name = "user_id") // ✅ DB 테이블에서 user_id 컬럼과 매핑됨
 	private int userId;
 
-	private String name; // ✅ 반려동물 이름
-	private String profileImage; // ✅ 반려동물 프로필 이미지 URL 또는 경로
-	private int age; // ✅ 반려동물 나이
+	private String name; // 반려동물 이름
+	private String profileImage; //  반려동물 프로필 이미지 URL 또는 경로
+	private int age; //  반려동물 나이
 	private boolean gender;
 	private String breed;
 	private float weight;
@@ -24,7 +24,7 @@ public class Pet {
 	private LocalDateTime updatedAt;
 	private LocalDateTime deletedAt;
 
-	// ✅ Getter 메서드 (필드 값을 외부에서 조회 가능하도록 제공)
+	//  Getter 메서드 (필드 값을 외부에서 조회 가능하도록 제공)
 	public int getUserId() {
 		return userId;
 	}

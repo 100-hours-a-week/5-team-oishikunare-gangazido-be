@@ -103,6 +103,7 @@ public class LlmService {
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
 				.body(new LlmResponse("invalid_weather_data", "internal_server_error"));
 		}
+		//JSONObject json = new JSONObject(response);
 
 		// ✅ 미세먼지 데이터 추출
 		JSONObject airQualityJson = weatherJson.optJSONObject("air_quality");

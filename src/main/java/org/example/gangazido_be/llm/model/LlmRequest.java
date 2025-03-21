@@ -7,7 +7,7 @@ public class LlmRequest {
 
 	//public LlmRequest() {}  // 기본 생성자
 
-	public LlmRequest(double latitude, double longitude, String message) {// ✅ 모든 필드를 초기화하는 생성자
+	public LlmRequest(double latitude, double longitude, String message) { // ✅ 모든 필드를 초기화하는 생성자
 		this.latitude = latitude;
 		this.longitude = longitude;
 		this.message = message;

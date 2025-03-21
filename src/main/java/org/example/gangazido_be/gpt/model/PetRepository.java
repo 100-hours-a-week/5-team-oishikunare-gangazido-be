@@ -13,3 +13,4 @@ public interface PetRepository extends JpaRepository<Pet, Integer> {
 	List<Pet> findByUserId(int userId); // 사용자 id로 반려동물 리스트를 가져오는 커스텀 쿼리 메서드
 }
 
+
