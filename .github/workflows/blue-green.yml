@@ -1,7 +1,7 @@
 on:
   push:
     branches:
-      - feature/map  # main 브랜치에 푸시될 때 실행
+      - feature/map
 
 name: 🚀 Blue-Green Deployment (Stable)
 
@@ -59,73 +59,80 @@ jobs:
           CURRENT_TARGET_GROUP=$(aws elbv2 describe-listeners --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
           --query 'Listeners[0].DefaultActions[0].TargetGroupArn' --output text)
 
-          echo "Current Target Group: $CURRENT_TARGET_GROUP"
+          echo "현재 활성화된 Target Group: $CURRENT_TARGET_GROUP"
 
           if [[ "$CURRENT_TARGET_GROUP" == "${{ secrets.BLUE_TARGET_GROUP_ARN }}" ]]; then
-            echo "BLUE is active, switching to GREEN"
+            echo "BLUE가 활성화됨, GREEN에 배포"
             echo "DEPLOY_ENV=GREEN" >> $GITHUB_ENV
             echo "NEW_ASG=gangazido-prod-green" >> $GITHUB_ENV
+            echo "NEW_TARGET_GROUP=${{ secrets.GREEN_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
+            echo "OLD_ASG=gangazido-prod-blue" >> $GITHUB_ENV
           else
-            echo "GREEN is active, switching to BLUE"
+            echo "GREEN이 활성화됨, BLUE에 배포"
             echo "DEPLOY_ENV=BLUE" >> $GITHUB_ENV
             echo "NEW_ASG=gangazido-prod-blue" >> $GITHUB_ENV
+            echo "NEW_TARGET_GROUP=${{ secrets.BLUE_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
+            echo "OLD_ASG=gangazido-prod-green" >> $GITHUB_ENV
           fi
 
-      - name: Debug NEW_ASG Variable
+      - name: Debug Deployment Variables
         run: |
-          echo "🚀 ASG 전환 대상: $NEW_ASG"
-
-          if [[ -z "$NEW_ASG" ]]; then
-            echo "🚨 NEW_ASG 값이 비어 있습니다! 배포를 중단합니다."
-            exit 1
-          fi
-
-      - name: Update New Auto Scaling Group (${{ env.NEW_ASG }})
-        run: |
-          aws autoscaling start-instance-refresh --auto-scaling-group-name ${{ env.NEW_ASG }}
-
-      - name: Verify DEPLOY_ENV Variable
-        run: |
-          if [[ -z "$DEPLOY_ENV" ]]; then
-            echo "⚠️ DEPLOY_ENV 변수가 설정되지 않음. 기본값 'blue' 사용"
-            echo "DEPLOY_ENV=blue" >> $GITHUB_ENV
-          fi
+          echo "🚀 배포 대상 ASG: $NEW_ASG"
+          echo "🎯 새로운 Target Group: $NEW_TARGET_GROUP"
+          echo "🛑 기존 운영 ASG: $OLD_ASG"
 
       - name: Build and Push Docker Image
         env:
           ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-northeast-2.amazonaws.com
           ECR_REPOSITORY: gangazido-backend
         run: |
-          DEPLOY_ENV_LOWER=$(echo "${DEPLOY_ENV}" | tr '[:upper:]' '[:lower:]')
-          IMAGE_TAG=$DEPLOY_ENV_LOWER
+          IMAGE_TAG=$(echo "${DEPLOY_ENV}" | tr '[:upper:]' '[:lower:]')
 
           echo "🐳 Building Docker image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
-          # 태그가 비어 있는 경우 방지
           if [[ -z "$IMAGE_TAG" ]]; then
             echo "🚨 IMAGE_TAG 값이 비어 있습니다!!!"
             exit 1
           fi
 
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-
-          echo "📤 Pushing Docker image..."
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-      - name: Update New Auto Scaling Group (${{ env.NEW_ASG }})
+      - name: Start New ASG Instance Refresh
         run: |
-          aws autoscaling start-instance-refresh --auto-scaling-group-name ${{ env.NEW_ASG }}
+          STATUS=$(aws autoscaling describe-instance-refreshes --auto-scaling-group-name $NEW_ASG \
+          --query 'InstanceRefreshes[0].Status' --output text 2>/dev/null || echo "None")
+
+          if [[ "$STATUS" == "InProgress" ]]; then
+            echo "🚨 현재 ASG($NEW_ASG)의 인스턴스 리프레시가 이미 진행 중입니다. 대기합니다."
+            exit 0
+          fi
+
+          echo "🔄 새로운 ASG($NEW_ASG) 인스턴스 리프레시 시작"
+          aws autoscaling start-instance-refresh --auto-scaling-group-name $NEW_ASG
 
       - name: Wait for New ASG to be Healthy
         run: |
-          sleep 60  # 인스턴스 헬스체크 대기
+          echo "⏳ 새로운 ASG가 헬스체크를 통과할 때까지 대기..."
+          sleep 60
 
-      - name: Switch ALB to New Target Group (${{ env.NEW_TARGET_GROUP }})
+      - name: Verify New ASG Instances
         run: |
-          aws elbv2 modify-listener --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
-            --default-actions Type=forward,TargetGroupArn=${{ env.NEW_TARGET_GROUP }}
+          STATUS=$(aws autoscaling describe-instance-refreshes --auto-scaling-group-name $NEW_ASG \
+          --query 'InstanceRefreshes[0].Status' --output text 2>/dev/null || echo "None")
 
-      - name: Health Check after Deployment
+          if [[ "$STATUS" != "Successful" ]]; then
+            echo "🚨 새로운 ASG($NEW_ASG)의 헬스체크가 완료되지 않았습니다!"
+            exit 1
+          fi
+
+      - name: Switch ALB to New Target Group
+        run: |
+          echo "🔄 ALB를 새로운 Target Group($NEW_TARGET_GROUP)으로 변경 중..."
+          aws elbv2 modify-listener --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+            --default-actions Type=forward,TargetGroupArn=$NEW_TARGET_GROUP
+
+      - name: Verify New ALB Health
         run: |
           ALB_URL="http://gangazido-alb-2142561859.ap-northeast-2.elb.amazonaws.com"
 
@@ -137,20 +144,14 @@ jobs:
               exit 0
             fi
 
-            echo "⏳ 헬스 체크 대기 중... ($i/10)"
+            echo "⏳ ALB 헬스 체크 중... ($i/10)"
             sleep 3
           done
 
           echo "🚨 배포 실패: 정상 응답 없음"
           exit 1
 
-      - name: Terminate Old Auto Scaling Group (${{ env.OLD_ASG }})
+      - name: Cleanup Old Auto Scaling Group
         run: |
-          aws autoscaling update-auto-scaling-group \
-            --auto-scaling-group-name ${{ env.OLD_ASG }} \
-            --desired-capacity 2 --min-size 2 --max-size 5
-
-      - name: Refresh Old Auto Scaling Group (${{ env.OLD_ASG }})
-        run: |
-          aws autoscaling start-instance-refresh --auto-scaling-group-name ${{ env.OLD_ASG }}
-# 작업 이후 다시 진행
+          echo "🛑 기존 ASG($OLD_ASG) 인스턴스 리프레시 시작"
+          aws autoscaling start-instance-refresh --auto-scaling-group-name $OLD_ASG
