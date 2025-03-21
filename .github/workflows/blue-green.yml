@@ -145,8 +145,16 @@ jobs:
           done
 
       # 2. ALB를 Green으로 전환
+      # 2. ALB를 Green으로 전환
       - name: Gradually Shift Traffic to New Environment
         run: |
+          if [[ -z "$CURRENT_ACTIVE_TARGET_GROUP" || -z "$NEW_TARGET_GROUP" ]]; then
+            echo "🚨 오류: CURRENT_ACTIVE_TARGET_GROUP 또는 NEW_TARGET_GROUP 값이 비어 있습니다."
+            echo "🔍 CURRENT_ACTIVE_TARGET_GROUP: $CURRENT_ACTIVE_TARGET_GROUP"
+            echo "🔍 NEW_TARGET_GROUP: $NEW_TARGET_GROUP"
+            exit 1
+          fi
+
           if [[ "$CURRENT_ACTIVE_TARGET_GROUP" == "$NEW_TARGET_GROUP" ]]; then
             echo "⚠️ 새로운 Target Group이 이미 운영 중입니다. 트래픽 변경을 건너뜁니다."
           else
@@ -161,19 +169,25 @@ jobs:
       - name: Fully Shift Traffic to New Environment
         run: |
           echo "🔄 ALB 트래픽을 완전히 새로운 환경($DEPLOY_ENV)으로 전환"
+
           CURRENT_ACTIVE_TARGET_GROUP=$(aws elbv2 describe-rules \
-            --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
-            --query 'Rules[?Conditions[?Field==`host-header`]].Actions[0].ForwardConfig.TargetGroups | sort_by(@, &Weight)[-1].TargetGroupArn' \
-            --output text)
+          --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+          --query 'Rules[?Conditions[?Field==`host-header`]].Actions[0].ForwardConfig.TargetGroups | sort_by(@, &Weight)[-1].TargetGroupArn' \
+          --output text)
+
+          if [[ -z "$CURRENT_ACTIVE_TARGET_GROUP" ]]; then
+          echo "🚨 오류: CURRENT_ACTIVE_TARGET_GROUP이 비어 있습니다. 트래픽을 변경할 수 없습니다."
+          exit 1
+          fi
 
           if [[ "$CURRENT_ACTIVE_TARGET_GROUP" == "$NEW_TARGET_GROUP" ]]; then
-            echo "⚠️ 이미 $NEW_TARGET_GROUP이 100% 트래픽을 받고 있습니다. 변경하지 않습니다."
+          echo "⚠️ 이미 $NEW_TARGET_GROUP이 100% 트래픽을 받고 있습니다. 변경하지 않습니다."
           else
-            aws elbv2 modify-listener --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
-              --default-actions '[{"Type": "forward", "ForwardConfig": {"TargetGroups": [
-                {"TargetGroupArn": "'$NEW_TARGET_GROUP'", "Weight": 100}
-              ]}}]'
-            echo "✅ 트래픽이 완전히 새로운 환경($DEPLOY_ENV)으로 이동했습니다."
+          aws elbv2 modify-listener --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+           --default-actions '[{"Type": "forward", "ForwardConfig": {"TargetGroups": [
+             {"TargetGroupArn": "'$NEW_TARGET_GROUP'", "Weight": 100}
+           ]}}]'
+          echo "✅ 트래픽이 완전히 새로운 환경($DEPLOY_ENV)으로 이동했습니다."
           fi
 
 #      # 3. Blue ASG 인스턴스를 모두 제거 (트래픽 차단)
