@@ -56,10 +56,12 @@ jobs:
       - name: Determine Active Environment
         id: active_env
         run: |
+          echo "🔍 현재 트래픽을 받고 있는 Target Group을 확인 중..."
+
           CURRENT_ACTIVE_TARGET_GROUP=$(aws elbv2 describe-rules \
           --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
           --region ap-northeast-2 \
-          --query 'Rules[?Conditions[?Field==`host-header`]].Actions[0].ForwardConfig.TargetGroups[?Weight==`1`].TargetGroupArn' \
+          --query "Rules[].Actions[].ForwardConfig.TargetGroups[?Weight==\`1\`].TargetGroupArn" \
           --output text)
 
           echo "현재 활성화된 Target Group ARN: $CURRENT_ACTIVE_TARGET_GROUP"
