@@ -155,11 +155,7 @@ public class UserController {
 			// 세션 및 쿠키 설정
 			setSessionAndCookie(user, session, response);
 
-			// 사용자 ID를 암호화하여 응답
-			String encryptedId = idEncryptionUtil.encrypt(user.getId());
-
 			Map<String, Object> responseData = new HashMap<>();
-			responseData.put("userId", encryptedId);
 			responseData.put("nickname", user.getNickname());
 
 			return UserApiResponse.success(UserApiMessages.LOGIN_SUCCESS, responseData);
