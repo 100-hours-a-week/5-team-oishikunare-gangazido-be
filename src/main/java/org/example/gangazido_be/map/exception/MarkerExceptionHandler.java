@@ -11,7 +11,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-@RestControllerAdvice // 모든 컨트롤러에서 발생하는 예외를 처리할 수 있도록 설정
+@RestControllerAdvice("org.example.gangazido_be.map") // 모든 컨트롤러에서 발생하는 예외를 처리할 수 있도록 설정
 public class MarkerExceptionHandler {
 
 	// DTO @Valid 검증 실패 시 (400 Bad Request)
