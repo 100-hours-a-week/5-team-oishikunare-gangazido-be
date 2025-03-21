@@ -191,7 +191,7 @@ public class UserController {
 		return ApiResponse.success(ApiMessages.SUCCESS, responseData);
 	}
 
-	// 프로필 이미지 업데이트 API
+	// 프로필 이미지 업데이트 API (안 쓰고있음)
 	@PostMapping(value = "/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseEntity<ApiResponse<Map<String, Object>>> updateProfileImage(
 		@RequestPart("profileImage") MultipartFile profileImage,
@@ -340,7 +340,6 @@ public class UserController {
 	private void setSessionAndCookie(User user, HttpSession session, HttpServletResponse response) {
 		// 세션에 사용자 정보 저장
 		session.setAttribute("user", user);
-		System.out.println("sadasd");
 		session.setMaxInactiveInterval(3600); // 세션 유효시간 1시간
 
 		// 쿠키 설정 (세션 ID 저장)

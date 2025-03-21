@@ -7,8 +7,8 @@ import java.util.Optional;
 
 public interface PetRepository extends JpaRepository<Pet, Long> {
 	// @Where가 적용되어 있으므로, 삭제되지 않은 데이터만 조회됨
-	Optional<Pet> findByUserId(Long userId);
+	Optional<Pet> findByUserId(Integer userId);
 
-	boolean existsByUserId(Long userId);
+	boolean existsByUserId(Integer userId);
 }
 

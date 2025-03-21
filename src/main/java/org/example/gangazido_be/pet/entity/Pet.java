@@ -3,7 +3,8 @@ package org.example.gangazido_be.pet.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import org.hibernate.annotations.Where;
+import org.example.gangazido_be.user.entity.User;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
 
@@ -14,14 +15,14 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Where(clause = "deleted_at IS NULL")
+@SQLRestriction("deleted_at IS NULL")
 public class Pet {
 	@Id
-	private Long userId; // PK이자 FK로 사용
+	private Integer userId; // PK
 
-	@OneToOne
-	@MapsId
-	@JoinColumn(name = "user_id")
+	@OneToOne	// 한 명의 유저 - 하나의 반려견 정보
+	@MapsId		// userId 필드를 user 엔티티의 기본 키(PK)로 사용 ==  FK 역할
+	@JoinColumn(name = "user_id")	// FK
 	private User user;
 
 	@Column(nullable = false, length = 10)
@@ -54,11 +55,19 @@ public class Pet {
 		this.gender = gender;
 		this.breed = breed;
 		this.weight = weight;
+	}
+
+	@PrePersist
+	protected void onCreate() {
+		this.createdAt = LocalDateTime.now();
+	}
+
+	@PreUpdate
+	protected void onUpdate() {
 		this.updatedAt = LocalDateTime.now();
 	}
 
-	// 소프트 딜리트 처리
-	public void softDelete() {
+	public void onSoftDelete() {
 		this.deletedAt = LocalDateTime.now();
 	}
 
