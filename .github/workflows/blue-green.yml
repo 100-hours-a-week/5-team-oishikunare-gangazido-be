@@ -183,6 +183,7 @@ jobs:
 #          aws autoscaling update-auto-scaling-group \
 #            --auto-scaling-group-name ${{ env.OLD_ASG }} \
 #            --desired-capacity 0 --min-size 0 --max-size 5
+      #지운다?
 
       # 4. Blue ASG에 새로운 코드 배포
       - name: Build and Push Docker Image to Blue
