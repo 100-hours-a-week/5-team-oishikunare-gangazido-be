@@ -1,8 +1,8 @@
 // ✅ GPTService: OpenAI GPT API를 호출해서 텍스트를 생성하는 서비스 클래스
 package org.example.gangazido_be.gpt.service;
 
+import org.example.gangazido_be.pet.repository.PetRepository;
 import org.springframework.stereotype.Service;
-import org.example.gangazido_be.gpt.model.PetRepository; //반려동물 db관련 접근용 레포지토리
 import org.springframework.web.client.RestTemplate; // 외부 api호출을 위한 spring 클래스
 import org.springframework.http.*;
 
