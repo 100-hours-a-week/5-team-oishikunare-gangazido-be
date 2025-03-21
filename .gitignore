@@ -6,6 +6,8 @@ build/
 !**/src/test/**/build/
 node_modules/
 
+#####env
+.env
 ### STS ###
 .apt_generated
 .classpath

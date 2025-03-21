@@ -1,7 +1,8 @@
 #!/bin/sh
 
 echo '🔍 Running pre-commit checks...'
-./gradlew clean build -x test
+./gradlew clean build
+./gradlew editorconfigFormat
 
 if [ $? -ne 0 ]; then
   echo "❌ Pre-commit checks failed. Fix the errors before committing."
