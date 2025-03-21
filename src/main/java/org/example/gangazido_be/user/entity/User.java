@@ -2,6 +2,7 @@ package org.example.gangazido_be.user.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -49,5 +50,18 @@ public class User {
 	@PreUpdate
 	protected void onUpdate() {
 		updatedAt = LocalDateTime.now();
+	}
+
+	@Override
+	public String toString() {        // 제리 작성
+		return "User{" +
+			"id=" + id +
+			", email='" + email + '\'' +
+			", nickname='" + nickname + '\'' +
+			", profileImage='" + profileImage + '\'' +
+			", createdAt=" + createdAt +
+			", updatedAt=" + updatedAt +
+			", deletedAt=" + deletedAt +
+			'}';
 	}
 }

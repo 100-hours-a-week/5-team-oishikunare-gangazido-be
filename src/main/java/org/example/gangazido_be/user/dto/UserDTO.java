@@ -1,8 +1,10 @@
 package org.example.gangazido_be.user.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import jakarta.validation.constraints.*;
 import lombok.*;
+
 import org.springframework.web.multipart.MultipartFile;
 
 @Getter
