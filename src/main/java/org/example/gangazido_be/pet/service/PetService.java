@@ -131,8 +131,9 @@ public class PetService {
 	}
 
 	private String saveFile(MultipartFile file) {
-		if (file == null || file.isEmpty()) return null;
-
+		if (file == null || file.isEmpty()) {
+			return null;
+		}
 		String originalFileName = file.getOriginalFilename();
 		if (originalFileName == null) {
 			throw new RuntimeException("❌ 업로드된 파일 이름이 null입니다.");
