@@ -105,24 +105,6 @@ public class UserService {
 		return userRepository.findByNicknameAndDeletedAtIsNull(nickname).isPresent();
 	}
 
-	// 프로필 이미지 업데이트
-	@Transactional
-	public User updateProfileImage(Integer userId, MultipartFile newProfileImage) {
-		User user = userRepository.findByIdAndDeletedAtIsNull(userId)
-			.orElseThrow(() -> new RuntimeException("missing_user"));
-
-		// 기존 이미지가 있으면 삭제
-		if (user.getProfileImage() != null && !user.getProfileImage().isEmpty()) {
-			userFileService.deleteImage(user.getProfileImage());
-		}
-
-		// 새 이미지 저장
-		String newImage = userFileService.saveProfileImage(newProfileImage);
-		user.setProfileImage(newImage);
-
-		return userRepository.save(user);
-	}
-
 	@Transactional
 	public User updateUserInfo(Integer userId, String nickname, MultipartFile profileImage) {
 		User user = userRepository.findByIdAndDeletedAtIsNull(userId)
