@@ -56,22 +56,23 @@ jobs:
       - name: Determine Active Environment
         id: active_env
         run: |
-          # 현재 100% 트래픽을 받고 있는 타겟 그룹 ARN 가져오기
-          CURRENT_ACTIVE_TARGET_GROUP=$(aws elbv2 describe-listeners \
-            --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
-            --query 'Listeners[0].DefaultActions[0].ForwardConfig.TargetGroups[?Weight==`100`].TargetGroupArn' \
-            --output text)
+          # 현재 트래픽을 받고 있는 타겟 그룹 ARN 가져오기 (Weight=100인 그룹 찾기)
+          CURRENT_ACTIVE_TARGET_GROUP=$(aws elbv2 describe-rules \
+          --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+          --query 'Rules[?Conditions[?Field==`host-header`]].Actions[0].ForwardConfig.TargetGroups | sort_by(@, &Weight)[-1].TargetGroupArn' \
+          --output text)
 
           echo "현재 활성화된 Target Group ARN: $CURRENT_ACTIVE_TARGET_GROUP"
 
+          # 활성화된 Target Group을 확인하고, 반대쪽 환경을 배포 대상으로 설정
           if [[ "$CURRENT_ACTIVE_TARGET_GROUP" == "${{ secrets.BLUE_TARGET_GROUP_ARN }}" ]]; then
-            echo "BLUE가 활성화됨, GREEN에 배포"
+            echo "✅ BLUE가 활성화됨, GREEN에 배포"
             echo "DEPLOY_ENV=GREEN" >> $GITHUB_ENV
             echo "NEW_ASG=gangazido-prod-green" >> $GITHUB_ENV
             echo "NEW_TARGET_GROUP=${{ secrets.GREEN_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
             echo "OLD_ASG=gangazido-prod-blue" >> $GITHUB_ENV
           elif [[ "$CURRENT_ACTIVE_TARGET_GROUP" == "${{ secrets.GREEN_TARGET_GROUP_ARN }}" ]]; then
-            echo "GREEN이 활성화됨, BLUE에 배포"
+            echo "✅ GREEN이 활성화됨, BLUE에 배포"
             echo "DEPLOY_ENV=BLUE" >> $GITHUB_ENV
             echo "NEW_ASG=gangazido-prod-blue" >> $GITHUB_ENV
             echo "NEW_TARGET_GROUP=${{ secrets.BLUE_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
@@ -146,22 +147,34 @@ jobs:
       # 2. ALB를 Green으로 전환
       - name: Gradually Shift Traffic to New Environment
         run: |
-          echo "🔄 ALB의 트래픽을 절반씩 나누어 새 환경으로 이동"
-          aws elbv2 modify-listener --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
-            --default-actions '[{"Type": "forward", "ForwardConfig": {"TargetGroups": [
-              {"TargetGroupArn": "'${{ secrets.BLUE_TARGET_GROUP_ARN }}'", "Weight": 50},
-              {"TargetGroupArn": "'$NEW_TARGET_GROUP'", "Weight": 50}
-            ]}}]'
-
-          sleep 30  # 트래픽 분배 대기
+          if [[ "$CURRENT_ACTIVE_TARGET_GROUP" == "$NEW_TARGET_GROUP" ]]; then
+            echo "⚠️ 새로운 Target Group이 이미 운영 중입니다. 트래픽 변경을 건너뜁니다."
+          else
+            aws elbv2 modify-listener --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+              --default-actions '[{"Type": "forward", "ForwardConfig": {"TargetGroups": [
+                {"TargetGroupArn": "'$CURRENT_ACTIVE_TARGET_GROUP'", "Weight": 50},
+                {"TargetGroupArn": "'$NEW_TARGET_GROUP'", "Weight": 50}
+              ]}}]'
+            sleep 30  # 트래픽 분배 대기
+          fi
 
       - name: Fully Shift Traffic to New Environment
         run: |
           echo "🔄 ALB 트래픽을 완전히 새로운 환경($DEPLOY_ENV)으로 전환"
-          aws elbv2 modify-listener --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
-            --default-actions '[{"Type": "forward", "ForwardConfig": {"TargetGroups": [
-              {"TargetGroupArn": "'$NEW_TARGET_GROUP'", "Weight": 100}
-            ]}}]'
+          CURRENT_ACTIVE_TARGET_GROUP=$(aws elbv2 describe-rules \
+            --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+            --query 'Rules[?Conditions[?Field==`host-header`]].Actions[0].ForwardConfig.TargetGroups | sort_by(@, &Weight)[-1].TargetGroupArn' \
+            --output text)
+
+          if [[ "$CURRENT_ACTIVE_TARGET_GROUP" == "$NEW_TARGET_GROUP" ]]; then
+            echo "⚠️ 이미 $NEW_TARGET_GROUP이 100% 트래픽을 받고 있습니다. 변경하지 않습니다."
+          else
+            aws elbv2 modify-listener --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+              --default-actions '[{"Type": "forward", "ForwardConfig": {"TargetGroups": [
+                {"TargetGroupArn": "'$NEW_TARGET_GROUP'", "Weight": 100}
+              ]}}]'
+            echo "✅ 트래픽이 완전히 새로운 환경($DEPLOY_ENV)으로 이동했습니다."
+          fi
 
 #      # 3. Blue ASG 인스턴스를 모두 제거 (트래픽 차단)
 #      - name: Scale Down Current (Blue) ASG (${{ env.OLD_ASG }})
