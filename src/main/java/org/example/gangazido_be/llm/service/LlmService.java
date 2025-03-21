@@ -3,26 +3,23 @@
 // ✅ LlmService: GPT 기반 반려견 산책 추천 및 대화 생성 서비스
 package org.example.gangazido_be.llm.service;
 
+import org.example.gangazido_be.pet.repository.PetRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-import org.springframework.http.HttpStatus;
 import org.example.gangazido_be.llm.model.LlmResponse;
 import org.example.gangazido_be.gpt.service.GptService;
 import org.example.gangazido_be.gpt.service.WeatherService;
-import org.example.gangazido_be.gpt.model.Pet;
-import org.example.gangazido_be.gpt.model.PetRepository;
+import org.example.gangazido_be.pet.entity.Pet;
 import org.springframework.stereotype.Service;
 import org.json.JSONObject;
 
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
-
-
+import java.util.Optional;
 
 // ✅ 이 클래스가 Spring의 Service Bean으로 등록됨
 @Service
@@ -35,6 +32,7 @@ public class LlmService {
 
 	// ✅ 견종별 특성을 정의 (추위에 대한 내성)
 	private static final Map<String, String> BREED_CHARACTERISTICS = new HashMap<>();
+
 	static {
 		BREED_CHARACTERISTICS.put("siberian husky", "추운 날씨에서 활동하기 적합한 견종입니다.");
 		BREED_CHARACTERISTICS.put("golden retriever", "추위에 비교적 강하지만, 너무 추운 날씨에는 보호가 필요할 수 있습니다.");
@@ -61,10 +59,11 @@ public class LlmService {
 	 */
 	//세션 id 받아오기
 	@SuppressWarnings("checkstyle:OperatorWrap")
-	public ResponseEntity<LlmResponse> generateChat(Integer sessionUserId, HttpServletRequest request, double latitude, double longitude, String message) {
+	public ResponseEntity<LlmResponse> generateChat(Integer sessionUserId, HttpServletRequest request, double latitude,
+		double longitude, String message) {
 
 		// 🐶 반려견 정보 조회
-		List<Pet> pets;
+		Optional<Pet> pets;
 		try {
 			pets = petRepository.findByUserId(sessionUserId);
 			if (pets.isEmpty()) {
@@ -77,8 +76,7 @@ public class LlmService {
 				.body(new LlmResponse("failed_to_get_pet_info", "서버 오류로 인해 반려견 정보를 가져올 수 없습니다."));
 		}
 
-		Pet pet = pets.get(0);
-
+		Pet pet = pets.get();
 
 		// 🌤️ 날씨 정보 가져오기
 		String weatherInfo;
@@ -118,10 +116,10 @@ public class LlmService {
 
 		// ✅ 날씨 정보 파싱
 		JSONObject weatherData = weatherJson.optJSONObject("weather");
-		String weatherCondition = (weatherData != null && weatherData.has("condition")) ? convertWeatherToKorean(weatherData.getString("condition")) : "알 수 없음";
+		String weatherCondition = (weatherData != null && weatherData.has("condition")) ?
+			convertWeatherToKorean(weatherData.getString("condition")) : "알 수 없음";
 
 		double temperature = (weatherData != null) ? weatherData.optDouble("temperature", 0.0) : 0.0;
-
 
 		// ✅ 반려견 정보
 		String petName = pet.getName();
@@ -264,6 +262,7 @@ public class LlmService {
 				return weather; // 변환할 수 없는 경우 원래 값 유지
 		}
 	}
+
 	// ✅ 견종명을 한글로 변환
 	private String convertBreedToKorean(String breed) {
 		switch (breed.toLowerCase()) {
@@ -295,8 +294,6 @@ public class LlmService {
 				return breed; // 변환할 수 없는 경우 원래 값 유지
 		}
 	}
-
-
 
 }
 

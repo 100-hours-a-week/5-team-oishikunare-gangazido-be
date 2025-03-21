@@ -275,12 +275,11 @@ The following rules in the Naver coding convention cannot be checked by this con
         <!--        </module>-->
 
         <!-- [blankline-between-methods] -->
-
-<!--        <module name="EmptyLineSeparator">-->
-<!--            <property name="tokens" value="METHOD_DEF"/>-->
-<!--            <message key="empty.line.separator"-->
-<!--                     value="[blankline-between-methods] ''{0}'' should be separated from previous statement."/>-->
-<!--        </module>-->
+        <module name="EmptyLineSeparator">
+            <property name="tokens" value="METHOD_DEF"/>
+            <message key="empty.line.separator"
+                     value="[blankline-between-methods] ''{0}'' should be separated from previous statement."/>
+        </module>
 
         <!-- End of Blank lines chapter -->
 

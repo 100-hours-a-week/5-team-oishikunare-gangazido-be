@@ -7,41 +7,6 @@ plugins {
     id 'pl.allegro.tech.build.axion-release' version '1.18.18'
 }
 
-scmVersion {
-    tag {
-        prefix = 'v'    // 태그 접두사 설정 (예: v1.0.3)
-    }
-
-    repository {
-        pushTagsOnly = true
-    }
-
-    ignoreUncommittedChanges = true
-
-    versionIncrementer 'incrementPatch'
-
-    checks {
-        aheadOfRemote = false
-        uncommittedChanges = false
-        snapshotDependencies = false
-    }
-
-    tasks.register('printVersion') {
-        doLast {
-            println project.scmVersion.version  // 정확한 버전 출력
-        }
-    }
-
-    hooks {
-        pre 'commit', { context ->
-            def version = context.currentVersion
-            println("🔍 Setting release commit message: chore(release): release version ${version}")
-            "git commit --amend -m 'chore(release): ${version}'".execute()
-        }
-        pre 'push'
-    }
-}
-
 checkstyle {
     maxWarnings = 0
     configFile = file("${rootDir}/config/naver-checkstyle-rules.xml")
@@ -81,25 +46,49 @@ repositories {
 
 dependencies {
     annotationProcessor 'org.projectlombok:lombok:1.18.26'//여니
-    implementation 'io.github.cdimascio:dotenv-java:3.0.0' // ㅇㅕ니 추가
+    implementation 'io.github.cdimascio:dotenv-java:3.0.0' // 여니 추가
     implementation 'org.json:json:20210307'//여니 추가
+    implementation 'io.github.cdimascio:dotenv-java:2.2.0' // 여니추가 env
+
+    // Spring Boot 기본 의존성
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-web'
+
+    // 개발용 도구
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    // 테스트 관련 의존성
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-    runtimeOnly 'com.h2database:h2'
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
-    implementation 'org.mariadb.jdbc:mariadb-java-client:3.3.2'
-    // lombok 관련 의존성 추가
-    implementation 'org.projectlombok:lombok'
-    // Spring Security 관련 지원
-    implementation 'org.springframework.boot:spring-boot-starter-security'
-    // Spring Security 관련 테스트 지원
-    testImplementation 'org.springframework.security:spring-security-test'
-    // Argon2 관련 bouncycastle 라이브러리 의존성 추가
-    //implementation 'org.bouncycastle:bcpkix-jdk15on:8.20'
-    implementation 'org.bouncycastle:bcprov-jdk18on:1.77'
 
+    // MariaDB 드라이버
+    implementation 'org.mariadb.jdbc:mariadb-java-client:3.3.2'
+
+    // H2 데이터베이스 (테스트용)
+    runtimeOnly 'com.h2database:h2'
+
+    // Spring Security
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    testImplementation 'org.springframework.security:spring-security-test'
+
+    // OpenAPI(Swagger)
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
+
+    // Argon2 해싱 (암호화)
+    implementation 'org.bouncycastle:bcpkix-jdk15on:1.70'
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    //actuator 헬스 체크 적용 (서버, DB 체크)
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
 }
 
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+tasks.named('editorconfigCheck') {
+    enabled = false // 누가 넣음? (레<>제 병합 중 레에 생김)
+}

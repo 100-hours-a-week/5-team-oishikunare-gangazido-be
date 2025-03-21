@@ -39,5 +39,9 @@ out/
 ### VS Code ###
 .vscode/
 
-application.yml
+### DB ###
 application.properties
+application.yml
+
+.DS_Store
+.DS_Store

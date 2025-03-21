@@ -43,6 +43,12 @@ public class UserService {
 			throw new RuntimeException("duplicate_nickname");
 		}
 
+		// 비밀번호와 비밀번호 확인이 일치하는지 검사
+		if (userDTO.getPasswordConfirm() != null &&
+			!userDTO.getPassword().equals(userDTO.getPasswordConfirm())) {
+			throw new RuntimeException("passwords_do_not_matched");
+		}
+
 		// 비밀번호 복잡성 검증
 		if (!UserPasswordValidator.isValid(userDTO.getPassword())) {
 			throw new RuntimeException(UserPasswordValidator.getValidationMessage());
@@ -168,7 +174,7 @@ public class UserService {
 	@Transactional
 	public User changePassword(Integer userId, String currentPassword, String newPassword) {
 		User user = userRepository.findById(userId)
-			.orElseThrow(() -> new RuntimeException("missing_user"));
+			.orElseThrow(() -> new RuntimeException("user_not_found"));
 
 		// 현재 비밀번호 확인
 		if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
@@ -177,7 +183,7 @@ public class UserService {
 
 		// 비밀번호 복잡성 검증
 		if (!UserPasswordValidator.isValid(newPassword)) {
-			throw new RuntimeException(UserPasswordValidator.getValidationMessage());
+			throw new RuntimeException("invalid_new_password_format");
 		}
 
 		// 새 비밀번호 설정
