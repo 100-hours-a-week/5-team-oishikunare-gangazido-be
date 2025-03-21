@@ -56,32 +56,29 @@ jobs:
       - name: Determine Active Environment
         id: active_env
         run: |
-          # 현재 트래픽을 받고 있는 타겟 그룹 중 Weight가 가장 높은 그룹 찾기
           CURRENT_ACTIVE_TARGET_GROUP=$(aws elbv2 describe-rules \
           --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
-          --query 'Rules[?Conditions[?Field==`host-header`]].Actions[0].ForwardConfig.TargetGroups[?Weight>=`1`]|[0].TargetGroupArn' \
+          --region ap-northeast-2 \
+          --query 'Rules[?Conditions[?Field==`host-header`]].Actions[0].ForwardConfig.TargetGroups[?Weight==`1`].TargetGroupArn' \
           --output text)
 
           echo "현재 활성화된 Target Group ARN: $CURRENT_ACTIVE_TARGET_GROUP"
 
-          # 활성화된 Target Group을 확인하고, 반대쪽 환경을 배포 대상으로 설정
-          if [[ -n "$CURRENT_ACTIVE_TARGET_GROUP" ]]; then
           if [[ "$CURRENT_ACTIVE_TARGET_GROUP" == "${{ secrets.BLUE_TARGET_GROUP_ARN }}" ]]; then
-           echo "✅ BLUE가 활성화됨, GREEN에 배포"
-           echo "DEPLOY_ENV=GREEN" >> $GITHUB_ENV
-           echo "NEW_ASG=gangazido-prod-green" >> $GITHUB_ENV
-           echo "NEW_TARGET_GROUP=${{ secrets.GREEN_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
-           echo "OLD_ASG=gangazido-prod-blue" >> $GITHUB_ENV
+          echo "✅ BLUE가 활성화됨, GREEN에 배포"
+          echo "DEPLOY_ENV=GREEN" >> $GITHUB_ENV
+          echo "NEW_ASG=gangazido-prod-green" >> $GITHUB_ENV
+          echo "NEW_TARGET_GROUP=${{ secrets.GREEN_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
+          echo "OLD_ASG=gangazido-prod-blue" >> $GITHUB_ENV
           elif [[ "$CURRENT_ACTIVE_TARGET_GROUP" == "${{ secrets.GREEN_TARGET_GROUP_ARN }}" ]]; then
-           echo "✅ GREEN이 활성화됨, BLUE에 배포"
-           echo "DEPLOY_ENV=BLUE" >> $GITHUB_ENV
-           echo "NEW_ASG=gangazido-prod-blue" >> $GITHUB_ENV
-           echo "NEW_TARGET_GROUP=${{ secrets.BLUE_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
-           echo "OLD_ASG=gangazido-prod-green" >> $GITHUB_ENV
-          fi
+          echo "✅ GREEN이 활성화됨, BLUE에 배포"
+          echo "DEPLOY_ENV=BLUE" >> $GITHUB_ENV
+          echo "NEW_ASG=gangazido-prod-blue" >> $GITHUB_ENV
+          echo "NEW_TARGET_GROUP=${{ secrets.BLUE_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
+          echo "OLD_ASG=gangazido-prod-green" >> $GITHUB_ENV
           else
-          echo "🚨 활성화된 Target Group을 찾을 수 없습니다."
-          exit 1  # 오류 발생 시 스크립트 종료
+          echo "🚨 활성화된 Target Group을 판별할 수 없습니다."
+          exit 1
           fi
 
       - name: Debug Deployment Variables
