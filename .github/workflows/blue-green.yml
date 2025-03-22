@@ -250,13 +250,42 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-      # 5. Blue 환경 스케일 업하여 새 코드 적용
-      - name: Re-Scale Blue ASG with New Code
+      - name: Wait Until Blue ASG is Healthy
         run: |
-          echo "🚀 Blue ASG($OLD_ASG)에 새 이미지로 인스턴스를 재생성합니다."
-          aws autoscaling update-auto-scaling-group \
-            --auto-scaling-group-name ${{ env.OLD_ASG }} \
-            --desired-capacity 2 --min-size 2 --max-size 5
+          MAX_WAIT=360
+          INTERVAL=10
+          ELAPSED=0
+          echo "⏳ Blue ASG($OLD_ASG)의 헬스체크 상태를 확인 중..."
+
+          while true; do
+            STATUS=$(aws autoscaling describe-instance-refreshes \
+              --auto-scaling-group-name $OLD_ASG \
+              --query 'InstanceRefreshes[0].Status' --output text 2>/dev/null || echo "None")
+
+            if [[ "$STATUS" == "Successful" ]]; then
+              echo "✅ Blue ASG 인스턴스가 모두 정상입니다!"
+              break
+            elif [[ "$STATUS" == "Failed" || "$STATUS" == "Cancelled" ]]; then
+              echo "🚨 인스턴스 리프레시 실패"
+              exit 1
+            fi
+            if [[ "$ELAPSED" -ge "$MAX_WAIT" ]]; then
+              echo "🚨 헬스체크 타임아웃!"
+              exit 1
+            fi
+            sleep $INTERVAL
+            ELAPSED=$((ELAPSED + INTERVAL))
+          done
+
+      # 4. 트래픽을 다시 Blue로 전환
+      - name: Shift Traffic Back to Blue
+        run: |
+          echo "🔄 다시 트래픽을 BLUE($OLD_ASG)로 전환 중..."
+          aws elbv2 modify-listener --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+            --default-actions '[{"Type": "forward", "ForwardConfig": {"TargetGroups": [
+              {"TargetGroupArn": "'${{ secrets.BLUE_TARGET_GROUP_ARN }}'", "Weight": 100}
+            ]}}]'
+          echo "✅ 트래픽이 BLUE 환경으로 복귀 완료"
 
       - name: Refresh Blue ASG to Apply New Image
         run: |
