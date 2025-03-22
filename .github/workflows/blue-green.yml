@@ -145,7 +145,6 @@ jobs:
           done
 
       # 2. ALB를 Green으로 전환
-      # 2. ALB를 Green으로 전환
       - name: Gradually Shift Traffic to New Environment
         run: |
           echo "🔍 현재 트래픽을 받고 있는 Target Group을 확인 중..."
@@ -298,4 +297,5 @@ jobs:
           aws autoscaling update-auto-scaling-group \
             --auto-scaling-group-name ${{ env.NEW_ASG }} \
             --desired-capacity 2 --min-size 2 --max-size 5
+
 #그린 배포 확인

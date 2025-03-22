@@ -1,6 +1,9 @@
 # OpenJDK 17 기반의 이미지 사용
 FROM openjdk:17-jdk-slim
 
+# 환경변수 설정
+ENV app.pet.upload.dir=/tmp/uploads
+
 # 작업 디렉토리 생성
 WORKDIR /app
 
