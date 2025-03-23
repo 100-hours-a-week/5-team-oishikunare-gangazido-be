@@ -313,15 +313,13 @@ jobs:
           echo "✅ 트래픽이 완전히 새로운 환경($DEPLOY_ENV)으로 이동했습니다."
           fi
 
-#      # 3. Blue ASG 인스턴스를 모두 제거 (트래픽 차단)
-#      - name: Scale Down Current (Blue) ASG (${{ env.OLD_ASG }})
-#        run: |
-#          echo "🧹 Blue ASG($OLD_ASG) 인스턴스 수를 0으로 조정 중..."
-#          aws autoscaling update-auto-scaling-group \
-#            --auto-scaling-group-name ${{ env.OLD_ASG }} \
-#            --desired-capacity 0 --min-size 0 --max-size 5
-      #지운다?
+        # 1. Blue ASG에 새로운 코드 배포를 위한 리프레시
+      - name: Refresh Blue ASG to Apply New Image
+        run: |
+          echo "🔁 Blue ASG($OLD_ASG)에 새 이미지 적용을 위해 인스턴스 리프레시 시작"
+          aws autoscaling start-instance-refresh --auto-scaling-group-name $OLD_ASG
 
+        # 2. Blue ASG의 상태가 정상인지 확인
       - name: Wait Until Blue ASG is Healthy
         run: |
           MAX_WAIT=360
@@ -333,6 +331,8 @@ jobs:
             STATUS=$(aws autoscaling describe-instance-refreshes \
               --auto-scaling-group-name $OLD_ASG \
               --query 'InstanceRefreshes[0].Status' --output text 2>/dev/null || echo "None")
+
+            echo "현재 상태: $STATUS"
 
             if [[ "$STATUS" == "Successful" ]]; then
               echo "✅ Blue ASG 인스턴스가 모두 정상입니다!"
@@ -349,7 +349,7 @@ jobs:
             ELAPSED=$((ELAPSED + INTERVAL))
           done
 
-      # 4. 트래픽을 다시 Blue로 전환
+        # 3. 트래픽을 다시 Blue로 전환
       - name: Shift Traffic Back to Blue
         run: |
           echo "🔄 다시 트래픽을 BLUE($OLD_ASG)로 전환 중..."
@@ -359,10 +359,6 @@ jobs:
             ]}}]'
           echo "✅ 트래픽이 BLUE 환경으로 복귀 완료"
 
-      - name: Refresh Blue ASG to Apply New Image
-        run: |
-          aws autoscaling start-instance-refresh --auto-scaling-group-name $OLD_ASG
-
       # 6. Green 환경은 다시 축소
       - name: Scale Down Green ASG
         run: |
@@ -370,5 +366,3 @@ jobs:
           aws autoscaling update-auto-scaling-group \
             --auto-scaling-group-name ${{ env.NEW_ASG }} \
             --desired-capacity 2 --min-size 2 --max-size 5
-
-#환경변수 설정
