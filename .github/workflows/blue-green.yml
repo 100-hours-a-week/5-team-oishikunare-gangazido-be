@@ -234,39 +234,29 @@ jobs:
           echo "🔍 조건부 규칙의 Rule ARN을 가져오는 중..."
           RULE_ARN=$(aws elbv2 describe-rules \
             --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
-            --query "Rules[?Conditions[?Field=='host-header' && Values[0]=='api.gangazido.com']].RuleArn" \
+            --query "Rules[?contains(to_string(Conditions[*].Values), 'api.gangazido.com')].RuleArn" \
             --output text)
-
-          if [[ -z "$RULE_ARN" ]]; then
-            echo "🚨 ERROR: 조건부 Rule ARN을 가져오지 못했습니다."
-            exit 1
-          fi
 
           echo "🎯 Rule ARN: $RULE_ARN"
 
-          if [[ -z "$NEW_TARGET_GROUP" || -z "$OLD_ASG_TARGET_GROUP" ]]; then
-            echo "🚨 ERROR: Target Group ARN 값이 비어 있습니다."
+          if [[ -z "$RULE_ARN" ]]; then
+            echo "🚨 RULE_ARN 값이 비어 있습니다. 중단합니다."
             exit 1
           fi
 
           echo "🔄 ALB 트래픽을 절반씩 나누어 새 환경으로 전환 중..."
 
           aws elbv2 modify-rule \
-            --rule-arn ${{ env.RULE_ARN }} \
-            --actions '[
-              {
-                "Type": "forward",
-                "ForwardConfig": {
-                  "TargetGroups": [
-                    { "TargetGroupArn": "'"$NEW_TARGET_GROUP"'", "Weight": 50 },
-                    { "TargetGroupArn": "'"$OLD_TARGET_GROUP"'", "Weight": 50 }
-                  ]
-                }
-              }
-            ]' || { echo "🚨 [ERROR] 트래픽 변경 실패 (절반 전환 실패)"; exit 1; }
+            --rule-arn "$RULE_ARN" \
+            --actions "[{\"Type\": \"forward\", \"ForwardConfig\": {\"TargetGroups\": [
+              {\"TargetGroupArn\": \"$NEW_TARGET_GROUP\", \"Weight\": 50},
+              {\"TargetGroupArn\": \"$OLD_TARGET_GROUP\", \"Weight\": 50}
+            ]}}]" || {
+              echo "🚨 [ERROR] 트래픽 변경 실패 (절반 전환 실패)"
+              exit 1
+            }
 
           echo "✅ 절반씩 트래픽 분산 완료!"
-
           echo "⏳ 30초 대기 후 다음 단계 진행..."
           sleep 30
 
@@ -275,7 +265,7 @@ jobs:
           echo "🔍 조건부 규칙의 Rule ARN을 가져오는 중..."
           RULE_ARN=$(aws elbv2 describe-rules \
             --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
-            --query "Rules[?Conditions[?Field=='host-header' && Values[0]=='api.gangazido.com']].RuleArn" \
+            --query "Rules[?contains(to_string(Conditions[*].Values), 'api.gangazido.com')].RuleArn" \
             --output text)
 
           if [[ -z "$RULE_ARN" ]]; then
@@ -287,6 +277,7 @@ jobs:
             echo "🚨 ERROR: NEW_TARGET_GROUP 값이 비어 있습니다."
             exit 1
           fi
+
           echo "🚀 ALB 트래픽을 완전히 새 환경($NEW_TARGET_GROUP)으로 전환 중..."
 
           aws elbv2 modify-rule \
@@ -303,9 +294,12 @@ jobs:
                   ]
                 }
               }
-            ]' || { echo "🚨 [ERROR] 최종 트래픽 변경 실패"; exit 1; }
+            ]' || {
+              echo "🚨 [ERROR] 최종 트래픽 변경 실패"
+              exit 1
+            }
 
-            echo "✅ 트래픽이 완전히 새로운 환경으로 전환되었습니다."
+          echo "✅ 트래픽이 완전히 새로운 환경으로 전환되었습니다."
 
       - name: Scale Down New ASG
         run: |
