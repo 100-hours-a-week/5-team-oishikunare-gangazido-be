@@ -192,7 +192,7 @@ jobs:
             HEALTH_STATUSES=$(aws elbv2 describe-target-health \
               --target-group-arn "$TG_ARN" \
               --query 'TargetHealthDescriptions[*].TargetHealth.State' \
-              --output text)
+              --output text | tr '\n' ' ' | xargs)
             echo "현재 ALB 타겟 상태들: $HEALTH_STATUSES"
 
             if [[ "$HEALTH_STATUSES" != *"unhealthy"* && "$HEALTH_STATUSES" != *"initial"* ]]; then
