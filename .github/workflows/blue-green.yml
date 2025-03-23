@@ -305,54 +305,7 @@ jobs:
           echo "✅ 트래픽이 완전히 새로운 환경($DEPLOY_ENV)으로 이동했습니다."
           fi
 
-        # 1. Blue ASG에 새로운 코드 배포를 위한 리프레시
-      - name: Refresh Blue ASG to Apply New Image
-        run: |
-          echo "🔁 Blue ASG($OLD_ASG)에 새 이미지 적용을 위해 인스턴스 리프레시 시작"
-          aws autoscaling start-instance-refresh --auto-scaling-group-name $OLD_ASG
-
-        # 2. Blue ASG의 상태가 정상인지 확인
-      - name: Wait Until Blue ASG is Healthy
-        run: |
-          MAX_WAIT=720
-          INTERVAL=10
-          ELAPSED=0
-          echo "⏳ Blue ASG($OLD_ASG)의 헬스체크 상태를 확인 중..."
-
-          while true; do
-            STATUS=$(aws autoscaling describe-instance-refreshes \
-              --auto-scaling-group-name $OLD_ASG \
-              --query 'InstanceRefreshes[0].Status' --output text 2>/dev/null || echo "None")
-
-            echo "현재 상태: $STATUS"
-
-            if [[ "$STATUS" == "Successful" ]]; then
-              echo "✅ Blue ASG 인스턴스가 모두 정상입니다!"
-              break
-            elif [[ "$STATUS" == "Failed" || "$STATUS" == "Cancelled" ]]; then
-              echo "🚨 인스턴스 리프레시 실패"
-              exit 1
-            fi
-            if [[ "$ELAPSED" -ge "$MAX_WAIT" ]]; then
-              echo "🚨 헬스체크 타임아웃!"
-              exit 1
-            fi
-            sleep $INTERVAL
-            ELAPSED=$((ELAPSED + INTERVAL))
-          done
-
-        # 3. 트래픽을 다시 Blue로 전환
-      - name: Shift Traffic Back to Blue
-        run: |
-          echo "🔄 다시 트래픽을 BLUE($OLD_ASG)로 전환 중..."
-          aws elbv2 modify-listener --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
-            --default-actions '[{"Type": "forward", "ForwardConfig": {"TargetGroups": [
-              {"TargetGroupArn": "'${{ secrets.BLUE_TARGET_GROUP_ARN }}'", "Weight": 100}
-            ]}}]'
-          echo "✅ 트래픽이 BLUE 환경으로 복귀 완료"
-
-      # 6. Green 환경은 다시 축소
-      - name: Scale Down Green ASG
+      - name: Scale Down New ASG
         run: |
           echo "✅ Green ASG($NEW_ASG)를 축소합니다."
           aws autoscaling update-auto-scaling-group \
