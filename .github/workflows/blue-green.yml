@@ -186,7 +186,7 @@ jobs:
             IP=${INSTANCE_IPS[$INSTANCE_ID]}
             echo "🔍 인스턴스 $INSTANCE_ID ($IP)의 /actuator/health 확인 중..."
 
-            STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 http://api.gangazido.com/actuator/health)
+            STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 https://api.gangazido.com/actuator/health)
 
             if [[ "$STATUS_CODE" != "200" ]]; then
               echo "❌ 인스턴스 $INSTANCE_ID 의 /actuator/health 상태 코드가 $STATUS_CODE 입니다."
