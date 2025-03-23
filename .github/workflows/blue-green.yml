@@ -374,3 +374,4 @@ jobs:
           aws autoscaling update-auto-scaling-group \
             --auto-scaling-group-name ${{ env.NEW_ASG }} \
             --desired-capacity 2 --min-size 2 --max-size 5
+#간절하다 진짜
