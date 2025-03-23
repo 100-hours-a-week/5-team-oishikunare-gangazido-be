@@ -170,8 +170,6 @@ jobs:
               --output text)
             INSTANCE_COUNT=$(echo $INSTANCE_IDS | wc -w)
 
-            echo "현재 인스턴스 수: $INSTANCE_COUNT / 기대 수: $EXPECTED_INSTANCE_COUNT"
-
             if [[ "$INSTANCE_COUNT" -lt "$EXPECTED_INSTANCE_COUNT" ]]; then
               echo "🕒 인스턴스가 충분히 생성될 때까지 대기 중..."
               sleep $INTERVAL
