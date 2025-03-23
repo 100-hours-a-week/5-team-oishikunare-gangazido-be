@@ -250,14 +250,22 @@ jobs:
           fi
 
           echo "🔄 ALB 트래픽을 절반씩 나누어 새 환경으로 전환 중..."
+
           aws elbv2 modify-rule \
-            --rule-arn "$RULE_ARN" \
-            --actions Type=forward,ForwardConfig='{
-              "TargetGroups":[
-                {"TargetGroupArn":"'"$NEW_TARGET_GROUP"'","Weight":50},
-                {"TargetGroupArn":"'"$OLD_ASG_TARGET_GROUP"'","Weight":50}
-              ]
-            }' || { echo "🚨 [ERROR] 트래픽 변경 실패 (절반 전환 실패)"; exit 1; }
+            --rule-arn ${{ env.RULE_ARN }} \
+            --actions '[
+              {
+                "Type": "forward",
+                "ForwardConfig": {
+                  "TargetGroups": [
+                    { "TargetGroupArn": "'"$NEW_TARGET_GROUP"'", "Weight": 50 },
+                    { "TargetGroupArn": "'"$OLD_TARGET_GROUP"'", "Weight": 50 }
+                  ]
+                }
+              }
+            ]' || { echo "🚨 [ERROR] 트래픽 변경 실패 (절반 전환 실패)"; exit 1; }
+
+          echo "✅ 절반씩 트래픽 분산 완료!"
 
           echo "⏳ 30초 대기 후 다음 단계 진행..."
           sleep 30
@@ -283,13 +291,21 @@ jobs:
 
           aws elbv2 modify-rule \
             --rule-arn "$RULE_ARN" \
-            --actions Type=forward,ForwardConfig='{
-              "TargetGroups":[
-                {"TargetGroupArn":"'"$NEW_TARGET_GROUP"'","Weight":100}
-              ]
-            }' || { echo "🚨 [ERROR] 최종 트래픽 변경 실패"; exit 1; }
+            --actions '[
+              {
+                "Type": "forward",
+                "ForwardConfig": {
+                  "TargetGroups": [
+                    {
+                      "TargetGroupArn": "'"$NEW_TARGET_GROUP"'",
+                      "Weight": 100
+                    }
+                  ]
+                }
+              }
+            ]' || { echo "🚨 [ERROR] 최종 트래픽 변경 실패"; exit 1; }
 
-          echo "✅ 트래픽이 완전히 새로운 환경으로 전환되었습니다."
+            echo "✅ 트래픽이 완전히 새로운 환경으로 전환되었습니다."
 
       - name: Scale Down New ASG
         run: |
