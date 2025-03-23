@@ -122,13 +122,15 @@ jobs:
 
           # Target Group 이름 구성
           # 매핑: blue → prod, green → dev
-          if [[ "$DEPLOY_ENV" == "blue" ]]; then
+          DEPLOY_ENV_LOWER=$(echo "$DEPLOY_ENV" | tr '[:upper:]' '[:lower:]')
+
+          if [[ "$DEPLOY_ENV_LOWER" == "blue" ]]; then
             TG_SUFFIX="prod"
-          elif [[ "$DEPLOY_ENV" == "green" ]]; then
+          elif [[ "$DEPLOY_ENV_LOWER" == "green" ]]; then
             TG_SUFFIX="dev"
           else
             echo "❌ 유효하지 않은 DEPLOY_ENV: $DEPLOY_ENV"
-            exit 1
+          exit 1
           fi
 
           TG_NAME="gangazido-${TG_SUFFIX}-target-group"
