@@ -74,14 +74,14 @@ jobs:
           echo "NEW_ASG=gangazido-prod-green" >> $GITHUB_ENV
           echo "NEW_TARGET_GROUP=${{ secrets.GREEN_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
           echo "OLD_ASG=gangazido-prod-blue" >> $GITHUB_ENV
-          echo "OLD_ASG_TARGET_GROUP=${{ secrets.BLUE_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
+          echo "OLD_TARGET_GROUP=${{ secrets.BLUE_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
           elif [[ "$CURRENT_ACTIVE_TARGET_GROUP" == "${{ secrets.GREEN_TARGET_GROUP_ARN }}" ]]; then
           echo "✅ GREEN이 활성화됨, BLUE에 배포"
           echo "DEPLOY_ENV=BLUE" >> $GITHUB_ENV
           echo "NEW_ASG=gangazido-prod-blue" >> $GITHUB_ENV
           echo "NEW_TARGET_GROUP=${{ secrets.BLUE_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
           echo "OLD_ASG=gangazido-prod-green" >> $GITHUB_ENV
-          echo "OLD_ASG_TARGET_GROUP=${{ secrets.GREEN_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
+          echo "OLD_TARGET_GROUP=${{ secrets.GREEN_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
           else
           echo "🚨 활성화된 Target Group을 판별할 수 없습니다."
           exit 1
