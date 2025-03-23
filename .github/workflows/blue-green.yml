@@ -117,12 +117,6 @@ jobs:
             --auto-scaling-group-name ${{ env.NEW_ASG }} \
             --desired-capacity 4 --min-size 4 --max-size 5
 
-          # 스케일 인 방지를 위해 Terminate 프로세스 중단
-          aws autoscaling suspend-processes \
-            --auto-scaling-group-name ${{ env.NEW_ASG }} \
-            --scaling-processes Terminate
-            echo "⏸️ 스케일 인 방지를 위해 Terminate 프로세스를 중지했습니다."
-
       - name: Start Green ASG Instance Refresh
         run: |
           STATUS=$(aws autoscaling describe-instance-refreshes --auto-scaling-group-name $NEW_ASG \
@@ -141,7 +135,6 @@ jobs:
           MAX_WAIT=720
           INTERVAL=10
           ELAPSED=0
-          EXPECTED_INSTANCE_COUNT=4
 
           echo "⏳ Green ASG($NEW_ASG)의 인스턴스 리프레시 상태 + ALB 헬스체크 + 앱 상태 확인 중..."
 
@@ -233,13 +226,6 @@ jobs:
             sleep $INTERVAL
             ELAPSED=$((ELAPSED + INTERVAL))
           done
-
-      - name: Resume ASG Terminate Process
-        run: |
-          echo "▶️ Terminate 프로세스를 재개합니다."
-          aws autoscaling resume-processes \
-            --auto-scaling-group-name ${{ env.NEW_ASG }} \
-            --scaling-processes Terminate
 
       # 2. ALB를 Green으로 전환
       - name: Gradually Shift Traffic to New Environment
