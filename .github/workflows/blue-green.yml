@@ -74,12 +74,14 @@ jobs:
           echo "NEW_ASG=gangazido-prod-green" >> $GITHUB_ENV
           echo "NEW_TARGET_GROUP=${{ secrets.GREEN_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
           echo "OLD_ASG=gangazido-prod-blue" >> $GITHUB_ENV
+          echo "OLD_ASG_TARGET_GROUP=${{ secrets.BLUE_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
           elif [[ "$CURRENT_ACTIVE_TARGET_GROUP" == "${{ secrets.GREEN_TARGET_GROUP_ARN }}" ]]; then
           echo "✅ GREEN이 활성화됨, BLUE에 배포"
           echo "DEPLOY_ENV=BLUE" >> $GITHUB_ENV
           echo "NEW_ASG=gangazido-prod-blue" >> $GITHUB_ENV
           echo "NEW_TARGET_GROUP=${{ secrets.BLUE_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
           echo "OLD_ASG=gangazido-prod-green" >> $GITHUB_ENV
+          echo "OLD_ASG_TARGET_GROUP=${{ secrets.GREEN_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
           else
           echo "🚨 활성화된 Target Group을 판별할 수 없습니다."
           exit 1
@@ -227,83 +229,67 @@ jobs:
             ELAPSED=$((ELAPSED + INTERVAL))
           done
 
-      # 2. ALB를 Green으로 전환
       - name: Gradually Shift Traffic to New Environment
         run: |
-          echo "🔍 현재 트래픽을 받고 있는 Target Group을 확인 중..."
-
-          # 현재 트래픽을 받고 있는 Target Group을 가져오는 AWS CLI 실행 결과를 JSON 형식으로 출력
-          RAW_AWS_RESPONSE=$(aws elbv2 describe-rules \
+          echo "🔍 조건부 규칙의 Rule ARN을 가져오는 중..."
+          RULE_ARN=$(aws elbv2 describe-rules \
             --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
-            --query 'Rules[?Conditions[?Field==`host-header`]].Actions[0].ForwardConfig.TargetGroups' \
-            --output json)
+            --query 'Rules[?Conditions[?Field==`host-header`]].RuleArn' \
+            --output text)
 
-          echo "🔍 [DEBUG] AWS CLI 응답(JSON):"
-          echo "$RAW_AWS_RESPONSE"
-
-          # Weight 값이 1인 Target Group ARN 가져오기
-          CURRENT_ACTIVE_TARGET_GROUP=$(echo "$RAW_AWS_RESPONSE" | jq -r '[.[][] | select(.Weight == 1)] | .[0].TargetGroupArn')
-
-          echo "🎯 현재 활성화된 Target Group ARN: $CURRENT_ACTIVE_TARGET_GROUP"
-          echo "🎯 새로운 Target Group ARN: $NEW_TARGET_GROUP"
-
-          # 값이 비어 있는 경우 오류 발생
-          if [[ -z "$CURRENT_ACTIVE_TARGET_GROUP" || -z "$NEW_TARGET_GROUP" ]]; then
-            echo "🚨 오류: CURRENT_ACTIVE_TARGET_GROUP 또는 NEW_TARGET_GROUP 값이 비어 있습니다."
+          if [[ -z "$RULE_ARN" ]]; then
+            echo "🚨 ERROR: 조건부 Rule ARN을 가져오지 못했습니다."
             exit 1
           fi
 
-          # 이미 NEW_TARGET_GROUP이 운영 중인 경우 트래픽 변경 건너뜀
-          if [[ "$CURRENT_ACTIVE_TARGET_GROUP" == "$NEW_TARGET_GROUP" ]]; then
-            echo "⚠️ 새로운 Target Group이 이미 운영 중입니다. 트래픽 변경을 건너뜁니다."
-          else
-            echo "🔄 ALB 트래픽을 절반씩 나누어 새 환경으로 이동..."
-            aws elbv2 modify-listener --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
-              --default-actions '[{"Type": "forward", "ForwardConfig": {"TargetGroups": [
-                {"TargetGroupArn": "'$CURRENT_ACTIVE_TARGET_GROUP'", "Weight": 50},
-                {"TargetGroupArn": "'$NEW_TARGET_GROUP'", "Weight": 50}
-              ]}}]' || { echo "🚨 [ERROR] 트래픽 변경 실패: modify-listener 실행 중 오류 발생"; exit 1; }
+          echo "🎯 Rule ARN: $RULE_ARN"
 
-            echo "⏳ 30초 대기 후 트래픽 확인..."
-            sleep 30
+          if [[ -z "$NEW_TARGET_GROUP" || -z "$OLD_ASG_TARGET_GROUP" ]]; then
+            echo "🚨 ERROR: Target Group ARN 값이 비어 있습니다."
+            exit 1
           fi
+
+          echo "🔄 ALB 트래픽을 절반씩 나누어 새 환경으로 전환 중..."
+          aws elbv2 modify-rule \
+            --rule-arn "$RULE_ARN" \
+            --actions Type=forward,ForwardConfig='{
+              "TargetGroups":[
+                {"TargetGroupArn":"'"$NEW_TARGET_GROUP"'","Weight":50},
+                {"TargetGroupArn":"'"$OLD_ASG_TARGET_GROUP"'","Weight":50}
+              ]
+            }' || { echo "🚨 [ERROR] 트래픽 변경 실패 (절반 전환 실패)"; exit 1; }
+
+          echo "⏳ 30초 대기 후 다음 단계 진행..."
+          sleep 30
 
       - name: Fully Shift Traffic to New Environment
         run: |
-          echo "🔄 ALB 트래픽을 완전히 새로운 환경($DEPLOY_ENV)으로 전환"
+          echo "🔍 조건부 규칙의 Rule ARN을 가져오는 중..."
+          RULE_ARN=$(aws elbv2 describe-rules \
+            --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+            --query 'Rules[?Conditions[?Field==`host-header`]].RuleArn' \
+            --output text)
 
-          # 최신 트래픽 정보를 가져와 JSON 형식으로 확인
-          RAW_AWS_RESPONSE=$(aws elbv2 describe-rules \
-          --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
-          --query 'Rules[?Conditions[?Field==`host-header`]].Actions[0].ForwardConfig.TargetGroups' \
-          --output json)
-
-          echo "🔍 [DEBUG] AWS CLI 응답(JSON):"
-          echo "$RAW_AWS_RESPONSE"
-
-          # Weight == 1인 Target Group ARN 파싱
-          CURRENT_ACTIVE_TARGET_GROUP=$(echo "$RAW_AWS_RESPONSE" | grep -B1 '"Weight": 1' | grep 'TargetGroupArn' | head -n 1 | awk -F '"' '{print $4}')
-
-          echo "🎯 현재 활성화된 Target Group ARN: $CURRENT_ACTIVE_TARGET_GROUP"
-
-          # 값이 비어 있는 경우 오류 발생
-          if [[ -z "$CURRENT_ACTIVE_TARGET_GROUP" ]]; then
-          echo "🚨 오류: CURRENT_ACTIVE_TARGET_GROUP이 비어 있습니다. 트래픽을 변경할 수 없습니다."
-          exit 1
+          if [[ -z "$RULE_ARN" ]]; then
+            echo "🚨 ERROR: 조건부 Rule ARN을 가져오지 못했습니다."
+            exit 1
           fi
 
-          # 이미 100% 트래픽 받고 있다면 변경 X
-          if [[ "$CURRENT_ACTIVE_TARGET_GROUP" == "$NEW_TARGET_GROUP" ]]; then
-          echo "⚠️ 이미 $NEW_TARGET_GROUP이 100% 트래픽을 받고 있습니다. 변경하지 않습니다."
-          else
-          echo "🚀 ALB 트래픽을 완전히 $NEW_TARGET_GROUP으로 이동 중..."
-          aws elbv2 modify-listener --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
-          --default-actions '[{"Type": "forward", "ForwardConfig": {"TargetGroups": [
-            {"TargetGroupArn": "'$NEW_TARGET_GROUP'", "Weight": 100}
-          ]}}]' || { echo "🚨 [ERROR] 최종 트래픽 변경 실패"; exit 1; }
-
-          echo "✅ 트래픽이 완전히 새로운 환경($DEPLOY_ENV)으로 이동했습니다."
+          if [[ -z "$NEW_TARGET_GROUP" ]]; then
+            echo "🚨 ERROR: NEW_TARGET_GROUP 값이 비어 있습니다."
+            exit 1
           fi
+          echo "🚀 ALB 트래픽을 완전히 새 환경($NEW_TARGET_GROUP)으로 전환 중..."
+
+          aws elbv2 modify-rule \
+            --rule-arn "$RULE_ARN" \
+            --actions Type=forward,ForwardConfig='{
+              "TargetGroups":[
+                {"TargetGroupArn":"'"$NEW_TARGET_GROUP"'","Weight":100}
+              ]
+            }' || { echo "🚨 [ERROR] 최종 트래픽 변경 실패"; exit 1; }
+
+          echo "✅ 트래픽이 완전히 새로운 환경으로 전환되었습니다."
 
       - name: Scale Down New ASG
         run: |
