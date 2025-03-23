@@ -110,17 +110,23 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-      # 1. Green 환경 스케일 업 및 헬스체크 준비
+    # 1. Green 환경 스케일 업 및 헬스체크 준비
       - name: Scale Up Temporary (Green) Auto Scaling Group (${{ env.NEW_ASG }})
         run: |
           aws autoscaling update-auto-scaling-group \
-          --auto-scaling-group-name ${{ env.NEW_ASG }} \
-          --desired-capacity 4 --min-size 2 --max-size 5
+            --auto-scaling-group-name ${{ env.NEW_ASG }} \
+            --desired-capacity 4 --min-size 4 --max-size 5
+
+      # 스케일 인 방지를 위해 Terminate 프로세스 중단
+          aws autoscaling suspend-processes \
+            --auto-scaling-group-name ${{ env.NEW_ASG }} \
+            --scaling-processes Terminate
+          echo "⏸️ 스케일 인 방지를 위해 Terminate 프로세스를 중지했습니다."
 
       - name: Start Green ASG Instance Refresh
         run: |
           STATUS=$(aws autoscaling describe-instance-refreshes --auto-scaling-group-name $NEW_ASG \
-          --query 'InstanceRefreshes[0].Status' --output text 2>/dev/null || echo "None")
+            --query 'InstanceRefreshes[0].Status' --output text 2>/dev/null || echo "None")
 
           if [[ "$STATUS" == "InProgress" ]]; then
             echo "🚨 현재 ASG($NEW_ASG)의 인스턴스 리프레시가 이미 진행 중입니다. 대기합니다."
@@ -132,108 +138,110 @@ jobs:
 
       - name: Wait Until Green ASG is Healthy (ASG + ALB Health Check)
         run: |
-          MAX_WAIT=720  # 최대 12분
+          MAX_WAIT=720
           INTERVAL=10
           ELAPSED=0
+          EXPECTED_INSTANCE_COUNT=4
 
           echo "⏳ Green ASG($NEW_ASG)의 인스턴스 리프레시 상태 + ALB 헬스체크 + 앱 상태 확인 중..."
 
-          # Target Group 이름 구성
-          # 매핑: blue → prod, green → dev
           DEPLOY_ENV_LOWER=$(echo "$DEPLOY_ENV" | tr '[:upper:]' '[:lower:]')
-
           if [[ "$DEPLOY_ENV_LOWER" == "blue" ]]; then
             TG_SUFFIX="prod"
           elif [[ "$DEPLOY_ENV_LOWER" == "green" ]]; then
             TG_SUFFIX="dev"
           else
             echo "❌ 유효하지 않은 DEPLOY_ENV: $DEPLOY_ENV"
-          exit 1
+            exit 1
           fi
 
           TG_NAME="gangazido-${TG_SUFFIX}-target-group"
           echo "✅ 매핑된 Target Group 이름: $TG_NAME"
 
-          # Target Group ARN 가져오기
           TG_ARN=$(aws elbv2 describe-target-groups \
-          --names $TG_NAME \
-          --query 'TargetGroups[0].TargetGroupArn' \
-          --output text)
-
-          # 대상 인스턴스 ID 목록 조회 (ASG에서 직접)
-          INSTANCE_IDS=$(aws autoscaling describe-auto-scaling-groups \
-          --auto-scaling-group-names $NEW_ASG \
-          --query 'AutoScalingGroups[0].Instances[*].InstanceId' \
-          --output text)
-
-          # 인스턴스별 퍼블릭 IP 주소 확인
-          echo "💡 배포된 인스턴스 IP 조회 중..."
-          declare -A INSTANCE_IPS
-          for INSTANCE_ID in $INSTANCE_IDS; do
-          IP=$(aws ec2 describe-instances \
-          --instance-ids $INSTANCE_ID \
-          --query 'Reservations[0].Instances[0].PublicIpAddress' \
-          --output text)
-          INSTANCE_IPS["$INSTANCE_ID"]=$IP
-          done
+            --names $TG_NAME \
+            --query 'TargetGroups[0].TargetGroupArn' --output text)
 
           while true; do
-          # ASG 상태 확인
-          ASG_STATUS=$(aws autoscaling describe-instance-refreshes \
-          --auto-scaling-group-name $NEW_ASG \
-          --query 'InstanceRefreshes[0].Status' \
-          --output text 2>/dev/null || echo "None")
+        # 인스턴스 ID 조회
+            INSTANCE_IDS=$(aws autoscaling describe-auto-scaling-groups \
+              --auto-scaling-group-names $NEW_ASG \
+              --query 'AutoScalingGroups[0].Instances[*].InstanceId' \
+              --output text)
+            INSTANCE_COUNT=$(echo $INSTANCE_IDS | wc -w)
 
-          echo "현재 ASG 상태: $ASG_STATUS"
+            echo "현재 인스턴스 수: $INSTANCE_COUNT / 기대 수: $EXPECTED_INSTANCE_COUNT"
 
-          # ALB Target 상태 확인
-          HEALTH_STATUSES=$(aws elbv2 describe-target-health \
-          --target-group-arn "$TG_ARN" \
-          --query 'TargetHealthDescriptions[*].TargetHealth.State' \
-          --output text)
-
-          echo "현재 ALB 타겟 상태들: $HEALTH_STATUSES"
-
-          # 모든 Target이 healthy인가 확인
-          if [[ "$HEALTH_STATUSES" != *"unhealthy"* && "$HEALTH_STATUSES" != *"initial"* ]]; then
-          echo "✅ 모든 ALB 대상 인스턴스가 healthy 상태입니다."
-
-          # 각 인스턴스에 직접 /actuator/health 체크
-          APP_STATUS_OK=true
-          for INSTANCE_ID in $INSTANCE_IDS; do
-            IP=${INSTANCE_IPS[$INSTANCE_ID]}
-            echo "🔍 인스턴스 $INSTANCE_ID ($IP)의 /actuator/health 확인 중..."
-
-            STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 https://api.gangazido.com/actuator/health)
-
-            if [[ "$STATUS_CODE" != "200" ]]; then
-              echo "❌ 인스턴스 $INSTANCE_ID 의 /actuator/health 상태 코드가 $STATUS_CODE 입니다."
-              APP_STATUS_OK=false
-            else
-              echo "✅ 인스턴스 $INSTANCE_ID 의 /actuator/health 상태 OK"
+            if [[ "$INSTANCE_COUNT" -lt "$EXPECTED_INSTANCE_COUNT" ]]; then
+              echo "🕒 인스턴스가 충분히 생성될 때까지 대기 중..."
+              sleep $INTERVAL
+              ELAPSED=$((ELAPSED + INTERVAL))
+              continue
             fi
+
+        # 인스턴스 퍼블릭 IP 조회
+            echo "💡 인스턴스 IP 조회 중..."
+            declare -A INSTANCE_IPS
+            for INSTANCE_ID in $INSTANCE_IDS; do
+              IP=$(aws ec2 describe-instances \
+                --instance-ids $INSTANCE_ID \
+                --query 'Reservations[0].Instances[0].PublicIpAddress' \
+                --output text)
+              INSTANCE_IPS["$INSTANCE_ID"]=$IP
+            done
+
+        # ALB Target 상태 확인
+            HEALTH_STATUSES=$(aws elbv2 describe-target-health \
+              --target-group-arn "$TG_ARN" \
+              --query 'TargetHealthDescriptions[*].TargetHealth.State' \
+              --output text)
+            echo "현재 ALB 타겟 상태들: $HEALTH_STATUSES"
+
+            if [[ "$HEALTH_STATUSES" != *"unhealthy"* && "$HEALTH_STATUSES" != *"initial"* ]]; then
+              echo "✅ 모든 ALB 대상 인스턴스가 healthy 상태입니다."
+
+          # 앱 상태 확인
+              APP_STATUS_OK=true
+              for INSTANCE_ID in $INSTANCE_IDS; do
+                IP=${INSTANCE_IPS[$INSTANCE_ID]}
+                echo "🔍 인스턴스 $INSTANCE_ID ($IP)의 /actuator/health 확인 중..."
+
+                STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 https://api.gangazido.com/actuator/health)
+
+                if [[ "$STATUS_CODE" != "200" ]]; then
+                  echo "❌ 인스턴스 $INSTANCE_ID 상태 코드: $STATUS_CODE"
+                  APP_STATUS_OK=false
+                else
+                  echo "✅ 인스턴스 $INSTANCE_ID 상태 OK"
+                fi
+              done
+
+              ASG_STATUS=$(aws autoscaling describe-instance-refreshes \
+                --auto-scaling-group-name $NEW_ASG \
+                --query 'InstanceRefreshes[0].Status' \
+                --output text 2>/dev/null || echo "None")
+
+              if [[ "$APP_STATUS_OK" == true && "$ASG_STATUS" == "Successful" ]]; then
+                echo "🎉 모든 조건을 만족했습니다. 배포 성공!"
+                break
+              fi
+            fi
+
+            if [[ "$ELAPSED" -ge "$MAX_WAIT" ]]; then
+              echo "🚨 타임아웃: $MAX_WAIT초 안에 완료되지 않았습니다."
+              exit 1
+            fi
+
+            sleep $INTERVAL
+            ELAPSED=$((ELAPSED + INTERVAL))
           done
 
-          if [[ "$APP_STATUS_OK" == true && "$ASG_STATUS" == "Successful" ]]; then
-            echo "🎉 모든 조건을 만족했습니다. 배포 성공!"
-            break
-          fi
-          fi
-
-          # 실패 상태 체크
-          if [[ "$ASG_STATUS" == "Failed" || "$ASG_STATUS" == "Cancelled" ]]; then
-          echo "🚨 인스턴스 리프레시 실패: 상태 $ASG_STATUS"
-          exit 1
-          fi
-
-          if [[ "$ELAPSED" -ge "$MAX_WAIT" ]]; then
-          echo "🚨 타임아웃: $MAX_WAIT초 안에 배포 완료 조건을 만족하지 못했습니다."
-          exit 1
-          fi
-
-          sleep $INTERVAL
-          ELAPSED=$((ELAPSED + INTERVAL))
-          done
+      - name: Resume ASG Terminate Process
+        run: |
+          echo "▶️ Terminate 프로세스를 재개합니다."
+          aws autoscaling resume-processes \
+            --auto-scaling-group-name ${{ env.NEW_ASG }} \
+            --scaling-processes Terminate
 
       # 2. ALB를 Green으로 전환
       - name: Gradually Shift Traffic to New Environment
@@ -322,7 +330,7 @@ jobs:
         # 2. Blue ASG의 상태가 정상인지 확인
       - name: Wait Until Blue ASG is Healthy
         run: |
-          MAX_WAIT=360
+          MAX_WAIT=720
           INTERVAL=10
           ELAPSED=0
           echo "⏳ Blue ASG($OLD_ASG)의 헬스체크 상태를 확인 중..."
