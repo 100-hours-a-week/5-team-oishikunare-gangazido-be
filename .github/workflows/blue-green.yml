@@ -110,18 +110,18 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-    # 1. Green 환경 스케일 업 및 헬스체크 준비
+        # 1. Green 환경 스케일 업 및 헬스체크 준비
       - name: Scale Up Temporary (Green) Auto Scaling Group (${{ env.NEW_ASG }})
         run: |
           aws autoscaling update-auto-scaling-group \
             --auto-scaling-group-name ${{ env.NEW_ASG }} \
             --desired-capacity 4 --min-size 4 --max-size 5
 
-      # 스케일 인 방지를 위해 Terminate 프로세스 중단
+          # 스케일 인 방지를 위해 Terminate 프로세스 중단
           aws autoscaling suspend-processes \
             --auto-scaling-group-name ${{ env.NEW_ASG }} \
             --scaling-processes Terminate
-          echo "⏸️ 스케일 인 방지를 위해 Terminate 프로세스를 중지했습니다."
+            echo "⏸️ 스케일 인 방지를 위해 Terminate 프로세스를 중지했습니다."
 
       - name: Start Green ASG Instance Refresh
         run: |
@@ -163,7 +163,7 @@ jobs:
             --query 'TargetGroups[0].TargetGroupArn' --output text)
 
           while true; do
-        # 인스턴스 ID 조회
+            # 인스턴스 ID 조회
             INSTANCE_IDS=$(aws autoscaling describe-auto-scaling-groups \
               --auto-scaling-group-names $NEW_ASG \
               --query 'AutoScalingGroups[0].Instances[*].InstanceId' \
@@ -177,7 +177,7 @@ jobs:
               continue
             fi
 
-        # 인스턴스 퍼블릭 IP 조회
+            # 인스턴스 퍼블릭 IP 조회
             echo "💡 인스턴스 IP 조회 중..."
             declare -A INSTANCE_IPS
             for INSTANCE_ID in $INSTANCE_IDS; do
@@ -188,7 +188,7 @@ jobs:
               INSTANCE_IPS["$INSTANCE_ID"]=$IP
             done
 
-        # ALB Target 상태 확인
+            # ALB Target 상태 확인
             HEALTH_STATUSES=$(aws elbv2 describe-target-health \
               --target-group-arn "$TG_ARN" \
               --query 'TargetHealthDescriptions[*].TargetHealth.State' \
@@ -198,7 +198,7 @@ jobs:
             if [[ "$HEALTH_STATUSES" != *"unhealthy"* && "$HEALTH_STATUSES" != *"initial"* ]]; then
               echo "✅ 모든 ALB 대상 인스턴스가 healthy 상태입니다."
 
-          # 앱 상태 확인
+              # 앱 상태 확인
               APP_STATUS_OK=true
               for INSTANCE_ID in $INSTANCE_IDS; do
                 IP=${INSTANCE_IPS[$INSTANCE_ID]}
