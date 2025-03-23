@@ -92,6 +92,24 @@ jobs:
           echo "🛑 기존 운영 ASG: $OLD_ASG"
           echo "📌 배포할 이미지 태그: $DEPLOY_ENV"
 
+      # 이미지 푸시
+      - name: Build and Push Docker Image to Blue
+        env:
+          ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-northeast-2.amazonaws.com
+          ECR_REPOSITORY: gangazido-backend
+        run: |
+          IMAGE_TAG=$(echo "${DEPLOY_ENV}" | tr '[:upper:]' '[:lower:]')
+
+          echo "🐳 Building Docker image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+          if [[ -z "$IMAGE_TAG" ]]; then
+            echo "🚨 IMAGE_TAG 값이 비어 있습니다!"
+            exit 1
+          fi
+
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
       # 1. Green 환경 스케일 업 및 헬스체크 준비
       - name: Scale Up Temporary (Green) Auto Scaling Group (${{ env.NEW_ASG }})
         run: |
@@ -303,24 +321,6 @@ jobs:
 #            --auto-scaling-group-name ${{ env.OLD_ASG }} \
 #            --desired-capacity 0 --min-size 0 --max-size 5
       #지운다?
-
-      # 4. Blue ASG에 새로운 코드 배포
-      - name: Build and Push Docker Image to Blue
-        env:
-          ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-northeast-2.amazonaws.com
-          ECR_REPOSITORY: gangazido-backend
-        run: |
-          IMAGE_TAG=$(echo "${DEPLOY_ENV}" | tr '[:upper:]' '[:lower:]')
-
-          echo "🐳 Building Docker image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-
-          if [[ -z "$IMAGE_TAG" ]]; then
-            echo "🚨 IMAGE_TAG 값이 비어 있습니다!"
-            exit 1
-          fi
-
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
       - name: Wait Until Blue ASG is Healthy
         run: |
