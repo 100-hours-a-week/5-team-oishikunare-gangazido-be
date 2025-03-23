@@ -307,4 +307,4 @@ jobs:
           aws autoscaling update-auto-scaling-group \
             --auto-scaling-group-name ${{ env.NEW_ASG }} \
             --desired-capacity 2 --min-size 2 --max-size 5
-#블루 이미지 생성 확인
+#블루 이미지 생성 확인 제발~~!
