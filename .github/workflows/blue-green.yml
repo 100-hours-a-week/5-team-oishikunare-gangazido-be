@@ -234,7 +234,7 @@ jobs:
           echo "🔍 조건부 규칙의 Rule ARN을 가져오는 중..."
           RULE_ARN=$(aws elbv2 describe-rules \
             --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
-            --query 'Rules[?Conditions[?Field==`host-header`]].RuleArn' \
+            --query "Rules[?Conditions[?Field=='host-header' && Values[0]=='api.gangazido.com']].RuleArn" \
             --output text)
 
           if [[ -z "$RULE_ARN" ]]; then
@@ -275,7 +275,7 @@ jobs:
           echo "🔍 조건부 규칙의 Rule ARN을 가져오는 중..."
           RULE_ARN=$(aws elbv2 describe-rules \
             --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
-            --query 'Rules[?Conditions[?Field==`host-header`]].RuleArn' \
+            --query "Rules[?Conditions[?Field=='host-header' && Values[0]=='api.gangazido.com']].RuleArn" \
             --output text)
 
           if [[ -z "$RULE_ARN" ]]; then
