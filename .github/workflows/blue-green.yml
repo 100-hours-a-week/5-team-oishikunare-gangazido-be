@@ -290,6 +290,10 @@ jobs:
                     {
                       "TargetGroupArn": "'"$NEW_TARGET_GROUP"'",
                       "Weight": 100
+                    },
+                    {
+                      "TargetGroupArn": "'"$OLD_TARGET_GROUP"'",
+                      "Weight": 0
                     }
                   ]
                 }
