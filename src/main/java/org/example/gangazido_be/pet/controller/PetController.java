@@ -28,8 +28,9 @@ public class PetController {
 		@RequestParam("gender") Boolean gender,
 		@RequestParam("breed") String breed,
 		@RequestParam("weight") double weight,
-		@RequestPart(value = "profileImage", required = false) MultipartFile petProfileImage,
+		@RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
 		HttpSession session) {
+
 		// 사용자 로그인 상태 확인
 		User user = (User) session.getAttribute("user");
 		if (user == null) {
@@ -38,27 +39,21 @@ public class PetController {
 		}
 
 		// userId 포함해서 반려견 등록
-		PetResponse response = petService.createPet(user.getId(), name, age, gender, breed, weight, petProfileImage);
-
+		PetResponse response = petService.createPet(user.getId(), name, age, gender, breed, weight, profileImage);
 		return ResponseEntity.ok(PetApiResponse.of("create_pet_success", response));
 	}
 
 	// 반려견 정보 조회
 	@GetMapping
 	public ResponseEntity<PetApiResponse<PetResponse>> getPet(HttpSession session) {
-		User user = (User) session.getAttribute("user");  // 세션에서 "user" 객체 가져오기
-		Integer userId = null;
-
-		if (user != null) {
-			userId = user.getId();  // "user" 객체에서 userId 가져오기
+		// 사용자 로그인 상태 확인
+		User user = (User) session.getAttribute("user");
+		if (user == null) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+				.body(PetApiResponse.of("required_authorization", null));
 		}
 
-		// 세션에 userId가 없으면 401 Unauthorized 응답
-		if (userId == null) {
-			return ResponseEntity.status(401).body(PetApiResponse.of("required_authorization", null));
-		}
-
-		PetResponse petResponse = petService.getPet(userId);
+		PetResponse petResponse = petService.getPet(user.getId());
 		return ResponseEntity.ok(PetApiResponse.of("get_pet_success", petResponse));
 	}
 
@@ -70,35 +65,31 @@ public class PetController {
 		@RequestParam("gender") Boolean gender,
 		@RequestParam("breed") String breed,
 		@RequestParam("weight") double weight,
-		@RequestPart(value = "profileImage", required = false) MultipartFile petProfileImage,
+		@RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
 		HttpSession session) {
 
+		// 사용자 로그인 확인
 		User user = (User) session.getAttribute("user");
 		if (user == null) {
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
 				.body(PetApiResponse.of("required_authorization", null));
 		}
-		PetResponse petResponse = petService.updatePet(user.getId(), name, age, gender, breed, weight, petProfileImage);
 
+		PetResponse petResponse = petService.updatePet(user.getId(), name, age, gender, breed, weight, profileImage);
 		return ResponseEntity.ok(PetApiResponse.of("change_pet_success", petResponse));
 	}
 
 	// 반려견 정보 삭제
 	@DeleteMapping
 	public ResponseEntity<PetApiResponse<PetResponse>> deletePet(HttpSession session) {
-		User user = (User) session.getAttribute("user");  // 세션에서 "user" 객체 가져오기
-		Integer userId = null;
-
-		if (user != null) {
-			userId = user.getId();  // "user" 객체에서 userId 가져오기
+		// 사용자 로그인 상태 확인
+		User user = (User) session.getAttribute("user");
+		if (user == null) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+				.body(PetApiResponse.of("required_authorization", null));
 		}
 
-		// 세션에 userId가 없으면 401 Unauthorized 응답
-		if (userId == null) {
-			return ResponseEntity.status(401).body(PetApiResponse.of("required_authorization", null));
-		}
-
-		petService.deletePet(userId);
+		petService.deletePet(user.getId());
 		return ResponseEntity.ok(PetApiResponse.of("delete_pet_success", null));
 	}
 }

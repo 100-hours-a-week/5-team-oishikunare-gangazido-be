@@ -9,7 +9,7 @@ import org.example.gangazido_be.pet.entity.Pet;
 @Builder
 public class PetResponse {
 	private String name;
-	private String petProfileImage;
+	private String profileImage;
 	private Integer age;
 	private boolean gender;
 	private String breed;
@@ -18,7 +18,7 @@ public class PetResponse {
 	public static PetResponse from(Pet pet) {
 		return PetResponse.builder()
 			.name(pet.getName())
-			.petProfileImage(pet.getPetProfileImage())
+			.profileImage(pet.getProfileImage())
 			.age(pet.getAge())
 			.gender(pet.getGender())
 			.breed(pet.getBreed())

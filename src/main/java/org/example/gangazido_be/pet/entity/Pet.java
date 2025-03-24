@@ -29,7 +29,7 @@ public class Pet {
 	@Column(nullable = false, length = 10)
 	private String name;    // 반려견 이름
 
-	private String petProfileImage;    // 반려견 프로필 이미지 URL
+	private String profileImage;    // 반려견 프로필 이미지 URL
 
 	@Column(nullable = false)
 	private Integer age;    // 반려견 나이
@@ -48,10 +48,10 @@ public class Pet {
 	private LocalDateTime deletedAt;    // 삭제일
 
 	// entity 수정
-	public void updatePet(String name, String petProfileImage, Integer age,
+	public void updatePet(String name, String profileImage, Integer age,
 		boolean gender, String breed, Double weight) {
 		this.name = name;
-		this.petProfileImage = petProfileImage;
+		this.profileImage = profileImage;
 		this.age = age;
 		this.gender = gender;
 		this.breed = breed;

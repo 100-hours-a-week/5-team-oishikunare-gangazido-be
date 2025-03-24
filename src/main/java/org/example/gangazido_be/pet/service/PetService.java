@@ -45,9 +45,7 @@ public class PetService {
 
 	// 반려견 정보 등록
 	@Transactional
-	public PetResponse createPet(Integer userId, String name, Integer age, Boolean gender, String breed, Double weight, MultipartFile petProfileImage) {
-		String petProfileImagePath = null;
-
+	public PetResponse createPet(Integer userId, String name, Integer age, Boolean gender, String breed, Double weight, MultipartFile profileImage) {
 		// 사용자 존재 여부 확인 (없으면 404  예외)
 		User user = userRepository.findByIdAndDeletedAtIsNull(userId) // userId로 User 엔티티 조회
 			.orElseThrow(() -> new PetException(HttpStatus.NOT_FOUND, PetExceptionType.NOT_FOUND_USER.getMessage()));
@@ -55,25 +53,6 @@ public class PetService {
 		// 이미 해당 userId로 pet이 존재한다면 예외 처리
 		if (petRepository.existsByUserIdAndDeletedAtIsNull(userId)) {
 			throw new PetException(HttpStatus.CONFLICT, PetExceptionType.ALREADY_EXISTS_PET.getMessage());
-		}
-
-		// soft-delete된 반려견 있는지 확인
-		Pet deletedPet = petRepository.findByUserIdIncludingDeleted(userId)
-			.filter(p -> p.getDeletedAt() != null)
-			.orElse(null);
-
-		if (deletedPet != null) {
-			log.debug("✔️ 소프트 삭제된 반려견 복구 로직 실행됨");
-
-			deletedPet.setDeletedAt(null);
-			deletedPet.setUser(user); // 중요!!
-
-			if (petProfileImage != null && !petProfileImage.isEmpty()) {
-				petProfileImagePath = saveFile(petProfileImage);
-			}
-
-			deletedPet.updatePet(name, petProfileImagePath, age, gender, breed, weight);
-			return PetResponse.from(petRepository.save(deletedPet));
 		}
 
 		// 유효성 검증
@@ -98,26 +77,39 @@ public class PetService {
 		if (gender == null) {
 			throw new PetException(HttpStatus.BAD_REQUEST, PetExceptionType.REQUIRED_PET_GENDER.getMessage());
 		}
-		if (breed == null || breed.isBlank()) {
-			throw new PetException(HttpStatus.BAD_REQUEST, PetExceptionType.REQUIRED_PET_BREED.getMessage());
-		}
-		if (age <= 0 || age > 50) {
-			throw new PetException(HttpStatus.BAD_REQUEST, PetExceptionType.INVALID_PET_AGE_VALUE.getMessage());
-		}
-		if (weight < 0.1 || weight > 200.0) {
-			throw new PetException(HttpStatus.BAD_REQUEST, PetExceptionType.INVALID_PET_WEIGHT.getMessage());
+
+		String profileImagePath = null;
+
+		// soft-delete된 반려견 있는지 확인
+		Pet deletedPet = petRepository.findByUserIdIncludingDeleted(userId)
+			.filter(p -> p.getDeletedAt() != null)
+			.orElse(null);
+
+		if (deletedPet != null) {
+			log.debug("✔️ 소프트 삭제된 반려견 복구 로직 실행됨");
+
+			deletedPet.setDeletedAt(null);
+			deletedPet.setUser(user);
+
+			// 복구하는 반려견에 대해 이미지 새로 들어왔는지 판단하고 저장
+			if (profileImage != null && !profileImage.isEmpty()) {
+				profileImagePath = saveFile(profileImage);
+			}
+
+			deletedPet.updatePet(name, profileImagePath, age, gender, breed, weight);
+			return PetResponse.from(petRepository.save(deletedPet));
 		}
 
-		// ✅ 파일 저장 처리
-		if (petProfileImage != null && !petProfileImage.isEmpty()) {
-			petProfileImagePath = saveFile(petProfileImage);
+		// 반려견 등록 시 이미지 있으면 저장
+		if (profileImage != null && !profileImage.isEmpty()) {
+			profileImagePath = saveFile(profileImage);
 		}
 
 		// 엔티티 생성 및 저장
 		Pet pet = Pet.builder()
 			.user(user)
 			.name(name)
-			.petProfileImage(petProfileImagePath) // ✅ 저장된 파일 URL 설정
+			.profileImage(profileImagePath) // 저장된 파일 URL 설정
 			.age(age)
 			.gender(gender)
 			.breed(breed)
@@ -128,29 +120,15 @@ public class PetService {
 		return PetResponse.from(savedPet);
 	}
 
-	@Transactional
-	public PetResponse updatePetProfileImage(Integer userId, MultipartFile petProfileImage) {
-		Pet pet = petRepository.findByUserId(userId)
-			.orElseThrow(PetNotFoundException::new);
 
-		// ✅ 기존 이미지 파일 삭제 (선택적)
-		deleteOldFile(pet.getPetProfileImage());
-
-		// ✅ 새 이미지 저장 후 URL 설정
-		String petProfileImageUrl = saveFile(petProfileImage);
-		pet.setPetProfileImage(petProfileImageUrl);
-		petRepository.save(pet);
-
-		return PetResponse.from(pet);
-	}
-
+	// 업로드된 파일 실제 디스크에 저장하고 경로 반환
 	private String saveFile(MultipartFile file) {
 		if (file == null || file.isEmpty()) {
 			return null;
 		}
 		String originalFileName = file.getOriginalFilename();
 		if (originalFileName == null) {
-			throw new RuntimeException("❌ 업로드된 파일 이름이 null입니다.");
+			throw new RuntimeException("업로드된 파일 이름이 null입니다.");
 		}
 
 		String fileName = UUID.randomUUID() + "_" + originalFileName;
@@ -161,16 +139,12 @@ public class PetService {
 		File parentDir = destination.getParentFile();
 
 		if (!parentDir.exists() && !parentDir.mkdirs()) {
-			log.error("❌ 업로드 폴더 생성 실패: {}", parentDir.getAbsolutePath());
 			throw new RuntimeException("폴더 생성 실패: " + parentDir.getAbsolutePath());
 		}
 
 		try {
-			log.info("📎 업로드된 파일명: {}", originalFileName);
-			log.info("📁 저장할 전체 경로: {}", fullPath);
 			file.transferTo(destination);
 		} catch (IOException e) {
-			log.error("❌ 파일 저장 실패! 경로: {}, 에러: {}", fullPath, e.getMessage(), e);
 			throw new RuntimeException("파일 저장 실패", e);
 		}
 
@@ -178,14 +152,14 @@ public class PetService {
 		return "/uploads/pet/" + fileName;
 	}
 
-	// ✅ 기존 이미지 파일 삭제 메서드 (선택적)
+	// 기존 이미지 파일 삭제 메서드
 	private void deleteOldFile(String filePath) {
 		if (filePath != null && filePath.startsWith("/uploads/pet/")) {
 			File oldFile = new File(filePath);
 			if (oldFile.exists()) {
-				boolean deleted = oldFile.delete(); // ✅ 삭제 성공 여부 확인
+				boolean deleted = oldFile.delete();
 				if (!deleted) {
-					System.err.println("파일 삭제 실패: " + oldFile.getAbsolutePath()); // ✅ 삭제 실패 시 로그 출력
+					System.err.println("파일 삭제 실패: " + oldFile.getAbsolutePath());
 				}
 			}
 		}
@@ -207,7 +181,7 @@ public class PetService {
 
 	// 반려견 정보 수정
 	@Transactional
-	public PetResponse updatePet(Integer userId,  String name, Integer age, Boolean gender, String breed, Double weight, MultipartFile petProfileImage) {
+	public PetResponse updatePet(Integer userId,  String name, Integer age, Boolean gender, String breed, Double weight, MultipartFile profileImage) {
 		// 사용자 존재 여부 확인 (없으면 404 예외)
 		User user = userRepository.findById(userId)
 			.orElseThrow(UserNotFoundException::new);
@@ -247,12 +221,18 @@ public class PetService {
 			throw new PetException(HttpStatus.BAD_REQUEST, PetExceptionType.REQUIRED_PET_BREED.getMessage());
 		}
 
-		// ✅ petProfileImage request에서 가져오지 않고 직접 MultipartFile에서 처리
-		String petProfileImageUrl = (petProfileImage != null && !petProfileImage.isEmpty()) ? saveFile(petProfileImage) : null;
+
+		// 반려견 수정 시 이미지 있으면 저장
+		String profileImagePath = null;
+
+		if (profileImage != null && !profileImage.isEmpty()) {
+			deleteOldFile(pet.getProfileImage());
+			profileImagePath = saveFile(profileImage);
+		}
 
 		pet.updatePet(
 			name,
-			petProfileImageUrl,  // ✅ 여기서 MultipartFile → String URL 변환
+			profileImagePath,  // 여기서 MultipartFile → String URL 변환
 			age,
 			gender,
 			breed,
