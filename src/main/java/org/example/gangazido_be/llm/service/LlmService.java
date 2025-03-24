@@ -4,10 +4,11 @@
 package org.example.gangazido_be.llm.service;
 
 import org.example.gangazido_be.pet.repository.PetRepository;
+import org.json.JSONArray;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-
 import org.example.gangazido_be.llm.model.LlmResponse;
+
 import org.example.gangazido_be.gpt.service.GptService;
 import org.example.gangazido_be.gpt.service.WeatherService;
 import org.example.gangazido_be.pet.entity.Pet;
@@ -34,14 +35,14 @@ public class LlmService {
 	private static final Map<String, String> BREED_CHARACTERISTICS = new HashMap<>();
 
 	static {
-		BREED_CHARACTERISTICS.put("siberian husky", "추운 날씨에서 활동하기 적합한 견종입니다.");
-		BREED_CHARACTERISTICS.put("golden retriever", "추위에 비교적 강하지만, 너무 추운 날씨에는 보호가 필요할 수 있습니다.");
-		BREED_CHARACTERISTICS.put("pomeranian", "추위에 약하므로 따뜻한 옷을 입히는 것이 좋습니다.");
-		BREED_CHARACTERISTICS.put("maltese", "추위에 약한 견종이므로 외출 시 방한복이 필요합니다.");
-		BREED_CHARACTERISTICS.put("bichon", "포근한 털이 있지만 추위에 약한 편이라 옷을 입히는 것이 좋아요.");
-		BREED_CHARACTERISTICS.put("jindodog", "적당한 기온에서는 산책이 가능하지만, 너무 추운 날씨에는 주의해야 합니다.");
-		BREED_CHARACTERISTICS.put("mixedbreed", "견종에 따라 차이가 있지만 일반적으로 기온 변화에 적응할 수 있습니다.");
-		BREED_CHARACTERISTICS.put("others", "견종별 특성을 고려하여 산책 여부를 결정하세요.");
+		BREED_CHARACTERISTICS.put("시베리안허스키", "추운 날씨에서 활동하기 적합한 견종입니다.");
+		BREED_CHARACTERISTICS.put("골든리트리버", "추위에 비교적 강하지만, 너무 추운 날씨에는 보호가 필요할 수 있습니다.");
+		BREED_CHARACTERISTICS.put("포메라니안", "추위에 약하므로 따뜻한 옷을 입히는 것이 좋습니다.");
+		BREED_CHARACTERISTICS.put("말티즈", "추위에 약한 견종이므로 외출 시 방한복이 필요합니다.");
+		BREED_CHARACTERISTICS.put("비숑", "포근한 털이 있지만 추위에 약한 편이라 옷을 입히는 것이 좋아요.");
+		BREED_CHARACTERISTICS.put("진돗개", "적당한 기온에서는 산책이 가능하지만, 너무 추운 날씨에는 주의해야 합니다.");
+		BREED_CHARACTERISTICS.put("믹스견", "견종에 따라 차이가 있지만 일반적으로 기온 변화에 적응할 수 있습니다.");
+		BREED_CHARACTERISTICS.put("기타", "견종별 특성을 고려하여 산책 여부를 결정하세요.");
 	}
 
 	// ✅ 생성자 주입 방식으로 의존성 주입 (Spring이 자동으로 관리)
@@ -101,6 +102,7 @@ public class LlmService {
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
 				.body(new LlmResponse("invalid_weather_data", "internal_server_error"));
 		}
+		//JSONObject json = new JSONObject(response);
 
 		// ✅ 미세먼지 데이터 추출
 		JSONObject airQualityJson = weatherJson.optJSONObject("air_quality");
@@ -109,9 +111,12 @@ public class LlmService {
 				.body(new LlmResponse("invalid_air_quality_data", "internal_server_error"));
 		}
 
-		JSONObject components = airQualityJson.optJSONObject("components");
+		/*JSONObject components = airQualityJson.optJSONObject("components");
 		double pm10 = (components != null) ? components.optDouble("pm10", -1.0) : -1.0;
-		double pm25 = (components != null) ? components.optDouble("pm2_5", -1.0) : -1.0;
+		double pm25 = (components != null) ? components.optDouble("pm2_5", -1.0) : -1.0;*/
+
+		double pm10 = airQualityJson.optDouble("pm10", -1.0);
+		double pm25 = airQualityJson.optDouble("pm2_5", -1.0);
 
 		// ✅ 날씨 정보 파싱
 		JSONObject weatherData = weatherJson.optJSONObject("weather");
@@ -139,6 +144,7 @@ public class LlmService {
 				"당신은 반려견 산책 추천 AI입니다. **반드시 JSON 형식으로만 답변하세요.** HTML이나 마크다운, 자연어 문장만 있는 응답은 허용되지 않습니다.\\n" +
 					"미세먼지 데이터와 반려견 정보를 바탕으로 **%s**의 산책 가능 여부를 판단하고 그 결과를 제공해주세요" +
 					"응답에 반드시 반려견 이름을 포함해주세요." +
+					"산책 추천 또는 비추천 사유에 기온 %.1f°C, 미세먼지 PM10 %.1fµg/m³, PM2.5 %.1fµg/m³ 수치를 반드시 모두 포함하여 설명하세요**" +
 					"📌 **현재 환경 데이터:**\n" +
 					"- 날씨 상태: %s\n" +
 					"- 기온: %.1f°C\n" +
@@ -158,13 +164,14 @@ public class LlmService {
 					"}\n" +
 					"```\n" +
 					"**반드시 위 JSON 형식을 지켜서 응답하세요.**",
-				petName, weatherCondition, temperature, pm10, pm25, petName, petBreed, petAge, petWeight
+				petName, temperature, pm10, pm25, weatherCondition, temperature, pm10, pm25, petName, petBreed, petAge, petWeight
 			);
 		} else if (lowerMessage.contains("산책") || lowerMessage.contains("산책 가능") || lowerMessage.contains("외출")) {
 			prompt = String.format(
 				"당신은 반려견 산책 추천 AI입니다. **반드시 JSON 형식으로만 답변하세요.** HTML이나 마크다운, 자연어 문장만 있는 응답은 허용되지 않습니다.\\n" +
 					" 날씨와 대기질, 반려견 정보를 바탕으로 **%s**의 산책 가능 여부를 판단하고, JSON 형식으로 추천 결과를 제공해주세요.\n\n" +
 					"응답에 반드시 반려견 이름을 포함해주세요." +
+					"산책 추천 또는 비추천 사유 (기온 %.1f°C, 미세먼지 PM10 %.1fµg/m³, PM2.5 %.1fµg/m³ 수치를 반드시 모두 포함하여 설명)" +
 					"📌 **현재 환경 데이터:**\n" +
 					"- 날씨 상태: %s\n" +
 					"- 기온: %.1f°C\n" +
@@ -183,7 +190,7 @@ public class LlmService {
 					"  \"safety_tips\": [\"산책 시 유의 사항\"]\n" +
 					"}\n" +
 					"```\n",
-				petName, weatherCondition, temperature, pm10, pm25, petName, petBreed, petAge, petWeight
+				petName, temperature, pm10, pm25, weatherCondition, temperature, pm10, pm25, petName, petBreed, petAge, petWeight
 			);
 		} else if (message.contains("옷") || message.contains("입어야") || lowerMessage.contains("외출 옷") || lowerMessage.contains("방한")) {
 			prompt = String.format(
@@ -191,25 +198,27 @@ public class LlmService {
 					"날씨 데이터와 반려견 정보를 바탕으로 **%s**의 산책 가능 여부를 판단하고 그 결과를 제공해주세요" +
 					"반려견이 외출 시 옷을 입어야 할까요? 현재 날씨를 분석하고, 반려견의 체형을 고려하여 적절한 답변을 제공해주세요.\n\n" +
 					"응답에 반드시 반려견 이름을 포함해주세요." +
+					"산책 추천 또는 비추천 사유 (기온 %.1f°C, 미세먼지 PM10 %.1fµg/m³, PM2.5 %.1fµg/m³ 수치를 반드시 모두 포함하여 설명)" +
 					"📌 **현재 환경 데이터:**\n" +
 					"- 날씨 상태: %s\n" +
 					"- 기온: %.1f°C\n" +
 					"- 반려견 견종: %s\n" +
 					"- 반려견 체중: %.1fkg\n\n" +
 					"📌 **옷을 입어야 하는지 여부와 이유를 한글로 설명해주세요.**",
-				weatherCondition, temperature, petBreed, petWeight
+				weatherCondition, temperature, pm10, pm25, temperature, petBreed, petWeight
 			);
 		} else {
 			prompt = "'제가 도와드릴 수 있는 질문이 아닙니다'라고 답해.";
 		}
 
-		System.out.println("📝 [DEBUG] 최종 GPT 프롬프트:\n" + prompt);
+		//System.out.println("📝 [DEBUG] 최종 GPT 프롬프트:\n" + prompt);
 
 		// 🔥 GPT 호출
 		String gptResponse;
 		try {
 			gptResponse = gptService.generateText(prompt);
 			System.out.println("response: " + gptResponse);  // 🔍 GPT 응답 확인
+
 			if (gptResponse == null || gptResponse.isEmpty()) {
 				throw new Exception("GPT 서비스에서 응답이 비어 있습니다.");
 			}
@@ -220,6 +229,7 @@ public class LlmService {
 		}
 
 		return ResponseEntity.ok(new LlmResponse("llm_success", gptResponse));
+		////////////
 	}
 
 	private String extractSessionId(HttpServletRequest request) {
