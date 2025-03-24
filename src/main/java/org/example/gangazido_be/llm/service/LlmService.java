@@ -163,7 +163,7 @@ public class LlmService {
 					"}\n" +
 					"```\n" +
 					"**반드시 위 JSON 형식을 지켜서 응답하세요.**",
-				petName,temperature, pm10, pm25, weatherCondition, temperature, pm10, pm25, petName, petBreed, petAge, petWeight
+				petName, temperature, pm10, pm25, weatherCondition, temperature, pm10, pm25, petName, petBreed, petAge, petWeight
 			);
 		} else if (lowerMessage.contains("산책") || lowerMessage.contains("산책 가능") || lowerMessage.contains("외출")) {
 			prompt = String.format(
