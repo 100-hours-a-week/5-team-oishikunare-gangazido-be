@@ -12,8 +12,6 @@ import org.example.gangazido_be.pet.dto.PetResponse;
 import org.example.gangazido_be.pet.entity.Pet;
 import org.example.gangazido_be.pet.exception.PetException;
 import org.example.gangazido_be.pet.exception.PetExceptionType;
-import org.example.gangazido_be.pet.exception.PetNotFoundException;
-import org.example.gangazido_be.pet.exception.UserNotFoundException;
 import org.example.gangazido_be.pet.repository.PetRepository;
 import org.example.gangazido_be.user.entity.User;
 import org.example.gangazido_be.user.repository.UserRepository;
@@ -174,7 +172,7 @@ public class PetService {
 
 		// 해당 사용자의 반려견 정보 조회 (없으면 404 예외)
 		Pet pet = petRepository.findByUserId(userId)
-			.orElseThrow(PetNotFoundException::new);
+			.orElseThrow(() -> new PetException(HttpStatus.NOT_FOUND, PetExceptionType.NOT_FOUND_PET.getMessage()));
 
 		return PetResponse.from(pet);
 	}
@@ -184,11 +182,11 @@ public class PetService {
 	public PetResponse updatePet(Integer userId,  String name, Integer age, Boolean gender, String breed, Double weight, MultipartFile profileImage) {
 		// 사용자 존재 여부 확인 (없으면 404 예외)
 		User user = userRepository.findById(userId)
-			.orElseThrow(UserNotFoundException::new);
+			.orElseThrow(() -> new PetException(HttpStatus.NOT_FOUND, PetExceptionType.NOT_FOUND_USER.getMessage()));
 
 		// 유저는 있지만 Pet 정보가 없는 경우 (404 예외)
 		Pet pet = petRepository.findByUserId(userId)
-			.orElseThrow(PetNotFoundException::new);
+			.orElseThrow(() -> new PetException(HttpStatus.NOT_FOUND, PetExceptionType.NOT_FOUND_PET.getMessage()));
 
 		// 본인 반려견인지 확인 (403 예외)
 		if (!pet.getUser().getId().equals(userId)) {
@@ -246,11 +244,11 @@ public class PetService {
 	public void deletePet(Integer userId) {
 		// 사용자 존재 여부 확인 (없으면 404 예외)
 		User user = userRepository.findById(userId)
-			.orElseThrow(UserNotFoundException::new);
+			.orElseThrow(() -> new PetException(HttpStatus.NOT_FOUND, PetExceptionType.NOT_FOUND_USER.getMessage()));
 
 		// 반려견 존재 여부 확인 (없으면 404 예외)
 		Pet pet = petRepository.findByUserId(userId)
-			.orElseThrow(PetNotFoundException::new);
+			.orElseThrow(() -> new PetException(HttpStatus.NOT_FOUND, PetExceptionType.NOT_FOUND_PET.getMessage()));
 
 		// 본인 반려견인지 확인 (403 예외)
 		if (!pet.getUser().getId().equals(userId)) {
