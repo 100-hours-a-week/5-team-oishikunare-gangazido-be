@@ -7,14 +7,14 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 // 전역 예외 처리기
 @RestControllerAdvice("org.example.gangazido_be.pet")
 public class PetGlobalExceptionHandler {
 	private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String message) {
-		Map<String, Object> response = new HashMap<>();
+		Map<String, Object> response = new LinkedHashMap<>();
 		response.put("message", message);
 		response.put("data", null);
 		return new ResponseEntity<>(response, status);
