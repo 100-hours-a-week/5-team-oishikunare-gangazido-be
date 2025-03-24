@@ -113,11 +113,11 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
         # 1. Green 환경 스케일 업 및 헬스체크 준비
-      - name: Scale Up Temporary (Green) Auto Scaling Group (${{ env.NEW_ASG }})
-        run: |
-          aws autoscaling update-auto-scaling-group \
-            --auto-scaling-group-name ${{ env.NEW_ASG }} \
-            --desired-capacity 4 --min-size 4 --max-size 5
+#      - name: Scale Up Temporary (Green) Auto Scaling Group (${{ env.NEW_ASG }})
+#        run: |
+#          aws autoscaling update-auto-scaling-group \
+#            --auto-scaling-group-name ${{ env.NEW_ASG }} \
+#            --desired-capacity 4 --min-size 4 --max-size 5
 
       - name: Start Green ASG Instance Refresh
         run: |
@@ -305,10 +305,10 @@ jobs:
 
           echo "✅ 트래픽이 완전히 새로운 환경으로 전환되었습니다."
 
-      - name: Scale Down New ASG
-        run: |
-          echo "✅ Green ASG($NEW_ASG)를 축소합니다."
-          aws autoscaling update-auto-scaling-group \
-            --auto-scaling-group-name ${{ env.NEW_ASG }} \
-            --desired-capacity 2 --min-size 2 --max-size 5
+#      - name: Scale Down New ASG
+#        run: |
+#          echo "✅ Green ASG($NEW_ASG)를 축소합니다."
+#          aws autoscaling update-auto-scaling-group \
+#            --auto-scaling-group-name ${{ env.NEW_ASG }} \
+#            --desired-capacity 2 --min-size 2 --max-size 5
 #타겟 그룹 빈값 허용하면 에러
