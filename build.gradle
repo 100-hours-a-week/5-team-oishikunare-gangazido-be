@@ -18,6 +18,8 @@ compileJava.options.encoding = 'UTF-8'
 compileTestJava.options.encoding = 'UTF-8'
 
 editorconfig {
+    excludes = ['build']
+    excludes = ['**/node_modules/**'] // 레이첼 추가
     excludes = [
             'build',
             '.github',
@@ -45,10 +47,8 @@ repositories {
 }
 
 dependencies {
-    annotationProcessor 'org.projectlombok:lombok:1.18.26'//여니
     implementation 'io.github.cdimascio:dotenv-java:3.0.0' // 여니 추가
     implementation 'org.json:json:20210307'//여니 추가
-    implementation 'io.github.cdimascio:dotenv-java:2.2.0' // 여니추가 env
 
     // Spring Boot 기본 의존성
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'

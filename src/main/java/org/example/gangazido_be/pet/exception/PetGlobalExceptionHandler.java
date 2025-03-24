@@ -1,6 +1,5 @@
 package org.example.gangazido_be.pet.exception;
 
-// 전역 예외 처리기
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -8,15 +7,16 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
+// 전역 예외 처리기
 @RestControllerAdvice("org.example.gangazido_be.pet")
 public class PetGlobalExceptionHandler {
 	private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String message) {
-		Map<String, Object> response = new HashMap<>();
-		response.put("data", null);
+		Map<String, Object> response = new LinkedHashMap<>();
 		response.put("message", message);
+		response.put("data", null);
 		return new ResponseEntity<>(response, status);
 	}
 
@@ -28,10 +28,6 @@ public class PetGlobalExceptionHandler {
 		return buildResponse(HttpStatus.BAD_REQUEST, message);
 	}
 
-	@ExceptionHandler(PetNotFoundException.class)
-	public ResponseEntity<Map<String, Object>> handlePetNotFoundException(PetNotFoundException ex) {
-		return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage());
-	}
 
 	// 비즈니스 로직에서 발생한 예외 처리 (400, 404 등)
 	@ExceptionHandler(PetException.class)

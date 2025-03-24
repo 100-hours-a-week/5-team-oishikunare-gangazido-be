@@ -11,7 +11,7 @@ public class PetResponse {
 	private String name;
 	private String profileImage;
 	private Integer age;
-	private Integer gender;
+	private boolean gender;
 	private String breed;
 	private Double weight;
 
