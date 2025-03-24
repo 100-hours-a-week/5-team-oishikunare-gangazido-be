@@ -7,8 +7,8 @@ import org.example.gangazido_be.pet.repository.PetRepository;
 import org.json.JSONArray;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-
 import org.example.gangazido_be.llm.model.LlmResponse;
+
 import org.example.gangazido_be.gpt.service.GptService;
 import org.example.gangazido_be.gpt.service.WeatherService;
 import org.example.gangazido_be.pet.entity.Pet;
