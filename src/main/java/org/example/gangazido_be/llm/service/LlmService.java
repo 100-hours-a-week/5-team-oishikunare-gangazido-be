@@ -4,6 +4,7 @@
 package org.example.gangazido_be.llm.service;
 
 import org.example.gangazido_be.pet.repository.PetRepository;
+import org.json.JSONArray;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -143,7 +144,7 @@ public class LlmService {
 				"당신은 반려견 산책 추천 AI입니다. **반드시 JSON 형식으로만 답변하세요.** HTML이나 마크다운, 자연어 문장만 있는 응답은 허용되지 않습니다.\\n" +
 					"미세먼지 데이터와 반려견 정보를 바탕으로 **%s**의 산책 가능 여부를 판단하고 그 결과를 제공해주세요" +
 					"응답에 반드시 반려견 이름을 포함해주세요." +
-					"산책 추천 또는 비추천 사유 (기온 %.1f°C, 미세먼지 PM10 %.1fµg/m³, PM2.5 %.1fµg/m³ 수치를 반드시 모두 포함하여 설명)" +
+					"산책 추천 또는 비추천 사유에 기온 %.1f°C, 미세먼지 PM10 %.1fµg/m³, PM2.5 %.1fµg/m³ 수치를 반드시 모두 포함하여 설명하세요**" +
 					"📌 **현재 환경 데이터:**\n" +
 					"- 날씨 상태: %s\n" +
 					"- 기온: %.1f°C\n" +
@@ -210,13 +211,14 @@ public class LlmService {
 			prompt = "'제가 도와드릴 수 있는 질문이 아닙니다'라고 답해.";
 		}
 
-		System.out.println("📝 [DEBUG] 최종 GPT 프롬프트:\n" + prompt);
+		//System.out.println("📝 [DEBUG] 최종 GPT 프롬프트:\n" + prompt);
 
 		// 🔥 GPT 호출
 		String gptResponse;
 		try {
 			gptResponse = gptService.generateText(prompt);
 			System.out.println("response: " + gptResponse);  // 🔍 GPT 응답 확인
+
 			if (gptResponse == null || gptResponse.isEmpty()) {
 				throw new Exception("GPT 서비스에서 응답이 비어 있습니다.");
 			}
@@ -227,6 +229,7 @@ public class LlmService {
 		}
 
 		return ResponseEntity.ok(new LlmResponse("llm_success", gptResponse));
+		////////////
 	}
 
 	private String extractSessionId(HttpServletRequest request) {
