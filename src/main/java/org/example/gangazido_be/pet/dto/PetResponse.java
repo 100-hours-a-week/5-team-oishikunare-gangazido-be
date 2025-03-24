@@ -9,16 +9,16 @@ import org.example.gangazido_be.pet.entity.Pet;
 @Builder
 public class PetResponse {
 	private String name;
-	private String profileImage;
+	private String petProfileImage;
 	private Integer age;
-	private Integer gender;
+	private boolean gender;
 	private String breed;
 	private Double weight;
 
 	public static PetResponse from(Pet pet) {
 		return PetResponse.builder()
 			.name(pet.getName())
-			.profileImage(pet.getProfileImage())
+			.petProfileImage(pet.getPetProfileImage())
 			.age(pet.getAge())
 			.gender(pet.getGender())
 			.breed(pet.getBreed())

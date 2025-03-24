@@ -1,17 +1,9 @@
 package org.example.gangazido_be.pet.controller;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.servlet.http.HttpSession;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import org.example.gangazido_be.pet.common.PetApiResponse;
-import org.example.gangazido_be.pet.dto.PetCreateRequest;
 import org.example.gangazido_be.pet.dto.PetResponse;
 import org.example.gangazido_be.pet.service.PetService;
 import org.example.gangazido_be.user.entity.User;
@@ -29,38 +21,24 @@ import org.springframework.web.multipart.MultipartFile;
 public class PetController {
 	private final PetService petService;
 
-	// 반려견 정보 등록
-	@Operation(summary = "반려견 정보 등록")
-	@ApiResponses({
-		@ApiResponse(responseCode = "200", description = "등록 성공"),
-		@ApiResponse(responseCode = "400", description = "잘못된 요청"),
-		@ApiResponse(responseCode = "401", description = "로그인 필요")
-	})
-	@PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@PostMapping(value = "/v1/pets/me", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseEntity<PetApiResponse<PetResponse>> createPet(
 		@RequestParam("name") String name,
-		@RequestParam("age") int age,
-		@RequestParam("gender") int gender,
+		@RequestParam("age") Integer age,
+		@RequestParam("gender") Boolean gender,
 		@RequestParam("breed") String breed,
 		@RequestParam("weight") double weight,
-
-		@Parameter(description = "반려견 이미지 (파일 업로드)", required = false)
-		@RequestPart(value = "image", required = false) MultipartFile petImage,
-
+		@RequestPart(value = "profileImage", required = false) MultipartFile petProfileImage,
 		HttpSession session) {
-
-		// ✅ 사용자 로그인 상태 확인
+		// 사용자 로그인 상태 확인
 		User user = (User) session.getAttribute("user");
 		if (user == null) {
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
 				.body(PetApiResponse.of("required_authorization", null));
 		}
 
-		// ✅ 요청 데이터 객체 생성
-		PetCreateRequest request = new PetCreateRequest(name, age, gender, breed, weight);
-
-		// ✅ userId 포함해서 반려견 등록
-		PetResponse response = petService.createPet(user.getId(), request, petImage);
+		// userId 포함해서 반려견 등록
+		PetResponse response = petService.createPet(user.getId(), name, age, gender, breed, weight, petProfileImage);
 
 		return ResponseEntity.ok(PetApiResponse.of("create_pet_success", response));
 	}
@@ -88,11 +66,11 @@ public class PetController {
 	@PatchMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseEntity<PetApiResponse<PetResponse>> updatePet(
 		@RequestParam("name") String name,
-		@RequestParam("age") int age,
-		@RequestParam("gender") int gender,
+		@RequestParam("age") Integer age,
+		@RequestParam("gender") Boolean gender,
 		@RequestParam("breed") String breed,
 		@RequestParam("weight") double weight,
-		@RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
+		@RequestPart(value = "profileImage", required = false) MultipartFile petProfileImage,
 		HttpSession session) {
 
 		User user = (User) session.getAttribute("user");
@@ -100,9 +78,7 @@ public class PetController {
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
 				.body(PetApiResponse.of("required_authorization", null));
 		}
-
-		PetCreateRequest request = new PetCreateRequest(name, age, gender, breed, weight);
-		PetResponse petResponse = petService.updatePet(user.getId(), request, profileImage);
+		PetResponse petResponse = petService.updatePet(user.getId(), name, age, gender, breed, weight, petProfileImage);
 
 		return ResponseEntity.ok(PetApiResponse.of("change_pet_success", petResponse));
 	}
