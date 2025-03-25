@@ -22,12 +22,7 @@ public class MarkerController {
 		this.markerService = markerService;
 	}
 
-	/**
-	 * 마커 등록 API
-	 *
-	 * @param requestDto - 클라이언트에서 보내온 마커 정보
-	 * @return 성공 메시지와 등록된 마커 정보
-	 */
+	// 마커 등록 API
 	@PostMapping    // POST 마커 등록 요청 처리
 	public ResponseEntity<?> createMarker(
 		HttpSession session,
@@ -43,7 +38,6 @@ public class MarkerController {
 		Integer sessionUserId = user.getId();
 		System.out.println("세션 user_id: " + sessionUserId); // 콘솔 디버깅
 
-		// DTO에서 user_id 제거 (세션에서 가져오기 때문)
 		// 마커 저장 로직 호출
 		// requestDto를 서비스 계층으로 넘겨 마커를 저장, 저장된 마커 정보를 반환받는다.
 		MarkerResponseDto responseDto = markerService.createMarker(sessionUserId, requestDto);
