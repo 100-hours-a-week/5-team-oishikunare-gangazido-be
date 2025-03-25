@@ -46,7 +46,7 @@ public class UserController {
 	public ResponseEntity<UserApiResponse<Map<String, Object>>> registerUser(
 		@RequestPart("user_email") String email,
 		@RequestPart("user_password") String password,
-		@RequestPart("user_password_confirm") String passwordConfirm, // 비밀번호 확인 추가
+		@RequestPart("user_password_confirm") String passwordConfirm,
 		@RequestPart("user_nickname") String nickname,
 		@RequestPart(value = "user_profileImage", required = false) MultipartFile profileImage,
 		HttpSession session,
@@ -57,21 +57,32 @@ public class UserController {
 				return UserApiResponse.badRequest("required_email");
 			}
 
+			// 이메일 형식 검증
+			if (!email.matches("^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$")) {
+				return UserApiResponse.badRequest("invalid_email_format");
+			}
+
 			if (password == null || password.isEmpty()) {
 				return UserApiResponse.badRequest("required_password");
 			}
 
-			if (passwordConfirm == null || passwordConfirm.isEmpty()) {
-				return UserApiResponse.badRequest("required_password");
-			}
-
-			// 비밀번호 일치 확인
-			if (!password.equals(passwordConfirm)) {
-				return UserApiResponse.badRequest("passwords_do_not_matched");
-			}
-
 			if (nickname == null || nickname.isEmpty()) {
 				return UserApiResponse.badRequest("required_nickname");
+			}
+
+			// 닉네임 길이 검증
+			if (nickname.length() < 2 || nickname.length() > 20) {
+				return UserApiResponse.badRequest("invalid_nickname_length");
+			}
+
+			// 비밀번호 확인 처리 추가
+			if (passwordConfirm == null || passwordConfirm.isEmpty()) {
+				return UserApiResponse.badRequest("required_password_confirm");
+			}
+
+			// 비밀번호 확인 유효성 검사
+			if (!UserPasswordValidator.isValid(passwordConfirm)) {
+				return UserApiResponse.badRequest("invalid_password_confirm");
 			}
 
 			// 비밀번호 복잡성 검증
@@ -102,30 +113,25 @@ public class UserController {
 
 			return UserApiResponse.success(UserApiMessages.USER_CREATED, responseData);
 		} catch (RuntimeException e) {
-			// 구체적인 예외 메시지 처리
+			logger.warn("회원가입 실패: {}", e.getMessage());
+
+			// 예외 메시지에 따른 처리
 			String errorMessage = e.getMessage();
 
-			// 예외 타입에 따른 처리
 			if ("duplicate_email".equals(errorMessage)) {
 				return UserApiResponse.badRequest("duplicate_email");
 			} else if ("duplicate_nickname".equals(errorMessage)) {
 				return UserApiResponse.badRequest("duplicate_nickname");
+			} else if (errorMessage != null && errorMessage.contains("Data too long for column 'nickname'")) {
+				return UserApiResponse.badRequest("invalid_nickname_length");
 			} else if ("invalid_password_format".equals(errorMessage)) {
 				return UserApiResponse.badRequest("invalid_password_format");
-			} else if ("invalid_password_length".equals(errorMessage)) {
-				return UserApiResponse.badRequest("invalid_password_length");
-			} else if ("invalid_nickname_format".equals(errorMessage)) {
-				return UserApiResponse.badRequest("invaild_nickname_format");
-			} else if ("invalid_nickname_length".equals(errorMessage)) {
-				return UserApiResponse.badRequest("invaild_nickname_length");
 			} else {
-				// 기타 RuntimeException
-				logger.warn("회원가입 실패: {}", e.getMessage());
-				return UserApiResponse.badRequest(e.getMessage());
+				return UserApiResponse.badRequest(errorMessage);
 			}
 		} catch (Exception e) {
 			logger.error("서버 오류: ", e);
-			return UserApiResponse.internalError("internal_server_error");
+			return UserApiResponse.internalError(UserApiMessages.INTERNAL_ERROR);
 		}
 	}
 
@@ -149,21 +155,15 @@ public class UserController {
 			// 세션 및 쿠키 설정
 			setSessionAndCookie(user, session, response);
 
-			// 사용자 ID를 암호화하여 응답
-			String encryptedId = idEncryptionUtil.encrypt(user.getId());
-
 			Map<String, Object> responseData = new HashMap<>();
-			responseData.put("userId", encryptedId);
 			responseData.put("nickname", user.getNickname());
 
 			return UserApiResponse.success(UserApiMessages.LOGIN_SUCCESS, responseData);
 		} catch (RuntimeException e) {
 			String errorMessage = e.getMessage();
 
-			if ("missing_email".equals(errorMessage)) {
-				return UserApiResponse.badRequest("missing_email");
-			} else if ("invalid_password".equals(errorMessage)) {
-				// 보안을 위해 일반적인 메시지로 변경
+			// 모든 비밀번호/이메일 관련 오류는 통일된 메시지 사용
+			if ("missing_email".equals(errorMessage) || "invalid_password".equals(errorMessage)) {
 				return UserApiResponse.badRequest("invalid_email_or_password");
 			} else {
 				logger.warn("로그인 실패: {}", e.getMessage());
@@ -175,58 +175,9 @@ public class UserController {
 		}
 	}
 
-	public void logSessionDetails(HttpSession session) {
-		if (session == null) {
-			logger.info("세션 없음: 활성화된 세션이 없습니다.");
-			return;
-		}
-
-		// 세션 기본 정보 로깅
-		logger.info("==================== 세션 정보 시작 ====================");
-		logger.info("세션 ID: {}", session.getId());
-		logger.info("세션 생성 시간: {}", new Date(session.getCreationTime()));
-		logger.info("세션 마지막 접근 시간: {}", new Date(session.getLastAccessedTime()));
-		logger.info("세션 최대 비활성 간격: {} 초", session.getMaxInactiveInterval());
-		logger.info("새 세션 여부: {}", session.isNew());
-
-		// 세션 속성 및 값 로깅
-		logger.info("-------- 세션 속성 --------");
-		Enumeration<String> attributeNames = session.getAttributeNames();
-		if (!attributeNames.hasMoreElements()) {
-			logger.info("세션 속성 없음");
-		}
-
-		while (attributeNames.hasMoreElements()) {
-			String name = attributeNames.nextElement();
-			Object value = session.getAttribute(name);
-
-			logger.info("속성 이름: {}", name);
-			logger.info("속성 타입: {}", value != null ? value.getClass().getName() : "null");
-
-			// User 객체인 경우 상세 정보 출력
-			if (value instanceof User) {
-				User user = (User) value;
-				logger.info("  User.id: {}", user.getId());
-				logger.info("  User.email: {}", user.getEmail());
-				logger.info("  User.nickname: {}", user.getNickname());
-				logger.info("  User.profileImage: {}", user.getProfileImage());
-				logger.info("  User.createdAt: {}", user.getCreatedAt());
-				logger.info("  User.updatedAt: {}", user.getUpdatedAt());
-				logger.info("  User.deletedAt: {}", user.getDeletedAt() != null ? user.getDeletedAt() : "null");
-			} else {
-				logger.info("속성 값: {}", value);
-			}
-			logger.info("--------------------");
-		}
-
-		logger.info("==================== 세션 정보 종료 ====================");
-	}
-
 	// 사용자 정보 확인 API
 	@GetMapping("/me")
 	public ResponseEntity<UserApiResponse<Map<String, Object>>> getCurrentUser(HttpSession session) {
-		logSessionDetails(session);
-
 		User user = (User) session.getAttribute("user");
 
 		if (user == null) {
@@ -284,31 +235,9 @@ public class UserController {
 	@GetMapping("/check-nickname")
 	public ResponseEntity<UserApiResponse<Map<String, Boolean>>> checkNicknameDuplicate(@RequestParam String nickname) {
 		boolean isDuplicate = userService.isNicknameDuplicate(nickname);
+		logger.info("닉네임 중복 체크: {}, 결과: {}", nickname, isDuplicate);
 		Map<String, Boolean> responseData = Map.of("isDuplicate", isDuplicate);
 		return UserApiResponse.success(UserApiMessages.SUCCESS, responseData);
-	}
-
-	// 프로필 이미지 업데이트 API (안 쓰고있음)
-	@PostMapping(value = "/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	public ResponseEntity<UserApiResponse<Map<String, Object>>> updateProfileImage(
-		@RequestPart("profileImage") MultipartFile profileImage,
-		HttpSession session) {
-
-		User user = (User) session.getAttribute("user");
-		if (user == null) {
-			return UserApiResponse.unauthorized(UserApiMessages.UNAUTHORIZED);
-		}
-
-		try {
-			User updatedUser = userService.updateProfileImage(user.getId(), profileImage);
-			session.setAttribute("user", updatedUser); // 세션 업데이트
-
-			Map<String, Object> responseData = Map.of("profileImage", updatedUser.getProfileImage());
-			return UserApiResponse.success(UserApiMessages.PROFILE_UPDATED, responseData);
-		} catch (Exception e) {
-			logger.error("프로필 이미지 업데이트 중 오류: ", e);
-			return UserApiResponse.internalError(UserApiMessages.INTERNAL_ERROR);
-		}
 	}
 
 	@PatchMapping(value = "/me", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -323,20 +252,36 @@ public class UserController {
 		}
 
 		try {
-			// 닉네임 정제 - 제어 문자 제거
+			// 닉네임과 프로필 이미지가 둘 다 제공되지 않은 경우 처리
+			if ((nickname == null || nickname.isEmpty()) &&
+				(profileImage == null || profileImage.isEmpty())) {
+				return UserApiResponse.badRequest("profile_update_data_required");
+			}
+
+			// 닉네임 유효성 검사
 			if (nickname != null && !nickname.isEmpty()) {
+				// 제어 문자 제거
 				nickname = nickname.replaceAll("[\\p{Cntrl}]", "");
 
 				// 빈 문자열이 되면 처리
 				if (nickname.isEmpty()) {
 					return UserApiResponse.badRequest("valid_nickname_required");
 				}
+
+				// 길이 제한 검사
+				if (nickname.length() < 2 || nickname.length() > 20) {
+					return UserApiResponse.badRequest("invalid_nickname_length");
+				}
+
+				// 닉네임 중복 검사 (현재 사용자의 닉네임은 제외)
+				if (!nickname.equals(user.getNickname()) && userService.isNicknameDuplicate(nickname)) {
+					return UserApiResponse.badRequest("duplicate_nickname");
+				}
 			}
 
-			// 정보 업데이트 (nickname 또는 profileImage 중 하나는 제공되어야 함)
-			if ((nickname == null || nickname.isEmpty()) &&
-				(profileImage == null || profileImage.isEmpty())) {
-				return UserApiResponse.badRequest("profile_update_data_required");
+			// 프로필 이미지 파일 크기 검사 (예: 5MB 제한)
+			if (profileImage != null && !profileImage.isEmpty() && profileImage.getSize() > 5 * 1024 * 1024) {
+				return UserApiResponse.badRequest("profile_image_too_large");
 			}
 
 			User updatedUser = userService.updateUserInfo(user.getId(), nickname, profileImage);
@@ -347,10 +292,24 @@ public class UserController {
 			responseData.put("nickname", updatedUser.getNickname());
 			responseData.put("profileImage", updatedUser.getProfileImage());
 
-			return UserApiResponse.success(UserApiMessages.USER_UPDATED, responseData);
+			return UserApiResponse.success("update_user_data_success", responseData);
 		} catch (RuntimeException e) {
 			logger.warn("사용자 정보 업데이트 실패: {}", e.getMessage());
-			return UserApiResponse.badRequest(e.getMessage());
+
+			// 구체적인 예외 메시지 처리
+			String errorMessage = e.getMessage();
+
+			if ("duplicate_nickname".equals(errorMessage)) {
+				return UserApiResponse.badRequest("duplicate_nickname");
+			} else if ("invalid_nickname_format".equals(errorMessage)) {
+				return UserApiResponse.badRequest("invalid_nickname_format");
+			} else if ("invalid_nickname_length".equals(errorMessage)) {
+				return UserApiResponse.badRequest("invalid_nickname_length");
+			} else if (errorMessage != null && errorMessage.contains("Data too long for column 'nickname'")) {
+				return UserApiResponse.badRequest("invalid_nickname_length");
+			} else {
+				return UserApiResponse.badRequest(errorMessage);
+			}
 		} catch (Exception e) {
 			logger.error("서버 오류: ", e);
 			return UserApiResponse.internalError(UserApiMessages.INTERNAL_ERROR);
@@ -417,12 +376,28 @@ public class UserController {
 
 			// 새 비밀번호 검증
 			if (requestDTO.getNewPassword() == null || requestDTO.getNewPassword().isEmpty()) {
-				return UserApiResponse.badRequest("required_new_password");
+				return UserApiResponse.badRequest("required_new_password"); // 수정
 			}
 
-			// 비밀번호 확인 검증
+			// 비밀번호 확인 메시지 처리 추가
+			if (!UserPasswordValidator.isValid(requestDTO.getNewPassword())) {
+				return UserApiResponse.badRequest("invalid_new_password_format");
+			}
+
+			if (requestDTO.getNewPassword().length() < 8 || requestDTO.getNewPassword().length() > 20) {
+				return UserApiResponse.badRequest("invalid_new_password_length");
+			}
+
 			if (requestDTO.getConfirmPassword() == null || requestDTO.getConfirmPassword().isEmpty()) {
 				return UserApiResponse.badRequest("required_new_password_confirm");
+			}
+
+			if (!UserPasswordValidator.isValid(requestDTO.getConfirmPassword())) {
+				return UserApiResponse.badRequest("invalid_new_password_confirm_format");
+			}
+
+			if (requestDTO.getConfirmPassword().length() < 8 || requestDTO.getConfirmPassword().length() > 20) {
+				return UserApiResponse.badRequest("invalid_new_password_confirm_length");
 			}
 
 			// 새 비밀번호와 확인 비밀번호 일치 확인
