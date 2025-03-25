@@ -4,7 +4,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,12 +13,8 @@ import java.util.UUID;
 @Service
 public class UserFileService {
 
-	// 기존 설정값 주석 처리
-	// @Value("${app.user.upload.dir:user-uploads}")
-	// private String uploadDir;
-
-	// 상대 경로를 사용하여 user 패키지 내에 위치하도록 설정
-	private final String uploadDir = "src/main/java/org/example/gangazido_be/user/user-uploads";
+	// 새로운 업로드 경로 설정
+	private final String uploadDir = "uploads/user";
 
 	/**
 	 * 사용자 프로필 이미지 저장
@@ -51,8 +46,8 @@ public class UserFileService {
 			Path filePath = uploadPath.resolve(filename);
 			Files.copy(profileImage.getInputStream(), filePath);
 
-			// URL 경로 반환 (상대 경로로 변경)
-			return "/user/user-uploads/" + filename;
+			// URL 경로 반환
+			return "/uploads/user/" + filename;
 		} catch (IOException e) {
 			throw new RuntimeException("프로필 이미지 저장 중 오류가 발생했습니다: " + e.getMessage());
 		}
