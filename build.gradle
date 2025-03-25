@@ -73,6 +73,7 @@ dependencies {
 
     // OpenAPI(Swagger)
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
+    implementation 'org.mariadb.jdbc:mariadb-java-client:3.3.2' // MariaDB 드라이버 추가
 
     // Argon2 해싱 (암호화)
     implementation 'org.bouncycastle:bcpkix-jdk15on:1.70'
