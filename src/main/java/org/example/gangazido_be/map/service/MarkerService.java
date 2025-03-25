@@ -22,9 +22,9 @@ public class MarkerService {
 	@Transactional
 	public MarkerResponseDto createMarker(Integer userId, MarkerRequestDto requestDto) {
 
-		// 1️⃣ DTO → 엔티티 변환 (DB 저장을 위해)
+		// 1️⃣ DTO → 엔티티 객체로 변환 (DB 저장을 위해)
 		MarkerEntity markerEntity = new MarkerEntity(
-			UUID.randomUUID(),    // UUID
+			UUID.randomUUID(),    // UUID 생성
 			userId,
 			requestDto.getType(),
 			requestDto.getLatitude(),
