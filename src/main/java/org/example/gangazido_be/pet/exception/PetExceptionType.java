@@ -19,13 +19,11 @@ public enum PetExceptionType {
 
 	REQUIRED_PET_GENDER("required_pet_gender"),
 
-	REQUIRED_AUTHORIZATION("required_authorization"),
 	REQUIRED_PERMISSION("required_permission"),
 	ALREADY_EXISTS_PET("already_exists_pet"),
 
 	NOT_FOUND_USER("not_found_user"),
-	NOT_FOUND_PET("not_found_pet"),
-	INTERNAL_SERVER_ERROR("internal_server_error");
+	NOT_FOUND_PET("not_found_pet");
 
 	private final String message;
 

@@ -1,22 +1,60 @@
-//llmresponse
-// ✅ LlmResponse: LLM API 응답을 클라이언트에게 반환하는 데이터 모델
 package org.example.gangazido_be.llm.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+
 public class LlmResponse {
-	private String message; // ✅ 응답 상태 메시지 (예: "success", "error code" 등)
-	private String response; // ✅ GPT가 생성한 실제 응답 텍스트
-	// ✅ 모든 필드를 초기화하는 생성자
+	private String message;
+	private Data data;
+
 	public LlmResponse(String message, String response) {
 		this.message = message;
-		this.response = response;
+		this.data = new Data(response);
 	}
-	// ✅ Getter 메서드 (클라이언트가 응답 값을 읽을 수 있도록 제공)
+
+	public LlmResponse(String message) {
+		this.message = message;
+		this.data = null;
+	}
+
 	public String getMessage() {
 		return message;
 	}
 
+	public Data getData() {
+		return data;
+	}
+
+	public void setMessage(String message) {
+		this.message = message;
+	}
+
+	public void setData(Data data) {
+		this.data = data;
+	}
+
+	// ✅ 여기가 핵심!
+	@JsonIgnore
 	public String getResponse() {
-		return response;
+		if (data != null) {
+			return data.getResponse();
+		}
+		return null;
+	}
+
+	public static class Data {
+		private String response;
+
+		public Data(String response) {
+			this.response = response;
+		}
+
+		public String getResponse() {
+			return response;
+		}
+
+		public void setResponse(String response) {
+			this.response = response;
+		}
 	}
 }
-

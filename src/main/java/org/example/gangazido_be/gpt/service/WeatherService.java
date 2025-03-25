@@ -82,6 +82,7 @@ public class WeatherService { // ✅ 이 클래스가 서비스 계층의 Bean�
 		// ✅ RestTemplate을 이용해 HTTP 요청 수행
 		RestTemplate restTemplate = new RestTemplate();
 		String response = restTemplate.getForObject(url, String.class); // API 응답을 문자열(JSON)로 받음
+
 		JSONObject json = new JSONObject(response); // JSON 객체로 변환
 
 		// ✅ JSON 데이터에서 미세먼지 관련 정보 추출
@@ -90,6 +91,8 @@ public class WeatherService { // ✅ 이 클래스가 서비스 계층의 Bean�
 		JSONObject airQualityJson = new JSONObject();
 		airQualityJson.put("pm10", pollution.getDouble("pm10"));   // 미세먼지 (PM10)
 		airQualityJson.put("pm2_5", pollution.getDouble("pm2_5")); // 초미세먼지 (PM2.5)
+		System.out.println("[DEBUG] 대기질 원본 응답: " + response);  // WeatherService 내에서!
+
 
 		return airQualityJson;
 	}
