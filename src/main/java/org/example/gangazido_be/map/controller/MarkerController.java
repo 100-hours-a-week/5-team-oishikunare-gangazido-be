@@ -25,9 +25,10 @@ public class MarkerController {
 	// 마커 등록 API
 	@PostMapping    // POST 마커 등록 요청 처리
 	public ResponseEntity<?> createMarker(
-		HttpSession session,
-		@RequestBody MarkerRequestDto requestDto) {
+		HttpSession session,	// 현재 세션에서 로그인 정보 가져옴
+		@RequestBody MarkerRequestDto requestDto) {	// 클라이언트가 보낸 마커 데이터 (JSON > DTO)
 		Object userObj = session.getAttribute("user");
+		//
 		if (userObj == null) {
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
 					.body(Map.of("message", "required_authorization", "data", new HashMap<>()));
