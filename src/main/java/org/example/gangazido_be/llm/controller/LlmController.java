@@ -30,7 +30,9 @@ public class LlmController {
 	@PostMapping("")
 	public ResponseEntity<LlmResponse> generateChat(@RequestBody LlmRequest request,
 		HttpServletRequest httpServletRequest, HttpSession session) {
-
+		System.out.println("✅ GPT 요청 도착");
+		System.out.println("📍 message: " + request.getMessage());
+		System.out.println("📍 위치: " + request.getLatitude() + ", " + request.getLongitude());
 		// 세션에서 "user" 객체 가져오기
 		User user = (User) session.getAttribute("user");
 		// ❌ 세션에 사용자 정보가 없으면 401 Unauthorized 응답

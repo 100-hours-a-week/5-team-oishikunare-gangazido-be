@@ -1,4 +1,4 @@
-plugins {
+plugins { //여니
     id 'java'
     id 'checkstyle'
     id 'org.springframework.boot' version '3.2.2'
