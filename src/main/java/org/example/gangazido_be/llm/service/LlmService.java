@@ -100,7 +100,7 @@ public class LlmService {
 			weatherJson = new JSONObject(weatherInfo);
 		} catch (Exception e) {
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-				.body(new LlmResponse("invalid_weather_data", "internal_server_error"));
+				.body(new LlmResponse("invalid_weather_data"));
 		}
 		//JSONObject json = new JSONObject(response);
 
@@ -108,7 +108,7 @@ public class LlmService {
 		JSONObject airQualityJson = weatherJson.optJSONObject("air_quality");
 		if (airQualityJson == null) {
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-				.body(new LlmResponse("invalid_air_quality_data", "internal_server_error"));
+				.body(new LlmResponse("invalid_air_quality_data"));
 		}
 
 		/*JSONObject components = airQualityJson.optJSONObject("components");
@@ -225,7 +225,7 @@ public class LlmService {
 		} catch (Exception e) {
 			System.err.println("[ERROR]: " + e.getMessage());
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-				.body(new LlmResponse("failed_to_get_gpt_response", "failed_to_get_gpt_response"));
+				.body(new LlmResponse("failed_to_get_gpt_response"));
 		}
 
 		return ResponseEntity.ok(new LlmResponse("llm_success", gptResponse));
