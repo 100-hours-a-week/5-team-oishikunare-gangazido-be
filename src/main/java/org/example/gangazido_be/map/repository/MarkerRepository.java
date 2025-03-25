@@ -11,10 +11,9 @@ import java.util.UUID;
 
 @Repository
 public interface MarkerRepository extends JpaRepository<MarkerEntity, UUID> {
-	// save()는 JpaRepository에서 제공
+	// JpaRepository 통해 CRUD 기능 자동으로 가짐
 
-	// 위도/경도를 기준으로 반경(radius) 내 마커 조회
-	// latitude, longitude
+	// 위도/경도를 기준으로 반경(radius) 내 마커 조회 하버사인 공식, 두 좌표 사이의 거리 계산을 위한 공식
 	@Query(value = "SELECT * FROM marker " +
 		"WHERE (6371 * acos(cos(radians(:latitude)) * cos(radians(latitude)) " +
 		"* cos(radians(longitude) - radians(:longitude)) + sin(radians(:latitude)) * sin(radians(latitude)))) <= :radius",

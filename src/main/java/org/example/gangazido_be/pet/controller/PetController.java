@@ -21,7 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class PetController {
 	private final PetService petService;
 
-	@PostMapping(value = "/v1/pets/me", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseEntity<PetApiResponse<PetResponse>> createPet(
 		@RequestParam("name") String name,
 		@RequestParam("age") Integer age,

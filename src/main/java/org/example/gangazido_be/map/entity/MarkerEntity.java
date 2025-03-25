@@ -10,15 +10,15 @@ import org.hibernate.annotations.GenericGenerator;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Entity
+@Entity	// 이 클래스는 DB 테이블과 매핑되는 클래스
 @Getter
 @NoArgsConstructor
 @Table(name = "marker") //테이블명 명시
 public class MarkerEntity {
-	@Id
-	@GeneratedValue(generator = "UUID")
-	@GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
-	@Column(name = "id", updatable = false, nullable = false, columnDefinition = "BINARY(16)")
+	@Id	// PK 지정
+	@GeneratedValue(generator = "UUID")	// UUID 자동 생성 방식 설정
+	@GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")	// Hibernate에서 UUID를 생성할 전략 지정
+	@Column(name = "id", updatable = false, nullable = false, columnDefinition = "BINARY(16)")	// DB에 16진수 Binary로 저장 성능 향상
 	private UUID id;  // 마커 ID (Primary Key)
 
 	@Column(nullable = false)
@@ -45,7 +45,7 @@ public class MarkerEntity {
 		this.createdAt = LocalDateTime.now(); // 현재 시간 저장
 	}
 
-	// 유저 ID 반환 메서드 추가
+	// 유저 ID 반환 메서드 추가, 서비스에서 본인 마커 확인 로직
 	public Integer getUserId() {
 		return user_id;
 	}
