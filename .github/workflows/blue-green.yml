@@ -1,0 +1,314 @@
+on:
+  push:
+    branches:
+      - feature/map
+
+name: 🚀 Blue-Green Deployment (Stable)
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'corretto'
+          java-version: '17'
+
+      - name: Ensure JAVA_HOME is set correctly
+        run: echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+
+      - name: Debug JAVA_HOME
+        run: echo $JAVA_HOME  # 현재 JAVA_HOME 경로 출력 (디버깅용)
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-2
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          mask-password: true
+
+      - name: Build Spring Boot Application
+        run: |
+          chmod +x gradlew
+          ./gradlew clean bootJar
+
+      - name: Ensure JAR File Exists
+        run: |
+          ls -lh build/libs/
+          if [ ! -f build/libs/*.jar ]; then
+            echo "🚨 JAR 파일이 존재하지 않습니다. 빌드를 확인하세요!"
+            exit 1
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Determine Active Environment
+        id: active_env
+        run: |
+          echo "🔍 현재 트래픽을 받고 있는 Target Group을 확인 중..."
+
+          CURRENT_ACTIVE_TARGET_GROUP=$(aws elbv2 describe-rules \
+          --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+          --region ap-northeast-2 \
+          --query 'Rules[?Conditions[?Field==`host-header` && Values[0]==`api.gangazido.com`]].Actions[0].ForwardConfig.TargetGroups' \
+          --output json | \
+          grep -B1 '"Weight": 1' | grep 'TargetGroupArn' | head -n1 | \
+          sed 's/.*"TargetGroupArn": "\(.*\)",/\1/')
+
+          echo "현재 활성화된 Target Group ARN: $CURRENT_ACTIVE_TARGET_GROUP"
+
+          if [[ "$CURRENT_ACTIVE_TARGET_GROUP" == "${{ secrets.BLUE_TARGET_GROUP_ARN }}" ]]; then
+          echo "✅ BLUE가 활성화됨, GREEN에 배포"
+          echo "DEPLOY_ENV=GREEN" >> $GITHUB_ENV
+          echo "NEW_ASG=gangazido-prod-green" >> $GITHUB_ENV
+          echo "NEW_TARGET_GROUP=${{ secrets.GREEN_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
+          echo "OLD_ASG=gangazido-prod-blue" >> $GITHUB_ENV
+          echo "OLD_TARGET_GROUP=${{ secrets.BLUE_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
+          elif [[ "$CURRENT_ACTIVE_TARGET_GROUP" == "${{ secrets.GREEN_TARGET_GROUP_ARN }}" ]]; then
+          echo "✅ GREEN이 활성화됨, BLUE에 배포"
+          echo "DEPLOY_ENV=BLUE" >> $GITHUB_ENV
+          echo "NEW_ASG=gangazido-prod-blue" >> $GITHUB_ENV
+          echo "NEW_TARGET_GROUP=${{ secrets.BLUE_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
+          echo "OLD_ASG=gangazido-prod-green" >> $GITHUB_ENV
+          echo "OLD_TARGET_GROUP=${{ secrets.GREEN_TARGET_GROUP_ARN }}" >> $GITHUB_ENV
+          else
+          echo "🚨 활성화된 Target Group을 판별할 수 없습니다."
+          exit 1
+          fi
+
+      - name: Debug Deployment Variables
+        run: |
+          echo "🚀 배포 대상 ASG: $NEW_ASG"
+          echo "🎯 새로운 Target Group: $NEW_TARGET_GROUP"
+          echo "🛑 기존 운영 ASG: $OLD_ASG"
+          echo "📌 배포할 이미지 태그: $DEPLOY_ENV"
+
+      # 이미지 푸시
+      - name: Build and Push Docker Image to Blue
+        env:
+          ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-northeast-2.amazonaws.com
+          ECR_REPOSITORY: gangazido-backend
+        run: |
+          IMAGE_TAG=$(echo "${DEPLOY_ENV}" | tr '[:upper:]' '[:lower:]')
+
+          echo "🐳 Building Docker image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+          if [[ -z "$IMAGE_TAG" ]]; then
+            echo "🚨 IMAGE_TAG 값이 비어 있습니다!"
+            exit 1
+          fi
+
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+        # 1. Green 환경 스케일 업 및 헬스체크 준비
+#      - name: Scale Up Temporary (Green) Auto Scaling Group (${{ env.NEW_ASG }})
+#        run: |
+#          aws autoscaling update-auto-scaling-group \
+#            --auto-scaling-group-name ${{ env.NEW_ASG }} \
+#            --desired-capacity 4 --min-size 4 --max-size 5
+
+      - name: Start Green ASG Instance Refresh
+        run: |
+          STATUS=$(aws autoscaling describe-instance-refreshes --auto-scaling-group-name $NEW_ASG \
+            --query 'InstanceRefreshes[0].Status' --output text 2>/dev/null || echo "None")
+
+          if [[ "$STATUS" == "InProgress" ]]; then
+            echo "🚨 현재 ASG($NEW_ASG)의 인스턴스 리프레시가 이미 진행 중입니다. 대기합니다."
+            exit 0
+          fi
+
+          echo "🔄 Green ASG($NEW_ASG) 인스턴스 리프레시 시작"
+          aws autoscaling start-instance-refresh --auto-scaling-group-name $NEW_ASG
+
+      - name: Wait Until Green ASG is Healthy (ASG + ALB Health Check)
+        run: |
+          MAX_WAIT=720
+          INTERVAL=10
+          ELAPSED=0
+
+          echo "⏳ Green ASG($NEW_ASG)의 인스턴스 리프레시 상태 + ALB 헬스체크 + 앱 상태 확인 중..."
+
+          DEPLOY_ENV_LOWER=$(echo "$DEPLOY_ENV" | tr '[:upper:]' '[:lower:]')
+          if [[ "$DEPLOY_ENV_LOWER" == "blue" ]]; then
+            TG_SUFFIX="prod"
+          elif [[ "$DEPLOY_ENV_LOWER" == "green" ]]; then
+            TG_SUFFIX="dev"
+          else
+            echo "❌ 유효하지 않은 DEPLOY_ENV: $DEPLOY_ENV"
+            exit 1
+          fi
+
+          TG_NAME="gangazido-${TG_SUFFIX}-target-group"
+          echo "✅ 매핑된 Target Group 이름: $TG_NAME"
+
+          TG_ARN=$(aws elbv2 describe-target-groups \
+            --names $TG_NAME \
+            --query 'TargetGroups[0].TargetGroupArn' --output text)
+
+          while true; do
+            # 인스턴스 ID 조회
+            INSTANCE_IDS=$(aws autoscaling describe-auto-scaling-groups \
+              --auto-scaling-group-names $NEW_ASG \
+              --query 'AutoScalingGroups[0].Instances[*].InstanceId' \
+              --output text)
+            INSTANCE_COUNT=$(echo $INSTANCE_IDS | wc -w)
+
+            if [[ "$INSTANCE_COUNT" -lt "$EXPECTED_INSTANCE_COUNT" ]]; then
+              echo "🕒 인스턴스가 충분히 생성될 때까지 대기 중..."
+              sleep $INTERVAL
+              ELAPSED=$((ELAPSED + INTERVAL))
+              continue
+            fi
+
+            # 인스턴스 퍼블릭 IP 조회
+            echo "💡 인스턴스 IP 조회 중..."
+            declare -A INSTANCE_IPS
+            for INSTANCE_ID in $INSTANCE_IDS; do
+              IP=$(aws ec2 describe-instances \
+                --instance-ids $INSTANCE_ID \
+                --query 'Reservations[0].Instances[0].PublicIpAddress' \
+                --output text)
+              INSTANCE_IPS["$INSTANCE_ID"]=$IP
+            done
+
+            # ALB Target 상태 확인
+            HEALTH_STATUSES=$(aws elbv2 describe-target-health \
+              --target-group-arn "$TG_ARN" \
+              --query 'TargetHealthDescriptions[*].TargetHealth.State' \
+              --output text | tr '\n' ' ' | xargs)
+            echo "현재 ALB 타겟 상태들: $HEALTH_STATUSES"
+
+            if [[ "$HEALTH_STATUSES" != *"unhealthy"* && "$HEALTH_STATUSES" != *"initial"* ]]; then
+              echo "✅ 모든 ALB 대상 인스턴스가 healthy 상태입니다."
+
+              # 앱 상태 확인
+              APP_STATUS_OK=true
+              for INSTANCE_ID in $INSTANCE_IDS; do
+                IP=${INSTANCE_IPS[$INSTANCE_ID]}
+                echo "🔍 인스턴스 $INSTANCE_ID ($IP)의 /actuator/health 확인 중..."
+
+                STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 https://api.gangazido.com/actuator/health)
+
+                if [[ "$STATUS_CODE" != "200" ]]; then
+                  echo "❌ 인스턴스 $INSTANCE_ID 상태 코드: $STATUS_CODE"
+                  APP_STATUS_OK=false
+                else
+                  echo "✅ 인스턴스 $INSTANCE_ID 상태 OK"
+                fi
+              done
+
+              ASG_STATUS=$(aws autoscaling describe-instance-refreshes \
+                --auto-scaling-group-name $NEW_ASG \
+                --query 'InstanceRefreshes[0].Status' \
+                --output text 2>/dev/null || echo "None")
+
+              if [[ "$APP_STATUS_OK" == true && "$ASG_STATUS" == "Successful" ]]; then
+                echo "🎉 모든 조건을 만족했습니다. 배포 성공!"
+                break
+              fi
+            fi
+
+            if [[ "$ELAPSED" -ge "$MAX_WAIT" ]]; then
+              echo "🚨 타임아웃: $MAX_WAIT초 안에 완료되지 않았습니다."
+              exit 1
+            fi
+
+            sleep $INTERVAL
+            ELAPSED=$((ELAPSED + INTERVAL))
+          done
+
+      - name: Gradually Shift Traffic to New Environment
+        run: |
+          echo "🔍 조건부 규칙의 Rule ARN을 가져오는 중..."
+          RULE_ARN=$(aws elbv2 describe-rules \
+            --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+            --query "Rules[?contains(to_string(Conditions[*].Values), 'api.gangazido.com')].RuleArn" \
+            --output text)
+
+          echo "🎯 Rule ARN: $RULE_ARN"
+
+          if [[ -z "$RULE_ARN" ]]; then
+            echo "🚨 RULE_ARN 값이 비어 있습니다. 중단합니다."
+            exit 1
+          fi
+
+          echo "🔄 ALB 트래픽을 절반씩 나누어 새 환경으로 전환 중..."
+
+          aws elbv2 modify-rule \
+            --rule-arn "$RULE_ARN" \
+            --actions "[{\"Type\": \"forward\", \"ForwardConfig\": {\"TargetGroups\": [
+              {\"TargetGroupArn\": \"$NEW_TARGET_GROUP\", \"Weight\": 50},
+              {\"TargetGroupArn\": \"$OLD_TARGET_GROUP\", \"Weight\": 50}
+            ]}}]" || {
+              echo "🚨 [ERROR] 트래픽 변경 실패 (절반 전환 실패)"
+              exit 1
+            }
+
+          echo "✅ 절반씩 트래픽 분산 완료!"
+          echo "⏳ 30초 대기 후 다음 단계 진행..."
+          sleep 30
+
+      - name: Fully Shift Traffic to New Environment
+        run: |
+          echo "🔍 조건부 규칙의 Rule ARN을 가져오는 중..."
+          RULE_ARN=$(aws elbv2 describe-rules \
+            --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+            --query "Rules[?contains(to_string(Conditions[*].Values), 'api.gangazido.com')].RuleArn" \
+            --output text)
+
+          if [[ -z "$RULE_ARN" ]]; then
+            echo "🚨 ERROR: 조건부 Rule ARN을 가져오지 못했습니다."
+            exit 1
+          fi
+
+          if [[ -z "$NEW_TARGET_GROUP" ]]; then
+            echo "🚨 ERROR: NEW_TARGET_GROUP 값이 비어 있습니다."
+            exit 1
+          fi
+
+          echo "🚀 ALB 트래픽을 완전히 새 환경($NEW_TARGET_GROUP)으로 전환 중..."
+
+          aws elbv2 modify-rule \
+            --rule-arn "$RULE_ARN" \
+            --actions '[
+              {
+                "Type": "forward",
+                "ForwardConfig": {
+                  "TargetGroups": [
+                    {
+                      "TargetGroupArn": "'"$NEW_TARGET_GROUP"'",
+                      "Weight": 100
+                    },
+                    {
+                      "TargetGroupArn": "'"$OLD_TARGET_GROUP"'",
+                      "Weight": 0
+                    }
+                  ]
+                }
+              }
+            ]' || {
+              echo "🚨 [ERROR] 최종 트래픽 변경 실패"
+              exit 1
+            }
+
+          echo "✅ 트래픽이 완전히 새로운 환경으로 전환되었습니다."
+
+#      - name: Scale Down New ASG
+#        run: |
+#          echo "✅ Green ASG($NEW_ASG)를 축소합니다."
+#          aws autoscaling update-auto-scaling-group \
+#            --auto-scaling-group-name ${{ env.NEW_ASG }} \
+#            --desired-capacity 2 --min-size 2 --max-size 5
+#타겟 그룹 빈값 허용하면 에러
