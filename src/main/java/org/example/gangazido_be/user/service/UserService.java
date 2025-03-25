@@ -11,7 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 
@@ -19,16 +18,16 @@ import java.time.LocalDateTime;
 public class UserService {
 	private final UserRepository userRepository;
 	private final Argon2PasswordEncoder passwordEncoder;
-	private final UserFileService userFileService;
+	private final UserS3FileService userS3FileService;
 	private final Logger logger = LoggerFactory.getLogger(UserService.class);
 
 	@Autowired
 	public UserService(UserRepository userRepository,
 		Argon2PasswordEncoder passwordEncoder,
-		UserFileService userFileService) {
+		UserS3FileService userS3FileService) {
 		this.userRepository = userRepository;
 		this.passwordEncoder = passwordEncoder;
-		this.userFileService = userFileService;
+		this.userS3FileService = userS3FileService;
 	}
 
 	@Transactional
@@ -58,11 +57,8 @@ public class UserService {
 			throw new RuntimeException(UserPasswordValidator.getValidationMessage());
 		}
 
-		// 프로필 이미지 처리
-		String profileImage = null;
-		if (userDTO.getProfileImage() != null && !userDTO.getProfileImage().isEmpty()) {
-			profileImage = userFileService.saveProfileImage(userDTO.getProfileImage());
-		}
+		// 프로필 이미지 URL이 제공된 경우 사용
+		String profileImage = userDTO.getProfileImageUrl();
 
 		User newUser = User.builder()
 			.email(userDTO.getEmail())
@@ -81,9 +77,6 @@ public class UserService {
 				logger.warn("로그인 실패: 이메일 {} 에 해당하는 사용자가 없습니다.", email);
 				return new RuntimeException("missing_email");
 			});
-
-		// 입력된 패스워드 로깅 (실제 환경에서는 보안상 위험하므로 개발 환경에서만 사용)
-		logger.debug("로그인 시도: 이메일={}, 패스워드 길이={}", email, password.length());
 
 		// 비밀번호 검증
 		boolean matches = passwordEncoder.matches(password, user.getPassword());
@@ -106,7 +99,7 @@ public class UserService {
 	}
 
 	@Transactional
-	public User updateUserInfo(Integer userId, String nickname, MultipartFile profileImage) {
+	public User updateUserInfo(Integer userId, String nickname) {
 		User user = userRepository.findByIdAndDeletedAtIsNull(userId)
 			.orElseThrow(() -> new RuntimeException("missing_user"));
 
@@ -132,30 +125,33 @@ public class UserService {
 			user.setNickname(nickname);
 		}
 
-		// 프로필 이미지 업데이트 (첨부된 경우에만)
-		if (profileImage != null && !profileImage.isEmpty()) {
-			// 파일 크기 검사 (예: 5MB 제한)
-			if (profileImage.getSize() > 5 * 1024 * 1024) {
-				throw new RuntimeException("profile_image_too_large");
-			}
+		return userRepository.save(user);
+	}
 
-			// 파일 형식 검사 (이미지 파일만 허용)
-			String contentType = profileImage.getContentType();
-			if (contentType == null || !contentType.startsWith("image/")) {
-				throw new RuntimeException("invalid_file_type");
-			}
+	// 프로필 이미지만 업데이트하는 메서드
+	@Transactional
+	public User updateProfileImage(Integer userId, String profileImageUrl) {
+		User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+			.orElseThrow(() -> new RuntimeException("missing_user"));
 
-			// 기존 이미지가 있으면 삭제
-			if (user.getProfileImage() != null && !user.getProfileImage().isEmpty()) {
-				userFileService.deleteImage(user.getProfileImage());
-			}
+		// 기존 이미지 정보 저장
+		String oldProfileImage = user.getProfileImage();
 
-			// 새 이미지 저장
-			String newImage = userFileService.saveProfileImage(profileImage);
-			user.setProfileImage(newImage);
+		// 새 이미지 URL 설정
+		user.setProfileImage(profileImageUrl);
+		User updatedUser = userRepository.save(user);
+
+		// 저장 성공 후 기존 이미지 삭제 시도 (있는 경우에만)
+		if (oldProfileImage != null && !oldProfileImage.isEmpty()) {
+			try {
+				userS3FileService.deleteFile(oldProfileImage);
+			} catch (Exception e) {
+				logger.warn("기존 프로필 이미지 삭제 실패: {}", e.getMessage());
+				// 새 이미지 저장은 이미 성공했으므로 예외를 던지지 않음
+			}
 		}
 
-		return userRepository.save(user);
+		return updatedUser;
 	}
 
 	@Transactional
@@ -163,9 +159,9 @@ public class UserService {
 		User user = userRepository.findById(userId)
 			.orElseThrow(() -> new RuntimeException("missing_user"));
 
-		// 프로필 이미지 삭제
+		// 프로필 이미지 삭제 - S3에서 삭제
 		if (user.getProfileImage() != null && !user.getProfileImage().isEmpty()) {
-			userFileService.deleteImage(user.getProfileImage());
+			userS3FileService.deleteFile(user.getProfileImage());
 		}
 
 		// 논리적 삭제 (deletedAt 설정)

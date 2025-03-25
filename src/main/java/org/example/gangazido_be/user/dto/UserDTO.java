@@ -36,4 +36,11 @@ public class UserDTO {
 
 	@JsonProperty("user_profileImage")
 	private MultipartFile profileImage;
+
+	// S3 프로필 이미지용 필드 추가
+	@JsonProperty("user_profileImageUrl")
+	private String profileImageUrl;
+
+	@JsonProperty("user_profileImageKey")
+	private String profileImageKey;
 }

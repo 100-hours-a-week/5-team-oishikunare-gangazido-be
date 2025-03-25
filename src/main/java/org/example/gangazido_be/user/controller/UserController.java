@@ -6,6 +6,7 @@ import org.example.gangazido_be.user.dto.UserPasswordChangeRequestDTO;
 import org.example.gangazido_be.user.dto.UserDTO;
 import org.example.gangazido_be.user.entity.User;
 import org.example.gangazido_be.user.service.UserService;
+import org.example.gangazido_be.user.service.UserS3FileService;
 import org.example.gangazido_be.user.util.UserApiMessages;
 import org.example.gangazido_be.user.util.UserIdEncryptionUtil;
 import org.example.gangazido_be.user.validator.UserPasswordValidator;
@@ -22,36 +23,38 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Enumeration;
-import java.util.Date;
 
 @RestController
 @RequestMapping("/v1/users")
 public class UserController {
 	private final UserService userService;
+	private final UserS3FileService userS3FileService;
 	private final UserIdEncryptionUtil idEncryptionUtil;
 	private final Logger logger = LoggerFactory.getLogger(UserController.class);
 
 	@Autowired
-	public UserController(UserService userService, UserIdEncryptionUtil idEncryptionUtil) {
+	public UserController(UserService userService, UserS3FileService userS3FileService, UserIdEncryptionUtil idEncryptionUtil) {
 		this.userService = userService;
+		this.userS3FileService = userS3FileService;
 		this.idEncryptionUtil = idEncryptionUtil;
 	}
 
-	@PostMapping(value = "/signup", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@PostMapping(value = "/signup")
 	public ResponseEntity<UserApiResponse<Map<String, Object>>> registerUser(
-		@RequestPart("user_email") String email,
-		@RequestPart("user_password") String password,
-		@RequestPart("user_password_confirm") String passwordConfirm,
-		@RequestPart("user_nickname") String nickname,
-		@RequestPart(value = "user_profileImage", required = false) MultipartFile profileImage,
+		@RequestBody Map<String, String> signupData,
 		HttpSession session,
 		HttpServletResponse response) {
 		try {
+			// 입력값 추출
+			String email = signupData.get("user_email");
+			String password = signupData.get("user_password");
+			String passwordConfirm = signupData.get("user_password_confirm");
+			String nickname = signupData.get("user_nickname");
+			String profileImageUrl = signupData.get("profile_image_url");
+
 			// 입력값 검증
 			if (email == null || email.isEmpty()) {
 				return UserApiResponse.badRequest("required_email");
@@ -95,7 +98,7 @@ public class UserController {
 				.email(email)
 				.password(password)
 				.nickname(nickname)
-				.profileImage(profileImage)
+				.profileImageUrl(profileImageUrl) // S3 URL 사용
 				.build();
 
 			// 사용자 등록
@@ -110,6 +113,7 @@ public class UserController {
 			Map<String, Object> responseData = new HashMap<>();
 			responseData.put("userId", encryptedId);
 			responseData.put("nickname", registeredUser.getNickname());
+			responseData.put("profileImage", registeredUser.getProfileImage());
 
 			return UserApiResponse.success(UserApiMessages.USER_CREATED, responseData);
 		} catch (RuntimeException e) {
@@ -240,10 +244,9 @@ public class UserController {
 		return UserApiResponse.success(UserApiMessages.SUCCESS, responseData);
 	}
 
-	@PatchMapping(value = "/me", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@PatchMapping(value = "/me")
 	public ResponseEntity<UserApiResponse<Map<String, Object>>> updateMyInfo(
-		@RequestPart(value = "user_nickname", required = false) String nickname,
-		@RequestPart(value = "user_profile_image", required = false) MultipartFile profileImage,
+		@RequestBody Map<String, String> updateData,
 		HttpSession session) {
 
 		User user = (User) session.getAttribute("user");
@@ -252,39 +255,33 @@ public class UserController {
 		}
 
 		try {
-			// 닉네임과 프로필 이미지가 둘 다 제공되지 않은 경우 처리
-			if ((nickname == null || nickname.isEmpty()) &&
-				(profileImage == null || profileImage.isEmpty())) {
-				return UserApiResponse.badRequest("profile_update_data_required");
+			String nickname = updateData.get("user_nickname");
+
+			// 닉네임이 제공되지 않은 경우 처리
+			if (nickname == null || nickname.isEmpty()) {
+				return UserApiResponse.badRequest("nickname_required");
 			}
 
 			// 닉네임 유효성 검사
-			if (nickname != null && !nickname.isEmpty()) {
-				// 제어 문자 제거
-				nickname = nickname.replaceAll("[\\p{Cntrl}]", "");
+			nickname = nickname.replaceAll("[\\p{Cntrl}]", "");
 
-				// 빈 문자열이 되면 처리
-				if (nickname.isEmpty()) {
-					return UserApiResponse.badRequest("valid_nickname_required");
-				}
-
-				// 길이 제한 검사
-				if (nickname.length() < 2 || nickname.length() > 20) {
-					return UserApiResponse.badRequest("invalid_nickname_length");
-				}
-
-				// 닉네임 중복 검사 (현재 사용자의 닉네임은 제외)
-				if (!nickname.equals(user.getNickname()) && userService.isNicknameDuplicate(nickname)) {
-					return UserApiResponse.badRequest("duplicate_nickname");
-				}
+			// 빈 문자열이 되면 처리
+			if (nickname.isEmpty()) {
+				return UserApiResponse.badRequest("valid_nickname_required");
 			}
 
-			// 프로필 이미지 파일 크기 검사 (예: 5MB 제한)
-			if (profileImage != null && !profileImage.isEmpty() && profileImage.getSize() > 5 * 1024 * 1024) {
-				return UserApiResponse.badRequest("profile_image_too_large");
+			// 길이 제한 검사
+			if (nickname.length() < 2 || nickname.length() > 20) {
+				return UserApiResponse.badRequest("invalid_nickname_length");
 			}
 
-			User updatedUser = userService.updateUserInfo(user.getId(), nickname, profileImage);
+			// 닉네임 중복 검사 (현재 사용자의 닉네임은 제외)
+			if (!nickname.equals(user.getNickname()) && userService.isNicknameDuplicate(nickname)) {
+				return UserApiResponse.badRequest("duplicate_nickname");
+			}
+
+			// 닉네임만 업데이트 (프로필 이미지는 별도 API로 처리)
+			User updatedUser = userService.updateUserInfo(user.getId(), nickname);
 			session.setAttribute("user", updatedUser); // 세션 업데이트
 
 			Map<String, Object> responseData = new HashMap<>();
@@ -376,7 +373,7 @@ public class UserController {
 
 			// 새 비밀번호 검증
 			if (requestDTO.getNewPassword() == null || requestDTO.getNewPassword().isEmpty()) {
-				return UserApiResponse.badRequest("required_new_password"); // 수정
+				return UserApiResponse.badRequest("required_new_password");
 			}
 
 			// 비밀번호 확인 메시지 처리 추가
