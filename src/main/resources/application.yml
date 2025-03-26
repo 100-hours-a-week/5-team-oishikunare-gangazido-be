@@ -2,7 +2,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: "health", "info", "prometheus"  # prometheus 포함
+        include:
+          - health
+          - info
+          - prometheus
   endpoint:
     prometheus:
       enabled: true
