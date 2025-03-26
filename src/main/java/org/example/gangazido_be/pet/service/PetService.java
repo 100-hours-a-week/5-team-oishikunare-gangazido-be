@@ -219,13 +219,12 @@ public class PetService {
 			throw new PetException(HttpStatus.BAD_REQUEST, PetExceptionType.REQUIRED_PET_BREED.getMessage());
 		}
 
-
 		// 반려견 수정 시 이미지 있으면 저장
-		String profileImagePath = null;
+		String profileImagePath = pet.getProfileImage(); // 기본값: 기존 이미지 유지
 
 		if (profileImage != null && !profileImage.isEmpty()) {
-			deleteOldFile(pet.getProfileImage());
-			profileImagePath = saveFile(profileImage);
+			deleteOldFile(pet.getProfileImage()); // 기존 이미지 삭제
+			profileImagePath = saveFile(profileImage); // 새 이미지 저장
 		}
 
 		pet.updatePet(
