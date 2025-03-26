@@ -35,14 +35,18 @@ public class LlmService {
 	private static final Map<String, String> BREED_CHARACTERISTICS = new HashMap<>();
 
 	static {
-		BREED_CHARACTERISTICS.put("시베리안허스키", "추운 날씨에서 활동하기 적합한 견종입니다.");
-		BREED_CHARACTERISTICS.put("골든리트리버", "추위에 비교적 강하지만, 너무 추운 날씨에는 보호가 필요할 수 있습니다.");
-		BREED_CHARACTERISTICS.put("포메라니안", "추위에 약하므로 따뜻한 옷을 입히는 것이 좋습니다.");
-		BREED_CHARACTERISTICS.put("말티즈", "추위에 약한 견종이므로 외출 시 방한복이 필요합니다.");
-		BREED_CHARACTERISTICS.put("비숑", "포근한 털이 있지만 추위에 약한 편이라 옷을 입히는 것이 좋아요.");
-		BREED_CHARACTERISTICS.put("진돗개", "적당한 기온에서는 산책이 가능하지만, 너무 추운 날씨에는 주의해야 합니다.");
-		BREED_CHARACTERISTICS.put("믹스견", "견종에 따라 차이가 있지만 일반적으로 기온 변화에 적응할 수 있습니다.");
-		BREED_CHARACTERISTICS.put("기타", "견종별 특성을 고려하여 산책 여부를 결정하세요.");
+		BREED_CHARACTERISTICS.put("푸들", "곱슬거리는 털이 보온성은 있으나 얇고 한기엔 약해 옷을 입히는 것이 좋아요."); //ㅍㅜ들
+		BREED_CHARACTERISTICS.put("비숑", "포근한 털이 있지만 추위에 약한 편이라 옷을 입히는 것이 좋아요."); //비숑
+		BREED_CHARACTERISTICS.put("포메라니안", " 체구가 작아 추위에 약하니 외출 시 방한이 필요합니다."); //포메
+		BREED_CHARACTERISTICS.put("말티즈", "추위에 약한 견종이므로 외출 시 방한복이 필요합니다."); //말티즈
+		BREED_CHARACTERISTICS.put("웰시코기", "이중모를 가진 견종이라 어느 정도 추위에 강하지만 너무 추운 날엔 방한이 필요합니다."); //웰시
+		BREED_CHARACTERISTICS.put("골든리트리버", "추위에 비교적 강하지만, 너무 추운 날씨에는 방한이 필요할 수 있습니다."); //골댕
+		BREED_CHARACTERISTICS.put("래브라도리트리버", "추위에 비교적 강하지만, 너무 추운 날씨에는 방한이 필요할 수 있습니다."); //래브라도
+		BREED_CHARACTERISTICS.put("보더콜리", "이중모를 가진 활동적인 견종으로 추위에 비교적 강하지만 한파 시 주의해야 해요."); //브로콜리
+		BREED_CHARACTERISTICS.put("시베리안허스키", "극지방 견종으로 추운 날씨에서 활동하기 매우 적합합니다."); //시베리안
+		BREED_CHARACTERISTICS.put("진돗개", "이중모를 가진 한국 토종견으로 일반적인 겨울 추위에는 잘 견딜 수 있습니다."); //진도독
+		BREED_CHARACTERISTICS.put("믹스견", "견종별 특성을 고려하여 산책 여부를 결정하세요."); //믹스
+		BREED_CHARACTERISTICS.put("기타", "견종별 특성을 고려하여 산책 여부를 결정하세요."); //기타
 	}
 
 	// ✅ 생성자 주입 방식으로 의존성 주입 (Spring이 자동으로 관리)
@@ -203,7 +207,7 @@ public class LlmService {
 					"- 기온: %.1f°C\n" +
 					"- 반려견 견종: %s\n" +
 					"- 반려견 체중: %.1fkg\n\n" +
-					"📌 **옷을 입어야 하는지 여부와 이유를 한글로 설명해주세요.**"+
+					"📌 **옷을 입어야 하는지 여부와 이유를 한글로 설명해주세요.**" +
 					"📌 **응답은 JSON 형식으로 다음과 같이 제공해주세요:**\n" +
 					"```json\n" +
 					"{\n" +
@@ -228,7 +232,7 @@ public class LlmService {
 			System.out.println("response: " + gptResponse);  // 🔍 GPT 응답 확인
 
 			if (gptResponse == null || gptResponse.isEmpty()) {
-				throw new Exception("GPT 서비스에서 응답이 비어 있습니다.");
+				throw new Exception("empty_response");
 			}
 		} catch (Exception e) {
 			System.err.println("[ERROR]: " + e.getMessage());
@@ -254,7 +258,7 @@ public class LlmService {
 		return parts[1].split(";")[0].trim();
 	}
 
-	// ✅ 영어 날씨명을 한글로 변환
+	//  영어 날씨명을 한글로 변환
 	private String convertWeatherToKorean(String weather) {
 		switch (weather.toLowerCase()) {
 			case "clear":
@@ -280,7 +284,7 @@ public class LlmService {
 		}
 	}
 
-	// ✅ 견종명을 한글로 변환
+	//  견종명을 한글로 변환
 	private String convertBreedToKorean(String breed) {
 		switch (breed.toLowerCase()) {
 			case "poodle":

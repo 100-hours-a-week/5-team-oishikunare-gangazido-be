@@ -33,7 +33,7 @@ public class LlmResponse {
 		this.data = data;
 	}
 
-	// ✅ 여기가 핵심!
+	//  여기가 핵심!
 	@JsonIgnore
 	public String getResponse() {
 		if (data != null) {
