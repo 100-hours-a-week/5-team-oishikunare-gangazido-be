@@ -1,7 +1,10 @@
 package org.example.gangazido_be.user.service;
 
+import org.example.gangazido_be.pet.entity.Pet;
+import org.example.gangazido_be.pet.repository.PetRepository;
 import org.example.gangazido_be.user.dto.UserDTO;
 import org.example.gangazido_be.user.entity.User;
+import org.example.gangazido_be.user.exception.*;
 import org.example.gangazido_be.user.repository.UserRepository;
 import org.example.gangazido_be.user.validator.UserPasswordValidator;
 
@@ -14,19 +17,23 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 public class UserService {
 	private final UserRepository userRepository;
+	private final PetRepository petRepository;
 	private final Argon2PasswordEncoder passwordEncoder;
 	private final UserFileService userFileService;
 	private final Logger logger = LoggerFactory.getLogger(UserService.class);
 
 	@Autowired
 	public UserService(UserRepository userRepository,
+		PetRepository petRepository,
 		Argon2PasswordEncoder passwordEncoder,
 		UserFileService userFileService) {
 		this.userRepository = userRepository;
+		this.petRepository = petRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.userFileService = userFileService;
 	}
@@ -34,34 +41,68 @@ public class UserService {
 	@Transactional
 	public User registerUser(UserDTO userDTO) {
 		// 이메일 형식 유효성 검사
-		if (userDTO.getEmail() == null || !userDTO.getEmail().matches("^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$")) {
-			throw new RuntimeException("invalid_email_format");
+		if (userDTO.getEmail() == null || userDTO.getEmail().isEmpty()) {
+			throw UserValidationException.requiredEmail();
 		}
 
-		// 닉네임 길이 검사
-		if (userDTO.getNickname() == null || userDTO.getNickname().length() < 2 || userDTO.getNickname().length() > 20) {
-			throw new RuntimeException("invalid_nickname_length");
+		if (!userDTO.getEmail().matches("^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$")) {
+			throw UserValidationException.invalidEmailFormat();
 		}
 
-		// 이메일 중복 체크
-		if (isEmailDuplicate(userDTO.getEmail())) {
-			throw new RuntimeException("duplicate_email");
+		// 비밀번호 유효성 검사
+		if (userDTO.getPassword() == null || userDTO.getPassword().isEmpty()) {
+			throw UserValidationException.requiredPassword();
 		}
 
-		// 닉네임 중복 체크
-		if (isNicknameDuplicate(userDTO.getNickname())) {
-			throw new RuntimeException("duplicate_nickname");
+		// 비밀번호 길이 검사
+		if (userDTO.getPassword().length() < 8 || userDTO.getPassword().length() > 20) {
+			throw UserValidationException.invalidPasswordLength();
 		}
 
 		// 비밀번호 복잡성 검증
 		if (!UserPasswordValidator.isValid(userDTO.getPassword())) {
-			throw new RuntimeException(UserPasswordValidator.getValidationMessage());
+			throw UserValidationException.invalidPasswordFormat();
+		}
+
+		// 닉네임 유효성 검사
+		if (userDTO.getNickname() == null || userDTO.getNickname().isEmpty()) {
+			throw UserValidationException.requiredNickname();
+		}
+
+		// 닉네임 길이 검사
+		if (userDTO.getNickname().length() < 2 || userDTO.getNickname().length() > 20) {
+			throw UserValidationException.invalidNicknameLength();
+		}
+
+		// 이메일 중복 체크
+		if (isEmailDuplicate(userDTO.getEmail())) {
+			throw UserDuplicateException.duplicateEmail();
+		}
+
+		// 닉네임 중복 체크
+		if (isNicknameDuplicate(userDTO.getNickname())) {
+			throw UserDuplicateException.duplicateNickname();
 		}
 
 		// 프로필 이미지 처리
 		String profileImage = null;
 		if (userDTO.getProfileImage() != null && !userDTO.getProfileImage().isEmpty()) {
-			profileImage = userFileService.saveProfileImage(userDTO.getProfileImage());
+			try {
+				// 이미지 크기 검사
+				if (userDTO.getProfileImage().getSize() > 5 * 1024 * 1024) {
+					throw UserFileException.fileTooLarge();
+				}
+
+				// 이미지 타입 검사
+				String contentType = userDTO.getProfileImage().getContentType();
+				if (contentType == null || !contentType.startsWith("image/")) {
+					throw UserFileException.invalidFileType();
+				}
+
+				profileImage = userFileService.saveProfileImage(userDTO.getProfileImage());
+			} catch (RuntimeException e) {
+				throw UserFileException.uploadError(e.getMessage());
+			}
 		}
 
 		User newUser = User.builder()
@@ -75,21 +116,33 @@ public class UserService {
 	}
 
 	public User login(String email, String password) {
+		// 이메일 유효성 검사
+		if (email == null || email.isEmpty()) {
+			throw UserValidationException.requiredEmail();
+		}
+
+		// 이메일 형식 검증
+		if (!email.matches("^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$")) {
+			throw UserValidationException.invalidEmailFormat();
+		}
+
+		// 비밀번호 유효성 검사
+		if (password == null || password.isEmpty()) {
+			throw UserValidationException.requiredPassword();
+		}
+
 		// 이메일로 사용자 조회
 		User user = userRepository.findByEmailAndDeletedAtIsNull(email)
 			.orElseThrow(() -> {
 				logger.warn("로그인 실패: 이메일 {} 에 해당하는 사용자가 없습니다.", email);
-				return new RuntimeException("missing_email");
+				return UserAuthenticationException.invalidEmail();
 			});
-
-		// 입력된 패스워드 로깅 (실제 환경에서는 보안상 위험하므로 개발 환경에서만 사용)
-		logger.debug("로그인 시도: 이메일={}, 패스워드 길이={}", email, password.length());
 
 		// 비밀번호 검증
 		boolean matches = passwordEncoder.matches(password, user.getPassword());
 		if (!matches) {
 			logger.warn("로그인 실패: 이메일 {} 사용자의 비밀번호가 일치하지 않습니다.", email);
-			throw new RuntimeException("invalid_password");
+			throw UserAuthenticationException.invalidPassword();
 		}
 
 		return user;
@@ -97,18 +150,31 @@ public class UserService {
 
 	// 중복 이메일 확인
 	public boolean isEmailDuplicate(String email) {
+		if (email == null || email.isEmpty()) {
+			throw UserValidationException.requiredEmail();
+		}
+
 		return userRepository.findByEmailAndDeletedAtIsNull(email).isPresent();
 	}
 
 	// 중복 닉네임 확인
 	public boolean isNicknameDuplicate(String nickname) {
+		if (nickname == null || nickname.isEmpty()) {
+			throw UserValidationException.requiredNickname();
+		}
+
 		return userRepository.findByNicknameAndDeletedAtIsNull(nickname).isPresent();
 	}
 
 	@Transactional
 	public User updateUserInfo(Integer userId, String nickname, MultipartFile profileImage) {
+		// userId 유효성 검사
+		if (userId == null) {
+			throw UserValidationException.requiredUserId();
+		}
+
 		User user = userRepository.findByIdAndDeletedAtIsNull(userId)
-			.orElseThrow(() -> new RuntimeException("missing_user"));
+			.orElseThrow(UserAuthenticationException::missingUser);
 
 		// 닉네임 업데이트 (변경 시에만)
 		if (nickname != null && !nickname.isEmpty() && !nickname.equals(user.getNickname())) {
@@ -117,17 +183,17 @@ public class UserService {
 
 			// 닉네임 유효성 검사
 			if (nickname.isEmpty()) {
-				throw new RuntimeException("invalid_nickname_format");
+				throw UserValidationException.requiredNickname();
 			}
 
 			// 길이 제한 검사
 			if (nickname.length() < 2 || nickname.length() > 20) {
-				throw new RuntimeException("invalid_nickname_length");
+				throw UserValidationException.invalidNicknameLength();
 			}
 
 			// 닉네임 중복 체크
 			if (isNicknameDuplicate(nickname)) {
-				throw new RuntimeException("duplicate_nickname");
+				throw UserDuplicateException.duplicateNickname();
 			}
 			user.setNickname(nickname);
 		}
@@ -136,23 +202,27 @@ public class UserService {
 		if (profileImage != null && !profileImage.isEmpty()) {
 			// 파일 크기 검사 (예: 5MB 제한)
 			if (profileImage.getSize() > 5 * 1024 * 1024) {
-				throw new RuntimeException("profile_image_too_large");
+				throw UserFileException.fileTooLarge();
 			}
 
 			// 파일 형식 검사 (이미지 파일만 허용)
 			String contentType = profileImage.getContentType();
 			if (contentType == null || !contentType.startsWith("image/")) {
-				throw new RuntimeException("invalid_file_type");
+				throw UserFileException.invalidFileType();
 			}
 
-			// 기존 이미지가 있으면 삭제
-			if (user.getProfileImage() != null && !user.getProfileImage().isEmpty()) {
-				userFileService.deleteImage(user.getProfileImage());
-			}
+			try {
+				// 기존 이미지가 있으면 삭제
+				if (user.getProfileImage() != null && !user.getProfileImage().isEmpty()) {
+					userFileService.deleteImage(user.getProfileImage());
+				}
 
-			// 새 이미지 저장
-			String newImage = userFileService.saveProfileImage(profileImage);
-			user.setProfileImage(newImage);
+				// 새 이미지 저장
+				String newImage = userFileService.saveProfileImage(profileImage);
+				user.setProfileImage(newImage);
+			} catch (RuntimeException e) {
+				throw UserFileException.uploadError(e.getMessage());
+			}
 		}
 
 		return userRepository.save(user);
@@ -160,12 +230,39 @@ public class UserService {
 
 	@Transactional
 	public void deleteUser(Integer userId) {
+		// userId 유효성 검사
+		if (userId == null) {
+			throw UserValidationException.requiredUserId();
+		}
+
 		User user = userRepository.findById(userId)
-			.orElseThrow(() -> new RuntimeException("missing_user"));
+			.orElseThrow(UserAuthenticationException::missingUser);
 
 		// 프로필 이미지 삭제
 		if (user.getProfileImage() != null && !user.getProfileImage().isEmpty()) {
-			userFileService.deleteImage(user.getProfileImage());
+			try {
+				userFileService.deleteImage(user.getProfileImage());
+			} catch (RuntimeException e) {
+				logger.warn("이미지 삭제 실패: {}", e.getMessage());
+				// 이미지 삭제 실패는 사용자 삭제를 중단시키지 않음
+			}
+		}
+
+		// 사용자의 반려동물 정보 소프트 딜리트 처리
+		try {
+			// 사용자의 반려동물 정보 조회
+			Optional<Pet> petOptional = petRepository.findByUserId(userId);
+
+			// 반려동물 정보가 존재하면 소프트 딜리트 처리
+			if (petOptional.isPresent()) {
+				Pet pet = petOptional.get();
+				pet.onSoftDelete(); // Pet 클래스의 onSoftDelete 메서드 호출
+				petRepository.save(pet);
+				logger.info("사용자 ID {}의 반려동물 정보 소프트 딜리트 완료", userId);
+			}
+		} catch (Exception e) {
+			logger.error("사용자 ID {}의 반려동물 정보 소프트 딜리트 실패: {}", userId, e.getMessage());
+			// 반려동물 정보 삭제 실패는 사용자 삭제를 중단시키지 않음
 		}
 
 		// 논리적 삭제 (deletedAt 설정)
@@ -174,18 +271,48 @@ public class UserService {
 	}
 
 	@Transactional
-	public User changePassword(Integer userId, String currentPassword, String newPassword) {
+	public User changePassword(Integer userId, String currentPassword, String newPassword, String confirmPassword) {
+		// userId 유효성 검사
+		if (userId == null) {
+			throw UserValidationException.requiredUserId();
+		}
+
+		// 현재 비밀번호 유효성 검사
+		if (currentPassword == null || currentPassword.isEmpty()) {
+			throw new UserValidationException("required_current_password", "현재 비밀번호를 입력해주세요.");
+		}
+
+		// 새 비밀번호 유효성 검사
+		if (newPassword == null || newPassword.isEmpty()) {
+			throw new UserValidationException("required_new_password", "새 비밀번호를 입력해주세요.");
+		}
+
+		// 새 비밀번호 길이 검사
+		if (newPassword.length() < 8 || newPassword.length() > 20) {
+			throw UserValidationException.invalidPasswordLength();
+		}
+
+		// 비밀번호 확인 검증
+		if (confirmPassword == null || confirmPassword.isEmpty()) {
+			throw new UserValidationException("required_new_password_confirm", "새 비밀번호 확인을 입력해주세요.");
+		}
+
+		// 비밀번호 일치 검증
+		if (!newPassword.equals(confirmPassword)) {
+			throw UserValidationException.passwordsDoNotMatch();
+		}
+
 		User user = userRepository.findById(userId)
-			.orElseThrow(() -> new RuntimeException("user_not_found"));
+			.orElseThrow(UserAuthenticationException::missingUser);
 
 		// 현재 비밀번호 확인
 		if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
-			throw new RuntimeException("invalid_current_password");
+			throw UserAuthenticationException.invalidCurrentPassword();
 		}
 
 		// 비밀번호 복잡성 검증
 		if (!UserPasswordValidator.isValid(newPassword)) {
-			throw new RuntimeException("invalid_new_password_format");
+			throw UserValidationException.invalidPasswordFormat();
 		}
 
 		// 새 비밀번호 설정

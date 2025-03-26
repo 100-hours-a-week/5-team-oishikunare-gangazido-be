@@ -1,6 +1,6 @@
 package org.example.gangazido_be.user.service;
 
-import org.springframework.beans.factory.annotation.Value;
+import org.example.gangazido_be.user.exception.UserFileException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -13,7 +13,7 @@ import java.util.UUID;
 @Service
 public class UserFileService {
 
-	// 새로운 업로드 경로 설정
+	// 업로드 경로 설정
 	private final String uploadDir = "uploads/user";
 
 	/**
@@ -25,6 +25,17 @@ public class UserFileService {
 	public String saveProfileImage(MultipartFile profileImage) {
 		if (profileImage == null || profileImage.isEmpty()) {
 			return null;
+		}
+
+		// 파일 크기 검사 (5MB 제한)
+		if (profileImage.getSize() > 5 * 1024 * 1024) {
+			throw UserFileException.fileTooLarge();
+		}
+
+		// 파일 형식 검사
+		String contentType = profileImage.getContentType();
+		if (contentType == null || !contentType.startsWith("image/")) {
+			throw UserFileException.invalidFileType();
 		}
 
 		try {
@@ -49,7 +60,7 @@ public class UserFileService {
 			// URL 경로 반환
 			return "/uploads/user/" + filename;
 		} catch (IOException e) {
-			throw new RuntimeException("프로필 이미지 저장 중 오류가 발생했습니다: " + e.getMessage());
+			throw UserFileException.uploadError(e.getMessage());
 		}
 	}
 
@@ -76,7 +87,7 @@ public class UserFileService {
 			}
 			return false;
 		} catch (IOException e) {
-			throw new RuntimeException("이미지 삭제 중 오류가 발생했습니다: " + e.getMessage());
+			throw UserFileException.uploadError(e.getMessage());
 		}
 	}
 }

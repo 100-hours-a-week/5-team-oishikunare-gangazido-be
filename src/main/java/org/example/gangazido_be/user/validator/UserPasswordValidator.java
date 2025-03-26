@@ -3,46 +3,44 @@ package org.example.gangazido_be.user.validator;
 import java.util.regex.Pattern;
 
 /**
- * 비밀번호의 유효성을 검사하는 유틸리티 클래스입니다.
+ * 비밀번호 유효성 검증 유틸리티 클래스
  */
 public class UserPasswordValidator {
+	// 비밀번호 정규식 패턴: 8-20자, 최소 하나의 대문자, 소문자, 숫자, 특수문자 포함
+	private static final String PASSWORD_PATTERN =
+		"^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,20}$";
 
-	private static final int MIN_LENGTH = 8;
-	private static final int MAX_LENGTH = 20;
-
-	private static final Pattern HAS_UPPERCASE = Pattern.compile("[A-Z]");
-	private static final Pattern HAS_LOWERCASE = Pattern.compile("[a-z]");
-	private static final Pattern HAS_NUMBER = Pattern.compile("\\d");
-	private static final Pattern HAS_SPECIAL_CHAR = Pattern.compile("[@$!%*?&]");
-
-	// 인스턴스 생성 방지
-	private UserPasswordValidator() {
-		throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
-	}
+	private static final Pattern pattern = Pattern.compile(PASSWORD_PATTERN);
 
 	/**
-	 * 비밀번호가 유효한 형식을 갖추었는지 검사합니다.
+	 * 비밀번호 유효성 검증
 	 *
-	 * @param password 검사할 비밀번호
-	 * @return 모든 조건을 만족하면 true, 그렇지 않으면 false
+	 * @param password 검증할 비밀번호
+	 * @return 유효성 여부
 	 */
 	public static boolean isValid(String password) {
-		if (password == null || password.length() < MIN_LENGTH || password.length() > MAX_LENGTH) {
+		if (password == null) {
 			return false;
 		}
-
-		return HAS_UPPERCASE.matcher(password).find() &&
-			HAS_LOWERCASE.matcher(password).find() &&
-			HAS_NUMBER.matcher(password).find() &&
-			HAS_SPECIAL_CHAR.matcher(password).find();
+		return pattern.matcher(password).matches();
 	}
 
 	/**
-	 * 비밀번호 형식에 맞지 않을 때 사용할 메시지 키를 반환합니다.
+	 * 비밀번호 유효성 검증 메시지 반환
 	 *
-	 * @return "invalid_password_format"
+	 * @return 검증 실패 시 에러 메시지
 	 */
 	public static String getValidationMessage() {
-		return "invalid_password_format";
+		return "비밀번호는 8-20자의 대소문자, 숫자, 특수문자(@$!%*?&)를 포함해야 합니다.";
+	}
+
+	/**
+	 * 비밀번호 길이 검증
+	 *
+	 * @param password 검증할 비밀번호
+	 * @return 길이 유효성 여부
+	 */
+	public static boolean isValidLength(String password) {
+		return password != null && password.length() >= 8 && password.length() <= 20;
 	}
 }
