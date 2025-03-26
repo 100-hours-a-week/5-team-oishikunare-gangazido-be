@@ -2,7 +2,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: "prometheus"
+        include: "health", "info", "prometheus"  # prometheus 포함
   endpoint:
     prometheus:
       enabled: true
@@ -10,4 +10,3 @@ management:
     metrics:
       export:
         enabled: true
-#삭제하지 말아주세요
