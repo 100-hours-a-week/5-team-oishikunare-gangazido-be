@@ -35,18 +35,18 @@ public class LlmService {
 	private static final Map<String, String> BREED_CHARACTERISTICS = new HashMap<>();
 
 	static {
-		BREED_CHARACTERISTICS.put("푸들", "곱슬거리는 털이 보온성은 있으나 얇고 한기엔 약해 옷을 입히는 것이 좋아요."); //ㅍㅜ들
-		BREED_CHARACTERISTICS.put("비숑", "포근한 털이 있지만 추위에 약한 편이라 옷을 입히는 것이 좋아요."); //비숑
-		BREED_CHARACTERISTICS.put("포메라니안", " 체구가 작아 추위에 약하니 외출 시 방한이 필요합니다."); //포메
-		BREED_CHARACTERISTICS.put("말티즈", "추위에 약한 견종이므로 외출 시 방한복이 필요합니다."); //말티즈
-		BREED_CHARACTERISTICS.put("웰시코기", "이중모를 가진 견종이라 어느 정도 추위에 강하지만 너무 추운 날엔 방한이 필요합니다."); //웰시
-		BREED_CHARACTERISTICS.put("골든리트리버", "추위에 비교적 강하지만, 너무 추운 날씨에는 방한이 필요할 수 있습니다."); //골댕
-		BREED_CHARACTERISTICS.put("래브라도리트리버", "추위에 비교적 강하지만, 너무 추운 날씨에는 방한이 필요할 수 있습니다."); //래브라도
-		BREED_CHARACTERISTICS.put("보더콜리", "이중모를 가진 활동적인 견종으로 추위에 비교적 강하지만 한파 시 주의해야 해요."); //브로콜리
-		BREED_CHARACTERISTICS.put("시베리안허스키", "극지방 견종으로 추운 날씨에서 활동하기 매우 적합합니다."); //시베리안
-		BREED_CHARACTERISTICS.put("진돗개", "이중모를 가진 한국 토종견으로 일반적인 겨울 추위에는 잘 견딜 수 있습니다."); //진도독
-		BREED_CHARACTERISTICS.put("믹스견", "견종별 특성을 고려하여 산책 여부를 결정하세요."); //믹스
-		BREED_CHARACTERISTICS.put("기타", "견종별 특성을 고려하여 산책 여부를 결정하세요."); //기타
+		BREED_CHARACTERISTICS.put("푸들", "곱슬거리는 털이 보온성은 있으나 추위와 더위 모두에 민감해요. 겨울에는 따뜻한 옷을 입히고, 여름엔 시원한 시간대에 산책하세요.");
+		BREED_CHARACTERISTICS.put("비숑", "풍성한 털이 있지만 속털이 없어 추위에 약하고 더위에도 약한 편이에요. 겨울엔 방한복, 여름엔 실내 활동을 중심으로 해주세요.");
+		BREED_CHARACTERISTICS.put("포메라니안", "이중모를 가졌지만 체구가 작아 추위와 더위 모두에 약해요. 겨울엔 방한복을, 여름엔 외출을 최소화하세요.");
+		BREED_CHARACTERISTICS.put("말티즈", "얇고 긴 털을 가지고 있어 추위와 더위 모두에 민감해요. 겨울엔 보온에 신경 쓰고, 여름엔 직사광선을 피하세요.");
+		BREED_CHARACTERISTICS.put("웰시코기", "이중모로 추위에는 어느 정도 강하지만 더위에 약해요. 겨울엔 짧은 산책도 가능하지만 여름엔 그늘을 잘 챙겨주세요.");
+		BREED_CHARACTERISTICS.put("골든리트리버", "이중모를 가진 대형견으로 추위엔 강하지만 더위엔 쉽게 지칠 수 있어요. 겨울엔 자유로운 활동이 가능하고, 여름엔 휴식을 자주 주세요.");
+		BREED_CHARACTERISTICS.put("래브라도리트리버", "추위엔 잘 견디지만 더운 날씨에는 피로를 쉽게 느껴요. 겨울엔 산책하기 좋고, 여름엔 활동 시간을 조절하세요.");
+		BREED_CHARACTERISTICS.put("보더콜리", "추위엔 강하지만 더위엔 약한 편이에요. 겨울엔 활발히 움직일 수 있지만, 여름엔 시원한 장소에서 짧은 산책이 좋아요.");
+		BREED_CHARACTERISTICS.put("시베리안허스키", "추위엔 매우 강하지만 더위엔 매우 약해요. 겨울엔 야외 활동에 적합하고, 여름엔 실내에서 쉬게 해주세요.");
+		BREED_CHARACTERISTICS.put("진돗개", "한국 기후에 잘 적응하지만 혹한과 폭염 모두 주의가 필요해요. 계절에 따라 산책 시간과 환경을 조절하세요.");
+		BREED_CHARACTERISTICS.put("믹스견", "혼혈된 특성에 따라 다르지만 보통 기온 변화에 적응력은 있어요. 날씨 변화에 따라 아이의 반응을 관찰해 주세요.");
+		BREED_CHARACTERISTICS.put("기타", "견종별로 특성이 다르므로 계절에 맞게 복장과 산책 여부를 조절해 주세요.");
 	}
 
 	// ✅ 생성자 주입 방식으로 의존성 주입 (Spring이 자동으로 관리)
