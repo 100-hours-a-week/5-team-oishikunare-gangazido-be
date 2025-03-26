@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import jakarta.servlet.http.HttpSession;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import org.hibernate.annotations.GenericGenerator;
 
@@ -12,6 +13,7 @@ import java.util.UUID;
 
 @Entity	// 이 클래스는 DB 테이블과 매핑되는 클래스
 @Getter
+@Setter
 @NoArgsConstructor
 @Table(name = "marker") //테이블명 명시
 public class MarkerEntity {
@@ -35,6 +37,9 @@ public class MarkerEntity {
 
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private LocalDateTime createdAt = LocalDateTime.now();
+
+	@Column(name = "deleted_at")
+	private LocalDateTime deletedAt;
 
 	public MarkerEntity(UUID id, Integer user_id, int type, double latitude, double longitude) {
 		this.id = id;

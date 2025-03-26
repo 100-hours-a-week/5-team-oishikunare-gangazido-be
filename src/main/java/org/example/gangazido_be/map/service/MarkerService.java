@@ -7,6 +7,7 @@ import org.example.gangazido_be.map.repository.MarkerRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -58,7 +59,9 @@ public class MarkerService {
 		}
 
 		// 마커 삭제
-		markerRepository.deleteById(markerId);
+		// markerRepository.deleteById(markerId); 소프트 삭제 처리 위해
+		marker.setDeletedAt(LocalDateTime.now());
+		markerRepository.save(marker);
 	}
 
 	// 반경 내 마커 조회
