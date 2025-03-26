@@ -35,14 +35,18 @@ public class LlmService {
 	private static final Map<String, String> BREED_CHARACTERISTICS = new HashMap<>();
 
 	static {
-		BREED_CHARACTERISTICS.put("시베리안허스키", "추운 날씨에서 활동하기 적합한 견종입니다.");
-		BREED_CHARACTERISTICS.put("골든리트리버", "추위에 비교적 강하지만, 너무 추운 날씨에는 보호가 필요할 수 있습니다.");
-		BREED_CHARACTERISTICS.put("포메라니안", "추위에 약하므로 따뜻한 옷을 입히는 것이 좋습니다.");
-		BREED_CHARACTERISTICS.put("말티즈", "추위에 약한 견종이므로 외출 시 방한복이 필요합니다.");
-		BREED_CHARACTERISTICS.put("비숑", "포근한 털이 있지만 추위에 약한 편이라 옷을 입히는 것이 좋아요.");
-		BREED_CHARACTERISTICS.put("진돗개", "적당한 기온에서는 산책이 가능하지만, 너무 추운 날씨에는 주의해야 합니다.");
-		BREED_CHARACTERISTICS.put("믹스견", "견종에 따라 차이가 있지만 일반적으로 기온 변화에 적응할 수 있습니다.");
-		BREED_CHARACTERISTICS.put("기타", "견종별 특성을 고려하여 산책 여부를 결정하세요.");
+		BREED_CHARACTERISTICS.put("푸들", "곱슬거리는 털이 보온성은 있으나 추위와 더위 모두에 민감해요. 겨울에는 따뜻한 옷을 입히고, 여름엔 시원한 시간대에 산책하세요.");
+		BREED_CHARACTERISTICS.put("비숑", "풍성한 털이 있지만 속털이 없어 추위에 약하고 더위에도 약한 편이에요. 겨울엔 방한복, 여름엔 실내 활동을 중심으로 해주세요.");
+		BREED_CHARACTERISTICS.put("포메라니안", "이중모를 가졌지만 체구가 작아 추위와 더위 모두에 약해요. 겨울엔 방한복을, 여름엔 외출을 최소화하세요.");
+		BREED_CHARACTERISTICS.put("말티즈", "얇고 긴 털을 가지고 있어 추위와 더위 모두에 민감해요. 겨울엔 보온에 신경 쓰고, 여름엔 직사광선을 피하세요.");
+		BREED_CHARACTERISTICS.put("웰시코기", "이중모로 추위에는 어느 정도 강하지만 더위에 약해요. 겨울엔 짧은 산책도 가능하지만 여름엔 그늘을 잘 챙겨주세요.");
+		BREED_CHARACTERISTICS.put("골든리트리버", "이중모를 가진 대형견으로 추위엔 강하지만 더위엔 쉽게 지칠 수 있어요. 겨울엔 자유로운 활동이 가능하고, 여름엔 휴식을 자주 주세요.");
+		BREED_CHARACTERISTICS.put("래브라도리트리버", "추위엔 잘 견디지만 더운 날씨에는 피로를 쉽게 느껴요. 겨울엔 산책하기 좋고, 여름엔 활동 시간을 조절하세요.");
+		BREED_CHARACTERISTICS.put("보더콜리", "추위엔 강하지만 더위엔 약한 편이에요. 겨울엔 활발히 움직일 수 있지만, 여름엔 시원한 장소에서 짧은 산책이 좋아요.");
+		BREED_CHARACTERISTICS.put("시베리안허스키", "추위엔 매우 강하지만 더위엔 매우 약해요. 겨울엔 야외 활동에 적합하고, 여름엔 실내에서 쉬게 해주세요.");
+		BREED_CHARACTERISTICS.put("진돗개", "한국 기후에 잘 적응하지만 혹한과 폭염 모두 주의가 필요해요. 계절에 따라 산책 시간과 환경을 조절하세요.");
+		BREED_CHARACTERISTICS.put("믹스견", "혼혈된 특성에 따라 다르지만 보통 기온 변화에 적응력은 있어요. 날씨 변화에 따라 아이의 반응을 관찰해 주세요.");
+		BREED_CHARACTERISTICS.put("기타", "견종별로 특성이 다르므로 계절에 맞게 복장과 산책 여부를 조절해 주세요.");
 	}
 
 	// ✅ 생성자 주입 방식으로 의존성 주입 (Spring이 자동으로 관리)
@@ -192,23 +196,31 @@ public class LlmService {
 					"```\n",
 				petName, temperature, pm10, pm25, weatherCondition, temperature, pm10, pm25, petName, petBreed, petAge, petWeight
 			);
-		} else if (message.contains("옷") || message.contains("입어야") || lowerMessage.contains("외출 옷") || lowerMessage.contains("방한")) {
+		} else if (message.contains("옷") || message.contains("입혀야") || lowerMessage.contains("외출 옷") || lowerMessage.contains("방한")) {
 			prompt = String.format(
 				"당신은 반려견 산책 추천 AI입니다. **반드시 JSON 형식으로만 답변하세요.** HTML이나 마크다운, 자연어 문장만 있는 응답은 허용되지 않습니다.\\n" +
-					"날씨 데이터와 반려견 정보를 바탕으로 **%s**의 산책 가능 여부를 판단하고 그 결과를 제공해주세요" +
 					"반려견이 외출 시 옷을 입어야 할까요? 현재 날씨를 분석하고, 반려견의 체형을 고려하여 적절한 답변을 제공해주세요.\n\n" +
-					"응답에 반드시 반려견 이름을 포함해주세요." +
+					"응답에 반드시 반려견 이름 %s을 포함해주세요." +
 					"산책 추천 또는 비추천 사유 (기온 %.1f°C, 미세먼지 PM10 %.1fµg/m³, PM2.5 %.1fµg/m³ 수치를 반드시 모두 포함하여 설명)" +
 					"📌 **현재 환경 데이터:**\n" +
 					"- 날씨 상태: %s\n" +
 					"- 기온: %.1f°C\n" +
 					"- 반려견 견종: %s\n" +
 					"- 반려견 체중: %.1fkg\n\n" +
-					"📌 **옷을 입어야 하는지 여부와 이유를 한글로 설명해주세요.**",
-				weatherCondition, temperature, pm10, pm25, temperature, petBreed, petWeight
+					"📌 **옷을 입어야 하는지 여부와 이유를 한글로 설명해주세요.**" +
+					"📌 **응답은 JSON 형식으로 다음과 같이 제공해주세요:**\n" +
+					"```json\n" +
+					"{\n" +
+					"  \"recommendation\": \"산책 추천 또는 비추천\",\n" +
+					"  \"reason\": \"산책 추천 또는 비추천 사유\",\n" +
+					"  \"safety_tips\": [\"산책 시 유의 사항\"]\n" +
+					"}\n" +
+					"```\n",
+
+				petName, temperature, pm10, pm25, weatherCondition, temperature, petBreed, petWeight
 			);
 		} else {
-			prompt = "'제가 도와드릴 수 있는 질문이 아닙니다'라고 답해.";
+			prompt = "대답할 수 없는 질문이라고 한 문장으로 말해.";
 		}
 
 		//System.out.println("📝 [DEBUG] 최종 GPT 프롬프트:\n" + prompt);
@@ -220,7 +232,7 @@ public class LlmService {
 			System.out.println("response: " + gptResponse);  // 🔍 GPT 응답 확인
 
 			if (gptResponse == null || gptResponse.isEmpty()) {
-				throw new Exception("GPT 서비스에서 응답이 비어 있습니다.");
+				throw new Exception("empty_response");
 			}
 		} catch (Exception e) {
 			System.err.println("[ERROR]: " + e.getMessage());
@@ -246,7 +258,7 @@ public class LlmService {
 		return parts[1].split(";")[0].trim();
 	}
 
-	// ✅ 영어 날씨명을 한글로 변환
+	//  영어 날씨명을 한글로 변환
 	private String convertWeatherToKorean(String weather) {
 		switch (weather.toLowerCase()) {
 			case "clear":
@@ -272,7 +284,7 @@ public class LlmService {
 		}
 	}
 
-	// ✅ 견종명을 한글로 변환
+	//  견종명을 한글로 변환
 	private String convertBreedToKorean(String breed) {
 		switch (breed.toLowerCase()) {
 			case "poodle":
