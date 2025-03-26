@@ -2,6 +2,8 @@
 package org.example.gangazido_be.gpt.service;
 
 import org.example.gangazido_be.pet.repository.PetRepository;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate; // 외부 api호출을 위한 spring 클래스
 import org.springframework.http.*;
@@ -13,19 +15,26 @@ import java.util.*;
 @Service //이 클래스가 서비스 계층의 빈으로 등록되도록 지정
 public class GptService {
 // 환경변수에서 오픈 api 키를 가져옴
-	private static final String API_KEY = System.getenv("OPENAI_API_KEY"); //OpenAI API 키
-	// OpenAI GPT API의 요청 URL (v1/chat/completions 엔드포인트)
+	private final OpenAiConfig openAiConfig;
 	private static final String GPT_API_URL = "https://api.openai.com/v1/chat/completions";
+
+	//public void callOpenAi() {
+	//String apiKey = openAiConfig.getApiKey();
+	//private static final String API_KEY = System.getenv("OPENAI_API_KEY"); //OpenAI API 키
+	// OpenAI GPT API의 요청 URL (v1/chat/completions 엔드포인트)
+
 	private final PetRepository petRepository; //  PetRepository 주입 받아 사용 (현재 미사용이지만 필요시 사용 가능)
 	// 생성자 주입 방식으로 PetRepository 전달
-	public GptService(PetRepository petRepository) {
+	public GptService(PetRepository petRepository, OpenAiConfig openAiConfig) {
 		this.petRepository = petRepository;
+		this.openAiConfig = openAiConfig;
 	}
 	//  입력 프롬프트를 기반으로 GPT가 생성한 텍스트를 반환하는 메서드
 	public String generateText(String prompt) {
 		try {
 			//  RestTemplate: 외부 HTTP 요청을 보내기 위한 도구
 			RestTemplate restTemplate = new RestTemplate();
+			String API_KEY = openAiConfig.getApiKey();
 			//  HTTP 요청 헤더 설정
 			HttpHeaders headers = new HttpHeaders();
 			headers.setContentType(MediaType.APPLICATION_JSON); //요청데이터는 제이슨 형식
