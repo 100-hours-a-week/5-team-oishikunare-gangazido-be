@@ -279,12 +279,12 @@ public class UserService {
 
 		// 현재 비밀번호 유효성 검사
 		if (currentPassword == null || currentPassword.isEmpty()) {
-			throw new UserValidationException("required_current_password", "현재 비밀번호를 입력해주세요.");
+			throw new UserValidationException("required_current_password", "required_current_password");
 		}
 
 		// 새 비밀번호 유효성 검사
 		if (newPassword == null || newPassword.isEmpty()) {
-			throw new UserValidationException("required_new_password", "새 비밀번호를 입력해주세요.");
+			throw new UserValidationException("required_new_password", "required_new_password");
 		}
 
 		// 새 비밀번호 길이 검사
@@ -294,7 +294,7 @@ public class UserService {
 
 		// 비밀번호 확인 검증
 		if (confirmPassword == null || confirmPassword.isEmpty()) {
-			throw new UserValidationException("required_new_password_confirm", "새 비밀번호 확인을 입력해주세요.");
+			throw new UserValidationException("required_new_password_confirm", "required_new_password_confirm");
 		}
 
 		// 비밀번호 일치 검증

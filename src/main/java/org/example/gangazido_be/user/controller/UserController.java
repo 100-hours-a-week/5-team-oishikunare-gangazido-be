@@ -245,7 +245,7 @@ public class UserController {
 
 			// 기본 입력 확인만 수행하고 서비스로 위임
 			if ((nickname == null || nickname.isEmpty()) && (profileImage == null || profileImage.isEmpty())) {
-				throw new UserValidationException("profile_update_data_required", "프로필 정보를 입력해주세요.");
+				throw new UserValidationException("required_profile_update_data", "required_profile_update_data");
 			}
 
 			// 서비스 호출 - 모든 유효성 검증은 서비스에서 처리
@@ -315,7 +315,7 @@ public class UserController {
 		try {
 			// 기본 null 체크만 수행
 			if (requestDTO == null) {
-				throw new UserValidationException("required_password_data", "비밀번호 변경 정보를 입력해주세요.");
+				throw new UserValidationException("required_password_data", "required_password_data");
 			}
 
 			User user = (User) session.getAttribute("user");
