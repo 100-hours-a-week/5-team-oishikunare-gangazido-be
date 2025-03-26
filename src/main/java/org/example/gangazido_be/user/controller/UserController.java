@@ -11,6 +11,9 @@ import org.example.gangazido_be.user.util.UserApiMessages;
 import org.example.gangazido_be.user.util.UserIdEncryptionUtil;
 import org.example.gangazido_be.user.validator.UserPasswordValidator;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -86,6 +89,12 @@ public class UserController {
 	}
 
 	@PostMapping("/login")
+	@Operation(summary = "사용자 로그인", description = "이메일과 비밀번호로 로그인합니다")
+	@io.swagger.v3.oas.annotations.parameters.RequestBody(
+		description = "로그인 정보",
+		required = true,
+		content = @Content(schema = @Schema(implementation = UserLoginRequestDTO.class))
+	)
 	public ResponseEntity<UserApiResponse<Map<String, Object>>> login(
 		@RequestBody(required = false) Map<String, Object> requestMap,
 		HttpSession session,

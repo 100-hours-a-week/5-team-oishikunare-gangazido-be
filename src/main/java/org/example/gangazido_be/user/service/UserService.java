@@ -1,5 +1,7 @@
 package org.example.gangazido_be.user.service;
 
+import org.example.gangazido_be.pet.entity.Pet;
+import org.example.gangazido_be.pet.repository.PetRepository;
 import org.example.gangazido_be.user.dto.UserDTO;
 import org.example.gangazido_be.user.entity.User;
 import org.example.gangazido_be.user.exception.*;
@@ -15,19 +17,23 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 public class UserService {
 	private final UserRepository userRepository;
+	private final PetRepository petRepository;
 	private final Argon2PasswordEncoder passwordEncoder;
 	private final UserFileService userFileService;
 	private final Logger logger = LoggerFactory.getLogger(UserService.class);
 
 	@Autowired
 	public UserService(UserRepository userRepository,
+		PetRepository petRepository,
 		Argon2PasswordEncoder passwordEncoder,
 		UserFileService userFileService) {
 		this.userRepository = userRepository;
+		this.petRepository = petRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.userFileService = userFileService;
 	}
@@ -240,6 +246,23 @@ public class UserService {
 				logger.warn("이미지 삭제 실패: {}", e.getMessage());
 				// 이미지 삭제 실패는 사용자 삭제를 중단시키지 않음
 			}
+		}
+
+		// 사용자의 반려동물 정보 소프트 딜리트 처리
+		try {
+			// 사용자의 반려동물 정보 조회
+			Optional<Pet> petOptional = petRepository.findByUserId(userId);
+
+			// 반려동물 정보가 존재하면 소프트 딜리트 처리
+			if (petOptional.isPresent()) {
+				Pet pet = petOptional.get();
+				pet.onSoftDelete(); // Pet 클래스의 onSoftDelete 메서드 호출
+				petRepository.save(pet);
+				logger.info("사용자 ID {}의 반려동물 정보 소프트 딜리트 완료", userId);
+			}
+		} catch (Exception e) {
+			logger.error("사용자 ID {}의 반려동물 정보 소프트 딜리트 실패: {}", userId, e.getMessage());
+			// 반려동물 정보 삭제 실패는 사용자 삭제를 중단시키지 않음
 		}
 
 		// 논리적 삭제 (deletedAt 설정)
