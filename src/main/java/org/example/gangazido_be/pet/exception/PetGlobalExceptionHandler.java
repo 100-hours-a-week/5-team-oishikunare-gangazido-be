@@ -22,9 +22,9 @@ public class PetGlobalExceptionHandler {
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<Map<String, Object>> handleValidationException(MethodArgumentNotValidException ex) {
-		String message = (ex.getBindingResult().hasErrors() && ex.getBindingResult().getFieldError() != null)
-			? ex.getBindingResult().getFieldError().getDefaultMessage()
-			: "invalid_request";
+		String message = (ex.getBindingResult().hasErrors() && ex.getBindingResult().getFieldError() != null) ?
+			ex.getBindingResult().getFieldError().getDefaultMessage() :
+			"invalid_request";
 		return buildResponse(HttpStatus.BAD_REQUEST, message);
 	}
 

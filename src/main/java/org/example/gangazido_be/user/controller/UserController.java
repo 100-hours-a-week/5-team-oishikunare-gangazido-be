@@ -346,19 +346,54 @@ public class UserController {
 
 	// 공통 세션 및 쿠키 설정 메서드
 	private void setSessionAndCookie(User user, HttpSession session, HttpServletResponse response) {
+		// // 세션에 사용자 정보 저장
+		// session.setAttribute("user", user);
+		// session.setMaxInactiveInterval(3600); // 세션 유효시간 1시간
+		//
+		// // 쿠키 설정 (세션 ID 저장)
+		// Cookie sessionCookie = new Cookie("JSESSIONID", session.getId());
+		// sessionCookie.setPath("/");
+		// sessionCookie.setHttpOnly(true);
+		// sessionCookie.setSecure(false); // HTTPS 환경에서만 사용 해제
+		// sessionCookie.setMaxAge(3600); // 1시간 유효
+		// response.addCookie(sessionCookie);
+		//
+		// // 디버깅 로그 추가
+		// logger.debug("쿠키 설정 완료: {}, 세션 ID: {}", sessionCookie.getName(), session.getId());
+
 		// 세션에 사용자 정보 저장
 		session.setAttribute("user", user);
 		session.setMaxInactiveInterval(3600); // 세션 유효시간 1시간
 
 		// 쿠키 설정 (세션 ID 저장)
 		Cookie sessionCookie = new Cookie("JSESSIONID", session.getId());
+
+		// 모든 경로에서 접근 가능하도록 설정
 		sessionCookie.setPath("/");
+
+		// XSS 공격 방지를 위한 HttpOnly 활성화
 		sessionCookie.setHttpOnly(true);
-		sessionCookie.setSecure(false); // HTTPS 환경에서만 사용 해제
+
+		// HTTPS 환경이므로 Secure 활성화
+		sessionCookie.setSecure(true);
+
+		// 도메인 설정 (www 서브도메인 포함)
+		sessionCookie.setDomain("gangazido.com");
+
+		// SameSite 설정 (브라우저 호환성을 위해 자바 쿠키에서는 직접 헤더 설정 필요)
+		// 현재 자바의 Cookie 클래스는 SameSite 속성을 직접 지원하지 않음
+		response.setHeader("Set-Cookie", sessionCookie.getName() + "=" + sessionCookie.getValue() +
+			"; Max-Age=" + sessionCookie.getMaxAge() +
+			"; Path=" + sessionCookie.getPath() +
+			"; Domain=" + sessionCookie.getDomain() +
+			"; HttpOnly" +
+			"; Secure" +
+			"; SameSite=Lax");
+
 		sessionCookie.setMaxAge(3600); // 1시간 유효
-		response.addCookie(sessionCookie);
 
 		// 디버깅 로그 추가
-		logger.debug("쿠키 설정 완료: {}, 세션 ID: {}", sessionCookie.getName(), session.getId());
+		logger.debug("쿠키 설정 완료: {}, 세션 ID: {}, 도메인: {}",
+			sessionCookie.getName(), session.getId(), sessionCookie.getDomain());
 	}
 }
