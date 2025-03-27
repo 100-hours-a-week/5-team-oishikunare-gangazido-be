@@ -21,7 +21,7 @@ import org.example.gangazido_be.llm.service.LlmService; // ✅ GPT 호출 로직
 @RequestMapping("/v1/llm") //  이 컨트롤러의 모든 요청은 "/v1/llm" 경로로 시작됨
 public class LlmController {
 	private final LlmService llmService; //  의존성 주입받은 LLM 서비스
-
+	private Object responseEntity;
 
 	public LlmController(LlmService llmService) {
 		this.llmService = llmService;
@@ -56,6 +56,6 @@ public class LlmController {
 		//  정상 응답 로그 출력 (디버깅용)
 		System.out.println("✅ [DEBUG] 최종 응답: " + responseBody.getResponse());
 		//  클라이언트에 GPT 응답 전달 (200 OK)
-		return ResponseEntity.ok(responseBody);
+		return responseEntity;
 	}
 }
