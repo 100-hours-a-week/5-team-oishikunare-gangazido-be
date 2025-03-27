@@ -375,6 +375,7 @@ public class UserController {
 		// // 디버깅 로그 추가
 		// logger.debug("쿠키 설정 완료: {}, 세션 ID: {}", sessionCookie.getName(), session.getId());
 
+		/** 이거 원래 쓰던거임
 		// 세션에 사용자 정보 저장
 		session.setAttribute("user", user);
 		session.setMaxInactiveInterval(3600); // 세션 유효시간 1시간
@@ -413,5 +414,27 @@ public class UserController {
 		// 디버깅 로그 추가
 		logger.debug("쿠키 설정 완료: {}, 세션 ID: {}, 도메인: {}",
 			sessionCookie.getName(), session.getId(), sessionCookie.getDomain());
+		 **/
+
+		// 세션에 사용자 정보 저장
+		session.setAttribute("user", user);
+		session.setMaxInactiveInterval(3600); // 세션 유효시간 1시간
+
+		// JSESSIONID 수동으로 Set-Cookie 헤더 설정 (서브도메인 포함 + SameSite=None)
+		String sessionId = session.getId();
+
+		String cookieValue = "JSESSIONID=" + sessionId +
+			"; Path=/" +
+			"; Domain=.gangazido.com" +  // 꼭 . 으로 시작해야 서브도메인 공통 인식
+			"; Max-Age=3600" +
+			"; HttpOnly" +
+			"; Secure" +
+			"; SameSite=None";
+
+		// 헤더로 명시적으로 설정
+		response.setHeader("Set-Cookie", cookieValue);
+
+		// 디버깅 로그
+		logger.debug("쿠키 설정 완료: {}, 세션 ID: {}, 도메인: {}", "JSESSIONID", sessionId, ".gangazido.com");
 	}
 }
