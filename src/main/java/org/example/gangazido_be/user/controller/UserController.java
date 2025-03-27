@@ -380,6 +380,9 @@ public class UserController {
 		// 도메인 설정 (www 서브도메인 포함)
 		sessionCookie.setDomain("gangazido.com");
 
+		// 1시간 유효
+		sessionCookie.setMaxAge(3600);
+
 		// SameSite 설정 (브라우저 호환성을 위해 자바 쿠키에서는 직접 헤더 설정 필요)
 		// 현재 자바의 Cookie 클래스는 SameSite 속성을 직접 지원하지 않음
 		response.setHeader("Set-Cookie", sessionCookie.getName() + "=" + sessionCookie.getValue() +
@@ -389,8 +392,6 @@ public class UserController {
 			"; HttpOnly" +
 			"; Secure" +
 			"; SameSite=None");
-
-		sessionCookie.setMaxAge(3600); // 1시간 유효
 
 		// 디버깅 로그 추가
 		logger.debug("쿠키 설정 완료: {}, 세션 ID: {}, 도메인: {}",
