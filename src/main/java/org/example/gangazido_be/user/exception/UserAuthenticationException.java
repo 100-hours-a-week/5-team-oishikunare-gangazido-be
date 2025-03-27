@@ -25,7 +25,7 @@ public class UserAuthenticationException extends UserException {
 	}
 
 	public static UserAuthenticationException unauthorized() {
-		return new UserAuthenticationException(UNAUTHORIZED, "required_authorization");
+		return new UserAuthenticationException(UNAUTHORIZED, "required_authentication");
 	}
 
 	public static UserAuthenticationException missingUser() {
