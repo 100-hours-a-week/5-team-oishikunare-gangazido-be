@@ -143,7 +143,21 @@ public class UserController {
 
 	// 사용자 정보 확인 API
 	@GetMapping("/me")
-	public ResponseEntity<UserApiResponse<Map<String, Object>>> getCurrentUser(HttpSession session) {
+	public ResponseEntity<UserApiResponse<Map<String, Object>>> getCurrentUser(HttpServletRequest request, HttpSession session) {
+		// 모든 쿠키 출력
+		Cookie[] cookies = request.getCookies();
+		if (cookies != null) {
+			for (Cookie cookie : cookies) {
+				logger.info("쿠키: {}={}", cookie.getName(), cookie.getValue());
+			}
+		} else {
+			logger.warn("요청에 쿠키가 없습니다!");
+		}
+
+		// 세션 정보 출력
+		logger.info("세션 ID: {}", session.getId());
+		logger.info("사용자 정보: {}", session.getAttribute("user"));
+
 		try {
 			User user = (User) session.getAttribute("user");
 
