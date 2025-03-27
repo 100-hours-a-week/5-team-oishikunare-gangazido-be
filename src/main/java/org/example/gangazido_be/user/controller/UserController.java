@@ -388,7 +388,7 @@ public class UserController {
 			"; Domain=" + sessionCookie.getDomain() +
 			"; HttpOnly" +
 			"; Secure" +
-			"; SameSite=Lax");
+			"; SameSite=None");
 
 		sessionCookie.setMaxAge(3600); // 1시간 유효
 
