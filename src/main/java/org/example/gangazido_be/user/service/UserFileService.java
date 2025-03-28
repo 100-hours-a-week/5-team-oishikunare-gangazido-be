@@ -58,7 +58,11 @@ public class UserFileService {
 			Files.copy(profileImage.getInputStream(), filePath);
 
 			// URL 경로 반환
-			return "/uploads/user/" + filename;
+			String domain = "https://api.gangazido.com";
+
+			// 파일 저장 후...
+			return domain + "/user-uploads/" + filename;
+
 		} catch (IOException e) {
 			throw UserFileException.uploadError(e.getMessage());
 		}

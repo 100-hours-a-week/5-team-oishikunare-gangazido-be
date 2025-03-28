@@ -28,7 +28,7 @@ public class UserFileConfig implements WebMvcConfigurer {
 		Path uploadPath = Paths.get(uploadDir);
 		String uploadAbsolutePath = uploadPath.toFile().getAbsolutePath();
 
-		registry.addResourceHandler("/user-uploads/**")
+		registry.addResourceHandler("/upload/user/**")
 			.addResourceLocations("file:" + uploadAbsolutePath + "/");
 	}
 }
