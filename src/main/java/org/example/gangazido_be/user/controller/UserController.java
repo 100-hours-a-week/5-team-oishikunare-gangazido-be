@@ -425,7 +425,7 @@ public class UserController {
 
 		String cookieValue = "JSESSIONID=" + sessionId +
 			"; Path=/" +
-			"; Domain=.gangazido.com" +  // 꼭 . 으로 시작해야 서브도메인 공통 인식
+			"; Domain=gangazido.com" +  // 꼭 . 으로 시작해야 서브도메인 공통 인식
 			"; Max-Age=3600" +
 			"; HttpOnly" +
 			"; Secure" +
