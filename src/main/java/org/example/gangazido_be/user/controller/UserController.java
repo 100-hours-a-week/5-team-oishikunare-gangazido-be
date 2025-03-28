@@ -427,6 +427,7 @@ public class UserController {
 			"; Path=/" +
 			"; Max-Age=3600" +
 			"; HttpOnly" +
+			"; Domain=gangazido.com" +
 			"; Secure" +
 			"; SameSite=None";
 
