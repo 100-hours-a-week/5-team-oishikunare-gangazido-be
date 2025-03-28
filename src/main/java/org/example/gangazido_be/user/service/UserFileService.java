@@ -61,7 +61,7 @@ public class UserFileService {
 			String domain = "https://api.gangazido.com";
 
 			// 파일 저장 후...
-			return domain + "/user-uploads/" + filename;
+			return domain + "/uploads/user/" + filename;
 
 		} catch (IOException e) {
 			throw UserFileException.uploadError(e.getMessage());
