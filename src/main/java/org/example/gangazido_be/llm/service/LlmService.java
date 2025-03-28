@@ -115,10 +115,6 @@ public class LlmService {
 				.body(new LlmResponse("invalid_air_quality_data"));
 		}
 
-		/*JSONObject components = airQualityJson.optJSONObject("components");
-		double pm10 = (components != null) ? components.optDouble("pm10", -1.0) : -1.0;
-		double pm25 = (components != null) ? components.optDouble("pm2_5", -1.0) : -1.0;*/
-
 		double pm10 = airQualityJson.optDouble("pm10", -1.0);
 		double pm25 = airQualityJson.optDouble("pm2_5", -1.0);
 

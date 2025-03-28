@@ -1,0 +1,80 @@
+spring:
+  application:
+    name: ${SPRING_APPLICATION_NAME}
+  session:
+    store-type: redis
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST}
+      port: ${SPRING_REDIS_PORT:6379}
+      timeout: ${SPRING_REDIS_TIMEOUT:60000}
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    hikari:
+      maximum-pool-size: ${SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE:5}
+      minimum-idle: ${SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE:2}
+      idle-timeout: ${SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT:30000}
+      connection-timeout: ${SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT:20000}
+      max-lifetime: ${SPRING_DATASOURCE_HIKARI_MAX_LIFETIME:600000}
+  jpa:
+    database-platform: ${SPRING_JPA_DATABASE_PLATFORM}
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
+    show-sql: ${SPRING_JPA_SHOW_SQL}
+  servlet:
+    multipart:
+      enabled: ${SPRING_SERVLET_MULTIPART_ENABLED:true}
+      max-file-size: ${SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE:10MB}
+      max-request-size: ${SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE:10MB}
+
+server:
+  servlet:
+    session:
+      cookie:
+        domain: gangazido.com
+
+app:
+  user:
+    upload:
+      dir: ${APP_USER_UPLOAD_DIR:uploads/user}
+  pet:
+    upload:
+      dir: ${APP_PET_UPLOAD_DIR:uploads/pet}
+  encryption:
+    key: ${APP_ENCRYPTION_KEY}
+    iv: ${APP_ENCRYPTION_IV}
+
+openai:
+  api-key: ${OPENAI_API_KEY}
+
+llm:
+  api-key: ${LLM_API_KEY}
+  model: ${LLM_MODEL:gpt-3.5-turbo}
+
+weather:
+  api:
+    key: ${WEATHER_API_KEY}
+
+logging:
+  level:
+    root: ${LOGGING_LEVEL_ROOT:INFO}
+    org.springframework.web: ${LOGGING_LEVEL_WEB:DEBUG}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include:
+          - health
+          - info
+          - prometheus
+  endpoint:
+    prometheus:
+      enabled: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true

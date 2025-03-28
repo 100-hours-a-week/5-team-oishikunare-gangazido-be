@@ -3,6 +3,7 @@ package org.example.gangazido_be.user.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Entity
@@ -10,7 +11,10 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class User {
+public class User implements Serializable {
+	// serialVersionUID 추가 - 직렬화 버전 관리를 위해 필수적
+	private static final long serialVersionUID = 1L;
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	// pk 컬럼명은 따로 지정해주는게 더 명확(같긴 하지만)

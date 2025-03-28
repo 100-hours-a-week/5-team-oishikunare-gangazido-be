@@ -17,12 +17,6 @@ public class GptService {
 // 환경변수에서 오픈 api 키를 가져옴
 	private final OpenAiConfig openAiConfig;
 	private static final String GPT_API_URL = "https://api.openai.com/v1/chat/completions";
-
-	//public void callOpenAi() {
-	//String apiKey = openAiConfig.getApiKey();
-	//private static final String API_KEY = System.getenv("OPENAI_API_KEY"); //OpenAI API 키
-	// OpenAI GPT API의 요청 URL (v1/chat/completions 엔드포인트)
-
 	private final PetRepository petRepository; //  PetRepository 주입 받아 사용 (현재 미사용이지만 필요시 사용 가능)
 	// 생성자 주입 방식으로 PetRepository 전달
 	public GptService(PetRepository petRepository, OpenAiConfig openAiConfig) {
