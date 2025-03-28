@@ -434,6 +434,6 @@ public class UserController {
 		response.setHeader("Set-Cookie", cookieValue);
 
 		// 디버깅 로그
-		logger.debug("쿠키 설정 완료: {}, 세션 ID: {}, 도메인: {}", "JSESSIONID", sessionId, ".gangazido.com");
+		logger.debug("쿠키 설정 완료: {}, 세션 ID: {}, 도메인: {}", "JSESSIONID", sessionId, "gangazido.com");
 	}
 }
