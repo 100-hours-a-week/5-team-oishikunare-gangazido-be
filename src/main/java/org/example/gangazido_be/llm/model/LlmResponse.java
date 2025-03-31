@@ -1,9 +1,11 @@
 package org.example.gangazido_be.llm.model;
 
+import java.io.Serializable;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 
-public class LlmResponse {
+public class LlmResponse implements Serializable {
 	private String message;
 	private Data data;
 
@@ -42,7 +44,7 @@ public class LlmResponse {
 		return null;
 	}
 
-	public static class Data {
+	public static class Data implements Serializable {
 		private String response;
 
 		public Data(String response) {

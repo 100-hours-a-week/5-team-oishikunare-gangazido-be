@@ -84,6 +84,12 @@ dependencies {
 
     //actuator 헬스 체크 적용 (서버, DB 체크)
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    //프로메테우스 적용
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+    //Redis
+    implementation 'org.springframework.session:spring-session-data-redis'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.springframework.boot:spring-boot-starter-cache' //여니 추가
 }
 
 tasks.named('test') {

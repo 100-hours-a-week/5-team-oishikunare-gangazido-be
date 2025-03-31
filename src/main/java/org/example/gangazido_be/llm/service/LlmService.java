@@ -4,7 +4,10 @@
 package org.example.gangazido_be.llm.service;
 
 import org.example.gangazido_be.pet.repository.PetRepository;
-import org.json.JSONArray;
+import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.example.gangazido_be.llm.model.LlmResponse;
@@ -15,21 +18,21 @@ import org.example.gangazido_be.pet.entity.Pet;
 import org.springframework.stereotype.Service;
 import org.json.JSONObject;
 
+import org.springframework.cache.annotation.Cacheable;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.List;
 import java.util.Optional;
 
-// ✅ 이 클래스가 Spring의 Service Bean으로 등록됨
+
 @Service
 public class LlmService {
 	private final GptService gptService; // ✅ GPT API를 호출하는 서비스
 	private final WeatherService weatherService; // ✅ 날씨 데이터를 가져오는 서비스
 	private final PetRepository petRepository; // ✅ 반려견 정보를 DB에서 조회하는 Repository
 	// ✅ 캐시를 사용하여 GPT 응답을 저장하여 성능 최적화
-	private final Map<String, LlmResponse> responseCache = new HashMap<>();
+	//private final Map<String, LlmResponse> responseCache = new HashMap<>();
 
 	// ✅ 견종별 특성을 정의 (추위에 대한 내성)
 	private static final Map<String, String> BREED_CHARACTERISTICS = new HashMap<>();
@@ -50,6 +53,7 @@ public class LlmService {
 	}
 
 	// ✅ 생성자 주입 방식으로 의존성 주입 (Spring이 자동으로 관리)
+
 	public LlmService(GptService gptService, WeatherService weatherService, PetRepository petRepository) {
 		this.gptService = gptService;
 		this.weatherService = weatherService;
@@ -64,6 +68,7 @@ public class LlmService {
 	 */
 	//세션 id 받아오기
 	@SuppressWarnings("checkstyle:OperatorWrap")
+	@Cacheable(value = "llmCache", key = "#sessionUserId + '|' + #latitude + ',' + #longitude + '|' + #message.trim().toLowerCase()")
 	public ResponseEntity<LlmResponse> generateChat(Integer sessionUserId, HttpServletRequest request, double latitude,
 		double longitude, String message) {
 
@@ -139,6 +144,7 @@ public class LlmService {
 		System.out.println("🌡️ [기온]: " + temperature);
 		System.out.println("💨 [미세먼지 PM10]: " + pm10);
 		System.out.println("💨 [초미세먼지 PM2.5]: " + pm25);
+
 
 		// ✅ GPT 프롬프트 생성 (산책 가능 여부)
 		String prompt;
@@ -224,6 +230,11 @@ public class LlmService {
 		}
 
 		//System.out.println("📝 [DEBUG] 최종 GPT 프롬프트:\n" + prompt);
+		/*String cacheKey = sessionUserId + "|" + latitude + "," + longitude + "|" + message.trim().toLowerCase();
+		if (responseCache.containsKey(cacheKey)) {
+			System.out.println("📦 캐시에서 GPT 응답을 가져옵니다.");
+			return ResponseEntity.ok(responseCache.get(cacheKey));
+		}*/
 
 		// 🔥 GPT 호출
 		String gptResponse;
@@ -240,7 +251,9 @@ public class LlmService {
 				.body(new LlmResponse("failed_to_get_gpt_response"));
 		}
 
+		//responseCache.put(cacheKey, new LlmResponse("llm_success", gptResponse));
 		return ResponseEntity.ok(new LlmResponse("llm_success", gptResponse));
+
 		////////////
 	}
 
