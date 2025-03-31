@@ -63,8 +63,7 @@ public class LlmService {
 		GptService gptService,
 		WeatherService weatherService,
 		PetRepository petRepository,
-		RedisTemplate<String, String> redisTemplate )
-	{
+		RedisTemplate<String, String> redisTemplate ) {
 		this.gptService = gptService;
 		this.weatherService = weatherService;
 		this.petRepository = petRepository;
@@ -159,8 +158,8 @@ public class LlmService {
 		// ✅ GPT 프롬프트 생성 (산책 가능 여부)
 		String prompt;
 		String lowerMessage = message.toLowerCase();
-		if (lowerMessage.contains("미세먼지") || lowerMessage.contains("공기") || lowerMessage.contains("대기")
-			|| lowerMessage.contains("날씨")) {
+		if (lowerMessage.contains("미세먼지") || lowerMessage.contains("공기") || lowerMessage.contains("대기") ||
+			lowerMessage.contains("날씨")) {
 			prompt = String.format(
 				"당신은 반려견 산책 추천 AI입니다. **반드시 JSON 형식으로만 답변하세요.** HTML이나 마크다운, 자연어 문장만 있는 응답은 허용되지 않습니다.\\n" +
 					"미세먼지 데이터와 반려견 정보를 바탕으로 **%s**의 산책 가능 여부를 판단하고 그 결과를 제공해주세요" +
@@ -215,8 +214,8 @@ public class LlmService {
 				petName, temperature, pm10, pm25, weatherCondition, temperature, pm10, pm25, petName, petBreed, petAge,
 				petWeight
 			);
-		} else if (message.contains("옷") || message.contains("입혀야") || lowerMessage.contains("외출 옷")
-			|| lowerMessage.contains("방한")) {
+		} else if (message.contains("옷") || message.contains("입혀야") || lowerMessage.contains("외출 옷") ||
+			lowerMessage.contains("방한")) {
 			prompt = String.format(
 				"당신은 반려견 산책 추천 AI입니다. **반드시 JSON 형식으로만 답변하세요.** HTML이나 마크다운, 자연어 문장만 있는 응답은 허용되지 않습니다.\\n" +
 					"반려견이 외출 시 옷을 입어야 할까요? 현재 날씨를 분석하고, 반려견의 체형을 고려하여 적절한 답변을 제공해주세요.\n\n" +
