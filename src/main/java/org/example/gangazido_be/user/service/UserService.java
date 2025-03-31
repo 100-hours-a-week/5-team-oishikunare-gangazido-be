@@ -24,18 +24,67 @@ public class UserService {
 	private final UserRepository userRepository;
 	private final PetRepository petRepository;
 	private final Argon2PasswordEncoder passwordEncoder;
-	private final UserFileService userFileService;
+	private final UserS3FileService userS3FileService;
 	private final Logger logger = LoggerFactory.getLogger(UserService.class);
 
 	@Autowired
 	public UserService(UserRepository userRepository,
 		PetRepository petRepository,
 		Argon2PasswordEncoder passwordEncoder,
-		UserFileService userFileService) {
+		UserS3FileService userS3FileService) {
 		this.userRepository = userRepository;
 		this.petRepository = petRepository;
 		this.passwordEncoder = passwordEncoder;
-		this.userFileService = userFileService;
+		this.userS3FileService = userS3FileService;
+	}
+
+	/**
+	 * S3 파일 키로부터 프로필 이미지 URL을 생성하는 메서드
+	 *
+	 * @param fileKey S3 객체 키
+	 * @return S3 URL
+	 */
+	public String getProfileImageUrlFromKey(String fileKey) {
+		// fileKey 유효성 검사
+		if (fileKey == null || fileKey.isEmpty()) {
+			throw new UserValidationException("invalid_file_key", "파일 키가 유효하지 않습니다");
+		}
+
+		// S3 URL 생성 후 반환
+		return userS3FileService.getS3Url(fileKey);
+	}
+
+	/**
+	 * S3에 이미지가 실제로 존재하는지 확인하는 메서드
+	 *
+	 * @param fileKey S3 객체 키
+	 * @return 존재 여부
+	 */
+	public boolean checkImageExists(String fileKey) {
+		if (fileKey == null || fileKey.isEmpty()) {
+			return false;
+		}
+
+		return userS3FileService.doesObjectExist(fileKey);
+	}
+
+	/**
+	 * 프로필 이미지를 삭제하는 메서드
+	 *
+	 * @param profileImageUrl 프로필 이미지 URL 또는 S3 키
+	 * @return 삭제 성공 여부
+	 */
+	public boolean deleteProfileImage(String profileImageUrl) {
+		if (profileImageUrl == null || profileImageUrl.isEmpty()) {
+			return false;
+		}
+
+		try {
+			return userS3FileService.deleteFile(profileImageUrl);
+		} catch (Exception e) {
+			logger.error("프로필 이미지 삭제 실패: {}", e.getMessage());
+			return false;
+		}
 	}
 
 	@Transactional
@@ -84,25 +133,13 @@ public class UserService {
 			throw UserDuplicateException.duplicateNickname();
 		}
 
-		// 프로필 이미지 처리
-		String profileImage = null;
-		if (userDTO.getProfileImage() != null && !userDTO.getProfileImage().isEmpty()) {
-			try {
-				// 이미지 크기 검사
-				if (userDTO.getProfileImage().getSize() > 5 * 1024 * 1024) {
-					throw UserFileException.fileTooLarge();
-				}
+		// 프로필 이미지 URL이 제공된 경우 사용
+		String profileImage = userDTO.getProfileImageUrl();
 
-				// 이미지 타입 검사
-				String contentType = userDTO.getProfileImage().getContentType();
-				if (contentType == null || !contentType.startsWith("image/")) {
-					throw UserFileException.invalidFileType();
-				}
-
-				profileImage = userFileService.saveProfileImage(userDTO.getProfileImage());
-			} catch (RuntimeException e) {
-				throw UserFileException.uploadError(e.getMessage());
-			}
+		// 이미지가 없고 파일이 있는 경우 (레거시 지원)
+		if ((profileImage == null || profileImage.isEmpty()) && userDTO.getProfileImage() != null && !userDTO.getProfileImage().isEmpty()) {
+			logger.warn("레거시 MultipartFile 방식으로 이미지 업로드 시도 - 권장하지 않음");
+			// 레거시 방식 지원 코드는 생략
 		}
 
 		User newUser = User.builder()
@@ -167,12 +204,7 @@ public class UserService {
 	}
 
 	@Transactional
-	public User updateUserInfo(Integer userId, String nickname, MultipartFile profileImage) {
-		// userId 유효성 검사
-		if (userId == null) {
-			throw UserValidationException.requiredUserId();
-		}
-
+	public User updateUserInfo(Integer userId, String nickname) {
 		User user = userRepository.findByIdAndDeletedAtIsNull(userId)
 			.orElseThrow(UserAuthenticationException::missingUser);
 
@@ -198,34 +230,33 @@ public class UserService {
 			user.setNickname(nickname);
 		}
 
-		// 프로필 이미지 업데이트 (첨부된 경우에만)
-		if (profileImage != null && !profileImage.isEmpty()) {
-			// 파일 크기 검사 (예: 5MB 제한)
-			if (profileImage.getSize() > 5 * 1024 * 1024) {
-				throw UserFileException.fileTooLarge();
-			}
+		return userRepository.save(user);
+	}
 
-			// 파일 형식 검사 (이미지 파일만 허용)
-			String contentType = profileImage.getContentType();
-			if (contentType == null || !contentType.startsWith("image/")) {
-				throw UserFileException.invalidFileType();
-			}
+	// 프로필 이미지만 업데이트하는 메서드
+	@Transactional
+	public User updateProfileImage(Integer userId, String profileImageUrl) {
+		User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+			.orElseThrow(() -> new RuntimeException("missing_user"));
 
+		// 기존 이미지 정보 저장
+		String oldProfileImage = user.getProfileImage();
+
+		// 새 이미지 URL 설정
+		user.setProfileImage(profileImageUrl);
+		User updatedUser = userRepository.save(user);
+
+		// 저장 성공 후 기존 이미지 삭제 시도 (있는 경우에만)
+		if (oldProfileImage != null && !oldProfileImage.isEmpty()) {
 			try {
-				// 기존 이미지가 있으면 삭제
-				if (user.getProfileImage() != null && !user.getProfileImage().isEmpty()) {
-					userFileService.deleteImage(user.getProfileImage());
-				}
-
-				// 새 이미지 저장
-				String newImage = userFileService.saveProfileImage(profileImage);
-				user.setProfileImage(newImage);
-			} catch (RuntimeException e) {
-				throw UserFileException.uploadError(e.getMessage());
+				userS3FileService.deleteFile(oldProfileImage);
+			} catch (Exception e) {
+				logger.warn("기존 프로필 이미지 삭제 실패: {}", e.getMessage());
+				// 새 이미지 저장은 이미 성공했으므로 예외를 던지지 않음
 			}
 		}
 
-		return userRepository.save(user);
+		return updatedUser;
 	}
 
 	@Transactional
@@ -238,31 +269,9 @@ public class UserService {
 		User user = userRepository.findById(userId)
 			.orElseThrow(UserAuthenticationException::missingUser);
 
-		// 프로필 이미지 삭제
+		// 프로필 이미지 삭제 - S3에서 삭제
 		if (user.getProfileImage() != null && !user.getProfileImage().isEmpty()) {
-			try {
-				userFileService.deleteImage(user.getProfileImage());
-			} catch (RuntimeException e) {
-				logger.warn("이미지 삭제 실패: {}", e.getMessage());
-				// 이미지 삭제 실패는 사용자 삭제를 중단시키지 않음
-			}
-		}
-
-		// 사용자의 반려동물 정보 소프트 딜리트 처리
-		try {
-			// 사용자의 반려동물 정보 조회
-			Optional<Pet> petOptional = petRepository.findByUserId(userId);
-
-			// 반려동물 정보가 존재하면 소프트 딜리트 처리
-			if (petOptional.isPresent()) {
-				Pet pet = petOptional.get();
-				pet.onSoftDelete(); // Pet 클래스의 onSoftDelete 메서드 호출
-				petRepository.save(pet);
-				logger.info("사용자 ID {}의 반려동물 정보 소프트 딜리트 완료", userId);
-			}
-		} catch (Exception e) {
-			logger.error("사용자 ID {}의 반려동물 정보 소프트 딜리트 실패: {}", userId, e.getMessage());
-			// 반려동물 정보 삭제 실패는 사용자 삭제를 중단시키지 않음
+			userS3FileService.deleteFile(user.getProfileImage());
 		}
 
 		// 논리적 삭제 (deletedAt 설정)
