@@ -4,6 +4,9 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 
 import org.example.gangazido_be.pet.common.PetApiResponse;
+import org.example.gangazido_be.pet.common.s3.PresignedUrlRequest;
+import org.example.gangazido_be.pet.common.s3.PresignedUrlResponse;
+import org.example.gangazido_be.pet.common.s3.S3Service;
 import org.example.gangazido_be.pet.dto.PetResponse;
 import org.example.gangazido_be.pet.service.PetService;
 import org.example.gangazido_be.user.entity.User;
@@ -20,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Validated
 public class PetController {
 	private final PetService petService;
+	private final S3Service s3Service;	//s3
 
 	@PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseEntity<PetApiResponse<PetResponse>> createPet(
@@ -28,7 +32,7 @@ public class PetController {
 		@RequestParam("gender") Boolean gender,
 		@RequestParam("breed") String breed,
 		@RequestParam("weight") double weight,
-		@RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
+		@RequestParam(value = "profileImage", required = false) String profileImage,
 		HttpSession session) {
 
 		// 사용자 로그인 상태 확인
@@ -65,9 +69,8 @@ public class PetController {
 		@RequestParam("gender") Boolean gender,
 		@RequestParam("breed") String breed,
 		@RequestParam("weight") double weight,
-		@RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
+		@RequestParam(value = "profileImage", required = false) String profileImage,
 		HttpSession session) {
-
 		// 사용자 로그인 확인
 		User user = (User) session.getAttribute("user");
 		if (user == null) {
@@ -91,5 +94,11 @@ public class PetController {
 
 		petService.deletePet(user.getId());
 		return ResponseEntity.ok(PetApiResponse.of("delete_pet_success", null));
+	}
+
+	// s3
+	@PostMapping("/presigned")
+	public ResponseEntity<PresignedUrlResponse> getPresignedUrl(@RequestBody PresignedUrlRequest request) {
+		return ResponseEntity.ok(s3Service.generatePresignedUrl(request.getFileExtension(), request.getContentType()));
 	}
 }
