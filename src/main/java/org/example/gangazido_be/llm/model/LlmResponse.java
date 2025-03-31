@@ -47,6 +47,10 @@ public class LlmResponse implements Serializable {
 	public static class Data implements Serializable {
 		private String response;
 
+		public Data() {
+			// Jackson이 필요로 하는 기본 생성자
+		}
+
 		public Data(String response) {
 			this.response = response;
 		}
@@ -59,4 +63,5 @@ public class LlmResponse implements Serializable {
 			this.response = response;
 		}
 	}
+
 }
