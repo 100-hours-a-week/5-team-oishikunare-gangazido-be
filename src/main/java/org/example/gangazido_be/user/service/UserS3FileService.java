@@ -28,6 +28,9 @@ public class UserS3FileService {
 	@Value("${aws.s3.bucket}")
 	private String bucketName;
 
+	@Value("${aws.region}")
+	private String region;
+
 	@Value("${aws.s3.presigned-url.expiration:600}")
 	private long presignedUrlExpiration; // 초 단위, 기본값 10분
 
@@ -52,7 +55,6 @@ public class UserS3FileService {
 			.bucket(bucketName)
 			.key(key)
 			.contentType(contentType)
-			.acl(ObjectCannedACL.PUBLIC_READ) // 공개 읽기 권한 추가
 			.build();
 
 		PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
@@ -135,7 +137,7 @@ public class UserS3FileService {
 	 * @return S3 URL
 	 */
 	public String getS3Url(String key) {
-		return String.format("https://%s.s3.amazonaws.com/%s", bucketName, key);
+		return String.format("https://%s.s3.%s.amazonaws.com/%s", bucketName, region, key);
 	}
 
 	/**
