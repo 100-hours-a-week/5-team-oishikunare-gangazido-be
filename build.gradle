@@ -86,10 +86,17 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     //프로메테우스 적용
     implementation 'io.micrometer:micrometer-registry-prometheus'
+
     //Redis
-    implementation 'org.springframework.session:spring-session-data-redis'
-    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
-    implementation 'org.springframework.boot:spring-boot-starter-cache' //여니 추가
+    // implementation 'org.springframework.session:spring-session-data-redis'
+    // implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // aws s3 sdk 의존성 추가 (레첼, 잭 같은 버전)
+    implementation 'software.amazon.awssdk:s3:2.20.147'
+
+    // AWS SDK v2 Presigner & Core 모듈 (레첼 추가)
+    implementation 'software.amazon.awssdk:auth:2.20.147'
+    implementation 'software.amazon.awssdk:regions:2.20.147'
 }
 
 tasks.named('test') {

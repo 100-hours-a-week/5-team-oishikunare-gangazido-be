@@ -23,9 +23,9 @@ public class UserSecurityConfig {
 	}
 
 	@Bean
-	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+	public SecurityFilterChain securityFilterChain(HttpSecurity http, CorsConfigurationSource corsConfigurationSource) throws Exception {
 		http
-			.cors(cors -> cors.configurationSource(corsConfigurationSource())) // ✅ CORS 설정 적용
+			.cors(cors -> cors.configurationSource(corsConfigurationSource))  // CorsConfig 변경에 따른 레첼 추가 코드
 			.csrf(csrf -> csrf.disable())  // API 서버이므로 CSRF 비활성화
 			.authorizeHttpRequests( auth -> auth
 					.requestMatchers("/**").permitAll()
@@ -49,18 +49,5 @@ public class UserSecurityConfig {
 			.httpBasic(httpBasic -> httpBasic.disable());  // HTTP Basic 인증 비활성화
 
 		return http.build();
-	}
-
-	@Bean
-	public CorsConfigurationSource corsConfigurationSource() {
-		CorsConfiguration config = new CorsConfiguration();
-		config.setAllowedOrigins(List.of("http://localhost:3000", "https://www.gangazido.com"));
-		config.setAllowedMethods(List.of("GET", "POST", "PATCH", "DELETE", "OPTIONS"));
-		config.setAllowedHeaders(List.of("*"));
-		config.setAllowCredentials(true); // ✅ 쿠키 허용
-
-		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-		source.registerCorsConfiguration("/**", config);
-		return source;
 	}
 }
