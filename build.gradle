@@ -99,8 +99,9 @@ dependencies {
     implementation 'software.amazon.awssdk:auth:2.20.147'
     implementation 'software.amazon.awssdk:regions:2.20.147'
 
+    implementation 'org.springframework.session:spring-session-data-redis'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
-    implementation 'org.springframework.boot:spring-boot-starter-cache' // 캐시 기능
+    implementation 'org.springframework.boot:spring-boot-starter-cache' //여니 추가
 }
 
 tasks.named('test') {
