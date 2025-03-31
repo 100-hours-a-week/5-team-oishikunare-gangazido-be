@@ -1,8 +1,15 @@
 spring:
   application:
     name: ${SPRING_APPLICATION_NAME}
+
   session:
     store-type: redis
+    redis:
+      namespace: spring:session
+
+  cache:
+    redis:
+      key-prefix: spring:cache
   data:
     redis:
       host: ${SPRING_REDIS_HOST}

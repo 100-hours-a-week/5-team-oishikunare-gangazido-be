@@ -4,7 +4,11 @@
 package org.example.gangazido_be.llm.service;
 
 import org.example.gangazido_be.pet.repository.PetRepository;
-import org.json.JSONArray;
+import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.cache.RedisCacheConfiguration;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.example.gangazido_be.llm.model.LlmResponse;
@@ -15,21 +19,25 @@ import org.example.gangazido_be.pet.entity.Pet;
 import org.springframework.stereotype.Service;
 import org.json.JSONObject;
 
+import org.springframework.cache.annotation.Cacheable;
 import jakarta.servlet.http.HttpServletRequest;
 
+import java.time.Duration;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
-// ✅ 이 클래스가 Spring의 Service Bean으로 등록됨
+
 @Service
 public class LlmService {
 	private final GptService gptService; // ✅ GPT API를 호출하는 서비스
 	private final WeatherService weatherService; // ✅ 날씨 데이터를 가져오는 서비스
 	private final PetRepository petRepository; // ✅ 반려견 정보를 DB에서 조회하는 Repository
+	private final RedisTemplate<String, String> redisTemplate;
+
 	// ✅ 캐시를 사용하여 GPT 응답을 저장하여 성능 최적화
-	private final Map<String, LlmResponse> responseCache = new HashMap<>();
+	//private final Map<String, LlmResponse> responseCache = new HashMap<>();
 
 	// ✅ 견종별 특성을 정의 (추위에 대한 내성)
 	private static final Map<String, String> BREED_CHARACTERISTICS = new HashMap<>();
@@ -50,10 +58,16 @@ public class LlmService {
 	}
 
 	// ✅ 생성자 주입 방식으로 의존성 주입 (Spring이 자동으로 관리)
-	public LlmService(GptService gptService, WeatherService weatherService, PetRepository petRepository) {
+
+	public LlmService(
+		GptService gptService,
+		WeatherService weatherService,
+		PetRepository petRepository,
+		RedisTemplate<String, String> redisTemplate ) {
 		this.gptService = gptService;
 		this.weatherService = weatherService;
 		this.petRepository = petRepository;
+		this.redisTemplate = redisTemplate;
 	}
 
 	/**
@@ -64,6 +78,7 @@ public class LlmService {
 	 */
 	//세션 id 받아오기
 	@SuppressWarnings("checkstyle:OperatorWrap")
+	@Cacheable(value = "llmCache", key = "#sessionUserId + '|' + #latitude + ',' + #longitude + '|' + #message.trim().toLowerCase()")
 	public ResponseEntity<LlmResponse> generateChat(Integer sessionUserId, HttpServletRequest request, double latitude,
 		double longitude, String message) {
 
@@ -139,7 +154,8 @@ public class LlmService {
 		// ✅ GPT 프롬프트 생성 (산책 가능 여부)
 		String prompt;
 		String lowerMessage = message.toLowerCase();
-		if (lowerMessage.contains("미세먼지") || lowerMessage.contains("공기") || lowerMessage.contains("대기") || lowerMessage.contains("날씨")) {
+		if (lowerMessage.contains("미세먼지") || lowerMessage.contains("공기") || lowerMessage.contains("대기") ||
+			lowerMessage.contains("날씨")) {
 			prompt = String.format(
 				"당신은 반려견 산책 추천 AI입니다. **반드시 JSON 형식으로만 답변하세요.** HTML이나 마크다운, 자연어 문장만 있는 응답은 허용되지 않습니다.\\n" +
 					"미세먼지 데이터와 반려견 정보를 바탕으로 **%s**의 산책 가능 여부를 판단하고 그 결과를 제공해주세요" +
@@ -164,7 +180,8 @@ public class LlmService {
 					"}\n" +
 					"```\n" +
 					"**반드시 위 JSON 형식을 지켜서 응답하세요.**",
-				petName, temperature, pm10, pm25, weatherCondition, temperature, pm10, pm25, petName, petBreed, petAge, petWeight
+				petName, temperature, pm10, pm25, weatherCondition, temperature, pm10, pm25, petName, petBreed, petAge,
+				petWeight
 			);
 		} else if (lowerMessage.contains("산책") || lowerMessage.contains("산책 가능") || lowerMessage.contains("외출")) {
 			prompt = String.format(
@@ -190,9 +207,11 @@ public class LlmService {
 					"  \"safety_tips\": [\"산책 시 유의 사항\"]\n" +
 					"}\n" +
 					"```\n",
-				petName, temperature, pm10, pm25, weatherCondition, temperature, pm10, pm25, petName, petBreed, petAge, petWeight
+				petName, temperature, pm10, pm25, weatherCondition, temperature, pm10, pm25, petName, petBreed, petAge,
+				petWeight
 			);
-		} else if (message.contains("옷") || message.contains("입혀야") || lowerMessage.contains("외출 옷") || lowerMessage.contains("방한")) {
+		} else if (message.contains("옷") || message.contains("입혀야") || lowerMessage.contains("외출 옷") ||
+			lowerMessage.contains("방한")) {
 			prompt = String.format(
 				"당신은 반려견 산책 추천 AI입니다. **반드시 JSON 형식으로만 답변하세요.** HTML이나 마크다운, 자연어 문장만 있는 응답은 허용되지 않습니다.\\n" +
 					"반려견이 외출 시 옷을 입어야 할까요? 현재 날씨를 분석하고, 반려견의 체형을 고려하여 적절한 답변을 제공해주세요.\n\n" +
@@ -220,24 +239,57 @@ public class LlmService {
 		}
 
 		//System.out.println("📝 [DEBUG] 최종 GPT 프롬프트:\n" + prompt);
+		/*String cacheKey = sessionUserId + "|" + latitude + "," + longitude + "|" + message.trim().toLowerCase();
+		if (responseCache.containsKey(cacheKey)) {
+			System.out.println("📦 캐시에서 GPT 응답을 가져옵니다.");
+			return ResponseEntity.ok(responseCache.get(cacheKey));
+		}*/
 
 		// 🔥 GPT 호출
+		String cacheKey = "recommendation|" + sessionUserId;
+		String cachedRecommendation = redisTemplate.opsForValue().get(cacheKey);
+
+		// 캐시된 추천 결과가 있다면, 그걸로 응답 바로 생성
+		if (cachedRecommendation != null && !cachedRecommendation.isEmpty()) {
+			JSONObject cachedJson = new JSONObject();
+			cachedJson.put("recommendation", cachedRecommendation);
+			cachedJson.put("reason", "최근 추천 결과입니다.");
+			cachedJson.put("safety_tips", List.of("30분 이내 동일 추천 유지"));
+
+			return ResponseEntity.ok(new LlmResponse("llm_cached", cachedJson.toString()));
+		}
+
 		String gptResponse;
+		String recommendation;
 		try {
 			gptResponse = gptService.generateText(prompt);
-			System.out.println("response: " + gptResponse);  // 🔍 GPT 응답 확인
-
 			if (gptResponse == null || gptResponse.isEmpty()) {
 				throw new Exception("empty_response");
 			}
+
+			JSONObject json = new JSONObject(gptResponse);
+			recommendation = json.optString("recommendation", "");
+
+			// GPT 응답이 JSON 형식이 아닐 경우 대비
+			if (recommendation.isEmpty()) {
+				throw new Exception("invalid_json_response");
+			}
+
+			// 🔥 Redis에 캐싱 시도 로그
+			System.out.println("📝 [Redis 캐싱 시도] key = " + cacheKey + ", value = " + recommendation);
+
+			redisTemplate.opsForValue().set(cacheKey, recommendation, Duration.ofMinutes(30));
+
+			// 🔥 Redis 캐싱 완료 로그
+			System.out.println("✅ [Redis 캐싱 완료] 30분 TTL 저장됨");
+
+			return ResponseEntity.ok(new LlmResponse("llm_success", gptResponse));
+
 		} catch (Exception e) {
-			System.err.println("[ERROR]: " + e.getMessage());
+			System.err.println("❌ [ERROR] GPT 처리 또는 Redis 캐싱 실패: " + e.getMessage());
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
 				.body(new LlmResponse("failed_to_get_gpt_response"));
 		}
-
-		return ResponseEntity.ok(new LlmResponse("llm_success", gptResponse));
-		////////////
 	}
 
 	private String extractSessionId(HttpServletRequest request) {
