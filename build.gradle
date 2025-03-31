@@ -97,6 +97,9 @@ dependencies {
     // AWS SDK v2 Presigner & Core 모듈 (레첼 추가)
     implementation 'software.amazon.awssdk:auth:2.20.147'
     implementation 'software.amazon.awssdk:regions:2.20.147'
+
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.springframework.boot:spring-boot-starter-cache' // 캐시 기능
 }
 
 tasks.named('test') {

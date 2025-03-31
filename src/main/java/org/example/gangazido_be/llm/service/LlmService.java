@@ -266,25 +266,21 @@ public class LlmService {
 			if (gptResponse == null || gptResponse.isEmpty()) {
 				throw new Exception("empty_response");
 			}
+			// ✅ GPT 응답에서 백틱 제거
+			gptResponse = gptResponse.replaceAll("(?s)```json|```", "").trim();
 
 			JSONObject json = new JSONObject(gptResponse);
 			recommendation = json.optString("recommendation", "");
 
-			// GPT 응답이 JSON 형식이 아닐 경우 대비
 			if (recommendation.isEmpty()) {
 				throw new Exception("invalid_json_response");
 			}
 
-			// 🔥 Redis에 캐싱 시도 로그
 			System.out.println("📝 [Redis 캐싱 시도] key = " + cacheKey + ", value = " + recommendation);
-
 			redisTemplate.opsForValue().set(cacheKey, recommendation, Duration.ofMinutes(30));
-
-			// 🔥 Redis 캐싱 완료 로그
 			System.out.println("✅ [Redis 캐싱 완료] 30분 TTL 저장됨");
 
 			return ResponseEntity.ok(new LlmResponse("llm_success", gptResponse));
-
 		} catch (Exception e) {
 			System.err.println("❌ [ERROR] GPT 처리 또는 Redis 캐싱 실패: " + e.getMessage());
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
