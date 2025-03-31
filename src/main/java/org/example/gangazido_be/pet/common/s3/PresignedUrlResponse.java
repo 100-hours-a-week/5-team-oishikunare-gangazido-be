@@ -8,5 +8,4 @@ import lombok.Getter;
 public class PresignedUrlResponse {
 	private String fileKey;
 	private String presignedUrl;
-	private String s3Url;
 }
