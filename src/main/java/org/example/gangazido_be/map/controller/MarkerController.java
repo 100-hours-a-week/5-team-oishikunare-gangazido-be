@@ -58,6 +58,7 @@ public class MarkerController {
 		return ResponseEntity.ok(successResponse);
 	}
 
+	// id 파라미터 값 가져옴 (UUID)
 	@DeleteMapping("/{Id}")    // DELETE 마커 삭제 요청 처리
 	public ResponseEntity<?> deleteMarker(
 		@PathVariable String Id, // URL의 ID 수신
