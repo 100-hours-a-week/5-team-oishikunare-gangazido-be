@@ -247,50 +247,44 @@ public class LlmService {
 
 		// 🔥 GPT 호출
 		String cacheKey = "recommendation|" + sessionUserId;
-		String cachedGptResponse = redisTemplate.opsForValue().get(cacheKey);
+		String cachedRecommendation = redisTemplate.opsForValue().get(cacheKey);
 
 		// 캐시된 추천 결과가 있다면, 그걸로 응답 바로 생성
-		if (cachedGptResponse != null && !cachedGptResponse.isEmpty()) {
-			return ResponseEntity.ok(new LlmResponse("llm_cached", cachedGptResponse));
+		if (cachedRecommendation != null && !cachedRecommendation.isEmpty()) {
+			JSONObject cachedJson = new JSONObject();
+			cachedJson.put("recommendation", cachedRecommendation);
+			cachedJson.put("reason", "최근 추천 결과입니다.");
+			cachedJson.put("safety_tips", List.of("30분 이내 동일 추천 유지"));
+
+			return ResponseEntity.ok(new LlmResponse("llm_cached", cachedJson.toString()));
 		}
 
 		String gptResponse;
 		String recommendation;
 		try {
-			// 1. GPT 호출
 			gptResponse = gptService.generateText(prompt);
 			if (gptResponse == null || gptResponse.isEmpty()) {
 				throw new Exception("empty_response");
 			}
-
-			// 2. 백틱 제거
+			// ✅ GPT 응답에서 백틱 제거
 			gptResponse = gptResponse.replaceAll("(?s)```json|```", "").trim();
 
-			// 3. JSON 파싱 및 recommendation 추출
 			JSONObject json = new JSONObject(gptResponse);
 			recommendation = json.optString("recommendation", "");
+
 			if (recommendation.isEmpty()) {
 				throw new Exception("invalid_json_response");
 			}
 
-			// 4. Redis 캐시된 recommendation 확인
-			String cachedRecommendation = redisTemplate.opsForValue().get(cacheKey);
+			System.out.println("📝 [Redis 캐싱 시도] key = " + cacheKey + ", value = " + recommendation);
+			redisTemplate.opsForValue().set(cacheKey, recommendation, Duration.ofMinutes(30));
+			System.out.println("✅ [Redis 캐싱 완료] 30분 TTL 저장됨");
 
-			if (cachedRecommendation == null || !cachedRecommendation.equals(recommendation)) {
-				// 5. 캐시 없거나 다른 경우 새로 저장
-				redisTemplate.opsForValue().set(cacheKey, recommendation, Duration.ofMinutes(30));
-				System.out.println("✅ [Redis 갱신] 새로운 recommendation 저장됨");
-			} else {
-				System.out.println("📦 [Redis 확인] 동일한 recommendation이 이미 존재함");
-			}
-
-			// 6. GPT 응답 그대로 반환
 			return ResponseEntity.ok(new LlmResponse("llm_success", gptResponse));
-
 		} catch (Exception e) {
-			System.err.println("❌ [ERROR] GPT 처리 실패: " + e.getMessage());
+			System.err.println("❌ [ERROR] GPT 처리 또는 Redis 캐싱 실패: " + e.getMessage());
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-				.body(new LlmResponse("failed_to_get_gpt_response", "GPT 응답을 처리할 수 없습니다."));
+				.body(new LlmResponse("failed_to_get_gpt_response"));
 		}
 	}
 
