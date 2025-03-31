@@ -30,6 +30,24 @@ public class LlmController {
 	@PostMapping("")
 	public ResponseEntity<LlmResponse> generateChat(@RequestBody LlmRequest request,
 		HttpServletRequest httpServletRequest, HttpSession session) {
+
+		User user = (User)session.getAttribute("user");
+		if (user == null) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+				.body(new LlmResponse("not_found_session"));
+		}
+
+		LlmResponse response = llmService.generateChat(
+			user.getId(), httpServletRequest,
+			request.getLatitude(), request.getLongitude(), request.getMessage()).getBody();
+
+		return ResponseEntity.ok(response);
+	}
+}
+
+	/*@PostMapping("")
+	public ResponseEntity<LlmResponse> generateChat(@RequestBody LlmRequest request,
+		HttpServletRequest httpServletRequest, HttpSession session) {
 		System.out.println(" GPT 요청 도착");
 		System.out.println(" message: " + request.getMessage());
 		System.out.println(" 위치: " + request.getLatitude() + ", " + request.getLongitude());
@@ -62,4 +80,5 @@ public class LlmController {
 		//  클라이언트에 GPT 응답 전달 (200 OK)
 		return responseEntity;
 	}
-}
+
+}*/
