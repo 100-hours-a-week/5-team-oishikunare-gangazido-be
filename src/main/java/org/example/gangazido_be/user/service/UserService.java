@@ -38,6 +38,55 @@ public class UserService {
 		this.userS3FileService = userS3FileService;
 	}
 
+	/**
+	 * S3 파일 키로부터 프로필 이미지 URL을 생성하는 메서드
+	 *
+	 * @param fileKey S3 객체 키
+	 * @return S3 URL
+	 */
+	public String getProfileImageUrlFromKey(String fileKey) {
+		// fileKey 유효성 검사
+		if (fileKey == null || fileKey.isEmpty()) {
+			throw new UserValidationException("invalid_file_key", "파일 키가 유효하지 않습니다");
+		}
+
+		// S3 URL 생성 후 반환
+		return userS3FileService.getS3Url(fileKey);
+	}
+
+	/**
+	 * S3에 이미지가 실제로 존재하는지 확인하는 메서드
+	 *
+	 * @param fileKey S3 객체 키
+	 * @return 존재 여부
+	 */
+	public boolean checkImageExists(String fileKey) {
+		if (fileKey == null || fileKey.isEmpty()) {
+			return false;
+		}
+
+		return userS3FileService.doesObjectExist(fileKey);
+	}
+
+	/**
+	 * 프로필 이미지를 삭제하는 메서드
+	 *
+	 * @param profileImageUrl 프로필 이미지 URL 또는 S3 키
+	 * @return 삭제 성공 여부
+	 */
+	public boolean deleteProfileImage(String profileImageUrl) {
+		if (profileImageUrl == null || profileImageUrl.isEmpty()) {
+			return false;
+		}
+
+		try {
+			return userS3FileService.deleteFile(profileImageUrl);
+		} catch (Exception e) {
+			logger.error("프로필 이미지 삭제 실패: {}", e.getMessage());
+			return false;
+		}
+	}
+
 	@Transactional
 	public User registerUser(UserDTO userDTO) {
 		// 이메일 형식 유효성 검사
@@ -86,6 +135,12 @@ public class UserService {
 
 		// 프로필 이미지 URL이 제공된 경우 사용
 		String profileImage = userDTO.getProfileImageUrl();
+
+		// 이미지가 없고 파일이 있는 경우 (레거시 지원)
+		if ((profileImage == null || profileImage.isEmpty()) && userDTO.getProfileImage() != null && !userDTO.getProfileImage().isEmpty()) {
+			logger.warn("레거시 MultipartFile 방식으로 이미지 업로드 시도 - 권장하지 않음");
+			// 레거시 방식 지원 코드는 생략
+		}
 
 		User newUser = User.builder()
 			.email(userDTO.getEmail())

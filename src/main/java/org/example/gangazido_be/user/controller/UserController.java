@@ -10,6 +10,7 @@ import org.example.gangazido_be.user.service.UserService;
 import org.example.gangazido_be.user.util.UserApiMessages;
 import org.example.gangazido_be.user.util.UserIdEncryptionUtil;
 import org.example.gangazido_be.user.validator.UserPasswordValidator;
+import org.example.gangazido_be.user.service.UserS3FileService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -39,31 +40,41 @@ import java.util.Date;
 public class UserController {
 	private final UserService userService;
 	private final UserIdEncryptionUtil idEncryptionUtil;
+	private final UserS3FileService userS3FileService;
 	private final Logger logger = LoggerFactory.getLogger(UserController.class);
 
 	@Autowired
-	public UserController(UserService userService, UserIdEncryptionUtil idEncryptionUtil) {
+	public UserController(UserService userService, UserS3FileService userS3FileService, UserIdEncryptionUtil idEncryptionUtil) {
 		this.userService = userService;
+		this.userS3FileService = userS3FileService;
 		this.idEncryptionUtil = idEncryptionUtil;
 	}
 
-	@PostMapping(value = "/signup", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@PostMapping("/signup")
 	public ResponseEntity<UserApiResponse<Map<String, Object>>> registerUser(
-		@RequestPart(value = "user_email", required = false) String email,
-		@RequestPart(value = "user_password", required = false) String password,
-		@RequestPart(value = "user_password_confirm", required = false) String passwordConfirm,
-		@RequestPart(value = "user_nickname", required = false) String nickname,
-		@RequestPart(value = "user_profileImage", required = false) MultipartFile profileImage,
+		@Valid @RequestBody UserDTO userDTO,
 		HttpSession session,
 		HttpServletResponse response) {
+
 		try {
-			// DTO 생성
-			UserDTO userDTO = UserDTO.builder()
-				.email(email)
-				.password(password)
-				.nickname(nickname)
-				.profileImage(profileImage)
-				.build();
+			// 비밀번호 일치 확인
+			if (!userDTO.isPasswordMatching()) {
+				return UserApiResponse.badRequest("password_mismatch");
+			}
+
+			// 이미지 키 처리 부분 확인 및 개선
+			if (userDTO.getProfileImageKey() != null && !userDTO.getProfileImageKey().isEmpty()) {
+				// S3에 실제로 이미지가 존재하는지 확인
+				if (!userService.checkImageExists(userDTO.getProfileImageKey())) {
+					logger.warn("S3에 이미지가 존재하지 않음: {}", userDTO.getProfileImageKey());
+					return UserApiResponse.badRequest("image_not_found");
+				}
+
+				// 이미지 URL 생성 및 설정
+				String profileImageUrl = userService.getProfileImageUrlFromKey(userDTO.getProfileImageKey());
+				userDTO.setProfileImageUrl(profileImageUrl);
+				logger.info("프로필 이미지 URL 생성: {}", profileImageUrl);
+			}
 
 			// 사용자 등록
 			User registeredUser = userService.registerUser(userDTO);
@@ -77,6 +88,7 @@ public class UserController {
 			Map<String, Object> responseData = new HashMap<>();
 			responseData.put("userId", encryptedId);
 			responseData.put("nickname", registeredUser.getNickname());
+			responseData.put("profileImage", registeredUser.getProfileImage());
 
 			return UserApiResponse.success(UserApiMessages.USER_CREATED, responseData);
 		} catch (UserException e) {
@@ -85,6 +97,35 @@ public class UserController {
 		} catch (Exception e) {
 			logger.error("서버 오류: ", e);
 			return UserApiResponse.internalError(UserApiMessages.INTERNAL_ERROR);
+		}
+	}
+
+	// 인증 없이 s3 presigned url 가져오는 api
+	@PostMapping("/signup/profile-image-upload-url")
+	public ResponseEntity<UserApiResponse<Map<String, String>>> getSignupProfileImageUploadUrl(
+		@RequestBody Map<String, String> fileInfo) {
+
+		try {
+			String fileExtension = fileInfo.get("fileExtension");
+			String contentType = fileInfo.get("contentType");
+
+			// 파일 확장자 검증
+			if (fileExtension == null || !fileExtension.matches("\\.(jpg|jpeg|png|gif)$")) {
+				return UserApiResponse.badRequest("invalid_file_extension");
+			}
+
+			// MIME 타입 검증
+			if (contentType == null || !contentType.startsWith("image/")) {
+				return UserApiResponse.badRequest("invalid_content_type");
+			}
+
+			Map<String, String> presignedData = userS3FileService.generatePresignedUrlForProfileImage(
+				fileExtension, contentType);
+
+			return UserApiResponse.success("presigned_url_generated", presignedData);
+		} catch (Exception e) {
+			logger.error("Presigned URL 생성 오류: ", e);
+			return UserApiResponse.internalError("internal_server_error");
 		}
 	}
 
@@ -246,10 +287,9 @@ public class UserController {
 		}
 	}
 
-	@PatchMapping(value = "/me", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@PatchMapping("/me")
 	public ResponseEntity<UserApiResponse<Map<String, Object>>> updateMyInfo(
-		@RequestPart(value = "user_nickname", required = false) String nickname,
-		@RequestPart(value = "user_profile_image", required = false) MultipartFile profileImage,
+		@RequestBody UserDTO updateDTO,
 		HttpSession session) {
 		try {
 			User user = (User) session.getAttribute("user");
@@ -257,13 +297,31 @@ public class UserController {
 				throw UserAuthenticationException.unauthorized();
 			}
 
-			// 기본 입력 확인만 수행하고 서비스로 위임
-			if ((nickname == null || nickname.isEmpty()) && (profileImage == null || profileImage.isEmpty())) {
+			// 적어도 하나의 필드는 필요
+			if ((updateDTO.getNickname() == null || updateDTO.getNickname().isEmpty()) &&
+				(updateDTO.getProfileImageKey() == null || updateDTO.getProfileImageKey().isEmpty())) {
 				throw new UserValidationException("required_profile_update_data", "required_profile_update_data");
 			}
 
-			// 서비스 호출 - 모든 유효성 검증은 서비스에서 처리
-			User updatedUser = userService.updateUserInfo(user.getId(), nickname, profileImage);
+			User updatedUser = user;
+
+			// 닉네임 업데이트
+			if (updateDTO.getNickname() != null && !updateDTO.getNickname().isEmpty()) {
+				updatedUser = userService.updateUserInfo(user.getId(), updateDTO.getNickname());
+			}
+
+			// 프로필 이미지 업데이트
+			if (updateDTO.getProfileImageKey() != null && !updateDTO.getProfileImageKey().isEmpty()) {
+				// S3에 실제로 이미지가 존재하는지 확인
+				if (!userService.checkImageExists(updateDTO.getProfileImageKey())) {
+					logger.warn("S3에 이미지가 존재하지 않음: {}", updateDTO.getProfileImageKey());
+					throw new UserValidationException("image_not_found", "업로드된 이미지를 찾을 수 없습니다");
+				}
+
+				String profileImageUrl = userService.getProfileImageUrlFromKey(updateDTO.getProfileImageKey());
+				updatedUser = userService.updateProfileImage(updatedUser.getId(), profileImageUrl);
+			}
+
 			session.setAttribute("user", updatedUser); // 세션 업데이트
 
 			Map<String, Object> responseData = new HashMap<>();

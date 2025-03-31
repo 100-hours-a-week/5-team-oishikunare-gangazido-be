@@ -48,7 +48,7 @@ public class UserS3FileService {
 	 * @return Map: presignedUrl과 fileKey 포함
 	 */
 	public Map<String, String> generatePresignedUrlForProfileImage(String fileExtension, String contentType) {
-		String key = "profiles/" + UUID.randomUUID().toString() + fileExtension;
+		String key = "uploads/user/" + UUID.randomUUID().toString() + fileExtension;
 
 		// 메타데이터 추가하지 않음 (또는 필요한 경우만 명시적으로 추가)
 		PutObjectRequest objectRequest = PutObjectRequest.builder()
@@ -165,14 +165,22 @@ public class UserS3FileService {
 
 	/**
 	 * 바이트 배열을 S3에 직접 업로드 (마이그레이션 등의 목적으로 사용)
+	 * S3 저장 경로를 "uploads/user"로 변경
 	 *
 	 * @param fileContent 파일 내용 바이트 배열
-	 * @param fileKey S3 객체 키
+	 * @param fileKey S3 객체 키 (null이면 자동 생성)
 	 * @param contentType 파일 MIME 타입
 	 * @return S3 URL
 	 */
 	public String uploadFile(byte[] fileContent, String fileKey, String contentType) {
 		try {
+			// fileKey가 null이면 자동 생성 (경로 변경)
+			if (fileKey == null || fileKey.isEmpty()) {
+				String extension = contentType != null ?
+					"." + contentType.substring(contentType.lastIndexOf("/") + 1) : ".jpg";
+				fileKey = "uploads/user/" + UUID.randomUUID().toString() + extension;
+			}
+
 			PutObjectRequest putObjectRequest = PutObjectRequest.builder()
 				.bucket(bucketName)
 				.key(fileKey)
