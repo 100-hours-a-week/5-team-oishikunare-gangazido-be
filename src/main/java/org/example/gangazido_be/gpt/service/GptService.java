@@ -1,4 +1,4 @@
-// ✅ GPTService: OpenAI GPT API를 호출해서 텍스트를 생성하는 서비스 클래스
+// GPTService: OpenAI GPT API를 호출해서 텍스트를 생성하는 서비스 클래스
 package org.example.gangazido_be.gpt.service;
 
 import org.example.gangazido_be.pet.repository.PetRepository;
@@ -70,15 +70,15 @@ public class GptService {
 			//choices 배열에서 첫 번째 응답 선택
 			List<Map<String, Object>> choices = (List<Map<String, Object>>) responseMap.get("choices");
 			if (choices == null || choices.isEmpty()) {
-				System.err.println("⚠️ [ERROR] choices 배열이 비어 있음.");
-				return "⚠️ GPT 응답이 없습니다.";
+				System.err.println(" [ERROR] choices 배열이 비어 있음.");
+				return "GPT 응답이 없습니다.";
 			}
 
 			//각 choice 내에 있는 message에서 content 추출
 			Map<String, Object> message = (Map<String, Object>) choices.get(0).get("message");
 			if (message == null || !message.containsKey("content")) {
-				System.err.println("⚠️ [ERROR] message 필드에 content 없음.");
-				return "⚠️ GPT 응답 메시지를 찾을 수 없습니다.";
+				System.err.println(" [ERROR] message 필드에 content 없음.");
+				return " GPT 응답 메시지를 찾을 수 없습니다.";
 			}
 			System.out.println("[DEBUG] OpenAI API 응답 원본: " + response.getBody()); // 원본 응답 확인
 			System.out.println("[DEBUG] OpenAI API 요청 JSON: " + objectMapper.writeValueAsString(requestBody));

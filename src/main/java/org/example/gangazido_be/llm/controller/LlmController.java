@@ -1,20 +1,20 @@
 package org.example.gangazido_be.llm.controller;
-// ✅ LlmController: LLM(GPT)과의 대화 요청을 처리하는 REST 컨트롤러
+//  LlmController: LLM(GPT)과의 대화 요청을 처리하는 REST 컨트롤러
 import java.util.HashMap;
 import java.util.Map;
 
-import org.example.gangazido_be.user.entity.User; // ✅ 세션에서 사용자 정보 가져오기 위한 엔티티
+import org.example.gangazido_be.user.entity.User; // 세션에서 사용자 정보 가져오기 위한 엔티티
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.PostMapping; // ✅ POST 요청 매핑
-import org.springframework.web.bind.annotation.RequestBody; // ✅ 요청 본문(JSON) 매핑
-import org.springframework.web.bind.annotation.RequestMapping; // ✅ 세션 접근을 위한 객체
+import org.springframework.web.bind.annotation.PostMapping; //  POST 요청 매핑
+import org.springframework.web.bind.annotation.RequestBody; //  요청 본문(JSON) 매핑
+import org.springframework.web.bind.annotation.RequestMapping; //  세션 접근을 위한 객체
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.http.ResponseEntity; // ✅ 응답 객체
-import jakarta.servlet.http.HttpServletRequest; // ✅ 클라이언트 요청 정보
-import jakarta.servlet.http.HttpSession; // ✅ 세션 접근을 위한 객체
-import org.example.gangazido_be.llm.model.LlmRequest; // ✅ 클라이언트에서 오는 요청 데이터
-import org.example.gangazido_be.llm.model.LlmResponse; // ✅ 응답 데이터 포맷
-import org.example.gangazido_be.llm.service.LlmService; // ✅ GPT 호출 로직이 있는 서비스
+import org.springframework.http.ResponseEntity; //  응답 객체
+import jakarta.servlet.http.HttpServletRequest; //  클라이언트 요청 정보
+import jakarta.servlet.http.HttpSession; //  세션 접근을 위한 객체
+import org.example.gangazido_be.llm.model.LlmRequest; // 클라이언트에서 오는 요청 데이터
+import org.example.gangazido_be.llm.model.LlmResponse; //  응답 데이터 포맷
+import org.example.gangazido_be.llm.service.LlmService; //  GPT 호출 로직이 있는 서비스
 
 
 @RestController // JSON 데이터를 반환하는 REST 컨트롤러임을 명시
@@ -30,9 +30,9 @@ public class LlmController {
 	@PostMapping("")
 	public ResponseEntity<LlmResponse> generateChat(@RequestBody LlmRequest request,
 		HttpServletRequest httpServletRequest, HttpSession session) {
-		System.out.println("✅ GPT 요청 도착");
-		System.out.println("📍 message: " + request.getMessage());
-		System.out.println("📍 위치: " + request.getLatitude() + ", " + request.getLongitude());
+		System.out.println(" GPT 요청 도착");
+		System.out.println(" message: " + request.getMessage());
+		System.out.println(" 위치: " + request.getLatitude() + ", " + request.getLongitude());
 
 		// 세션에서 "user" 객체 가져오기
 		User user = (User) session.getAttribute("user");
@@ -58,7 +58,7 @@ public class LlmController {
 		}
 
 		//  정상 응답 로그 출력 (디버깅용)
-		System.out.println("✅ [DEBUG] 최종 응답: " + responseBody.getResponse());
+		System.out.println(" [DEBUG] 최종 응답: " + responseBody.getResponse());
 		//  클라이언트에 GPT 응답 전달 (200 OK)
 		return responseEntity;
 	}

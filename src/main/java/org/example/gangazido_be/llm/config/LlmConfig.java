@@ -1,5 +1,5 @@
 //llmconfig
-// ✅ LlmConfig: LLM(OpenAI 등) 관련 설정을 application.yml에서 불러오는 설정 클래스
+//  LlmConfig: LLM(OpenAI 등) 관련 설정을 application.yml에서 불러오는 설정 클래스
 package org.example.gangazido_be.llm.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties; // yml 속성 매핑용 어노테이션

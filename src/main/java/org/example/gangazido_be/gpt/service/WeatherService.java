@@ -1,4 +1,4 @@
-//✅ WeatherService: OpenWeather API를 이용해 날씨 및 대기질 데이터를 가져오는 서비스
+// WeatherService: OpenWeather API를 이용해 날씨 및 대기질 데이터를 가져오는 서비스
 
 package org.example.gangazido_be.gpt.service;
 
@@ -10,34 +10,34 @@ import org.springframework.web.util.UriComponentsBuilder;
 import org.json.JSONObject;
 
 @Service
-public class WeatherService { // ✅ 이 클래스가 서비스 계층의 Bean으로 등록되도록 지정 (Spring이 관리)
+public class WeatherService { //  이 클래스가 서비스 계층의 Bean으로 등록되도록 지정 (Spring이 관리)
 
 	@Value("${weather.api.key}") // application.yml에서 OpenWeather API 키 가져오기
-	private String apiKey; // ✅ application.yml에 저장된 OpenWeather API 키 주입
-	// ✅ OpenWeather 날씨 API 및 공기질 API 엔드포인트
+	private String apiKey; //  application.yml에 저장된 OpenWeather API 키 주입
+	//  OpenWeather 날씨 API 및 공기질 API 엔드포인트
 	private static final String WEATHER_API_URL = "https://api.openweathermap.org/data/2.5/weather";
-	private static final String AIR_POLLUTION_API_URL = "https://api.openweathermap.org/data/2.5/air_pollution"; // ✅ OpenWeather 공기질 API 사용
+	private static final String AIR_POLLUTION_API_URL = "https://api.openweathermap.org/data/2.5/air_pollution"; //  OpenWeather 공기질 API 사용
 	/**
-	 * ✅ 위도(latitude)와 경도(longitude)를 기반으로 날씨 및 공기질 정보를 가져옴
+	 *  위도(latitude)와 경도(longitude)를 기반으로 날씨 및 공기질 정보를 가져옴
 	 */
 	public String getWeather(double latitude, double longitude) {
 		if (apiKey == null || apiKey.isEmpty()) {
-			return "❌ API 키가 설정되지 않았습니다. 환경 변수를 확인하세요.";
+			return " API 키가 설정되지 않았습니다. 환경 변수를 확인하세요.";
 		}
 
 		try {
-			// ✅ 날씨 및 대기질 정보 가져오기
+			//  날씨 및 대기질 정보 가져오기
 			JSONObject weatherJson = fetchWeatherData(latitude, longitude);
-			JSONObject airQualityJson = fetchAirPollutionData(latitude, longitude); // ✅ OpenWeather API로 대기질 정보 가져오기
+			JSONObject airQualityJson = fetchAirPollutionData(latitude, longitude); //  OpenWeather API로 대기질 정보 가져오기
 
-			// ✅ JSON 형태로 응답 반환
+			// JSON 형태로 응답 반환
 			JSONObject responseJson = new JSONObject();
 			responseJson.put("weather", weatherJson); // 날씨 데이터 포함
 			responseJson.put("air_quality", airQualityJson); // 대기질 데이터 포함
 
 			return responseJson.toString(2); // JSON 예쁘게 포맷하여 반환
 		} catch (Exception e) {
-			return "❌ 데이터 요청 중 오류 발생: " + e.getMessage();
+			return " 데이터 요청 중 오류 발생: " + e.getMessage();
 		}
 	}
 
