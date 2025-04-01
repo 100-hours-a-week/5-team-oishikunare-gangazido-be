@@ -26,6 +26,8 @@ public class PetService {
 	// 반려견 정보 등록
 	@Transactional
 	public PetResponse createPet(Integer userId, String name, Integer age, Boolean gender, String breed, Double weight, String profileImage) {
+		log.debug("📸 받은 profileImage 파라미터: {}", profileImage);
+
 		// 사용자 존재 여부 확인 (없으면 404  예외)
 		User user = userRepository.findByIdAndDeletedAtIsNull(userId) // userId로 User 엔티티 조회
 			.orElseThrow(() -> new PetException(HttpStatus.NOT_FOUND, PetExceptionType.NOT_FOUND_USER.getMessage()));
