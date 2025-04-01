@@ -157,10 +157,16 @@ public class PetService {
 		}
 
 		// 수정
-		String profileImagePath = profileImage != null && !profileImage.isBlank() ? profileImage : pet.getProfileImage();  // 새 이미지 없으면 기존 유지
+		// String profileImagePath = profileImage != null && !profileImage.isBlank() ? profileImage : pet.getProfileImage();  // 새 이미지 없으면 기존 유지
 
-		pet.updatePet(name, profileImagePath, age, gender, breed, weight);
-		return PetResponse.from(pet);
+		// updatePet 메서드에서 CloudFront URL 추가
+		PetResponse response = PetResponse.from(pet);
+
+		if (pet.getProfileImage() != null && !pet.getProfileImage().isBlank()) {
+			String imageUrl = CLOUDFRONT_URL + "/" + pet.getProfileImage() + "?t=" + System.currentTimeMillis();
+			response.setProfileImage(imageUrl);
+		}
+		return response;
 	}
 
 	// 반려견 정보 삭제
