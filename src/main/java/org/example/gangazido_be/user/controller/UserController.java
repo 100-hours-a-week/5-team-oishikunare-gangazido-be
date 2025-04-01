@@ -207,7 +207,7 @@ public class UserController {
 			}
 
 			Map<String, Object> responseData = new HashMap<>();
-			responseData.put("userId", idEncryptionUtil.encrypt(user.getId()));
+			responseData.put("userId", user.getId());
 			responseData.put("email", user.getEmail());
 			responseData.put("nickname", user.getNickname());
 			responseData.put("profileImage", user.getProfileImage());
