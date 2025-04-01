@@ -181,7 +181,7 @@ public class LlmService {
 
 				petName, temperature, pm10, pm25, weatherCondition, temperature, petBreed, petWeight
 			);
-		} else if (lowerMessage.contains("안녕") || lowerMessage.contains("반가워") || lowerMessage.contains("고마워") || lowerMessage.contains("산책 어디") || lowerMessage.contains("뭐해")) {
+		} else if (lowerMessage.contains("안녕") || lowerMessage.contains("안뇽") || lowerMessage.contains("해위") || lowerMessage.contains("고마웡") || lowerMessage.contains("떙큐")) {
 			prompt = String.format(
 				"너는 귀여운 반려견 산책 도우미 AI야. 사용자와 친근한 말투로 짧게 대답해줘.\n" +
 					"반려견 이름은 %s이고, 견종은 %s야. 사용자가 '%s'라고 말했어. 너무 딱딱하지 않게, 공감하며 답장해줘. 문장은 한두 문장으로 간단히 해줘.\n\n" +
@@ -232,7 +232,7 @@ public class LlmService {
 				petName, temperature, pm10, pm25, weatherCondition, temperature, pm10, pm25, petName, petBreed, petAge, petWeight
 			);
 		} else {
-			prompt = "대답할 수 없는 질문이라고 한 문장으로 말해. 그리고 너가 답할 수 있는 예시질문 3개도 함꼐 추천해줘.";
+			prompt = "대답할 수 없는 질문이라고 한 문장으로 말해.";
 		}
 
 		//System.out.println("📝 [DEBUG] 최종 GPT 프롬프트:\n" + prompt);
