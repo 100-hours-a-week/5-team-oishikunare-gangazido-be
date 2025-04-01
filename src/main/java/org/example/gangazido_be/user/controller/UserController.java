@@ -171,6 +171,8 @@ public class UserController {
 
 			Map<String, Object> responseData = new HashMap<>();
 			responseData.put("nickname", user.getNickname());
+			responseData.put("userId", user.getId());
+
 
 			return UserApiResponse.success(UserApiMessages.LOGIN_SUCCESS, responseData);
 		} catch (UserException e) {
