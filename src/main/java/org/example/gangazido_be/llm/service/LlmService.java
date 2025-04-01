@@ -239,7 +239,7 @@ public class LlmService {
 					"}",
 				latitude, longitude
 			);
-		}else {
+		} else {
 			prompt = "대답할 수 없는 질문이라고 한 문장으로 말해.";
 		}
 
