@@ -2,9 +2,11 @@ package org.example.gangazido_be.pet.dto;
 
 import lombok.Builder;
 import lombok.Getter;
+import lombok.Setter;
 
 import org.example.gangazido_be.pet.entity.Pet;
 
+@Setter
 @Getter
 @Builder
 public class PetResponse {
