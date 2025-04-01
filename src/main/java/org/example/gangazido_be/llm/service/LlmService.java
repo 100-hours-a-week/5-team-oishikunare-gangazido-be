@@ -230,7 +230,6 @@ public class LlmService {
 			if (gptResponse == null || gptResponse.isEmpty()) {
 				throw new Exception("empty_response");
 			}
-
 		} catch (Exception e) {
 			System.err.println("[ERROR]: " + e.getMessage());
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
