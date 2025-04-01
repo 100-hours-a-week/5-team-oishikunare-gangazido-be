@@ -215,6 +215,7 @@ public class LlmService {
 
 				petName, temperature, pm10, pm25, weatherCondition, temperature, petBreed, petWeight
 			);
+
 		} else {
 			prompt = "대답할 수 없는 질문이라고 한 문장으로 말해.";
 		}
