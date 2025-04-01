@@ -230,6 +230,9 @@ public class LlmService {
 			if (gptResponse == null || gptResponse.isEmpty()) {
 				throw new Exception("empty_response");
 			}
+			// ✅ 멘트 추가
+			String disclaimer = "\n\n⚠️ 참고: 산책 추천은 실시간 기상 정보에 기반한 참고 정보입니다. 실제 상황과 다를 수 있으니, 최종 판단은 보호자님의 몫입니다!";
+			gptResponse += disclaimer;
 		} catch (Exception e) {
 			System.err.println("[ERROR]: " + e.getMessage());
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
