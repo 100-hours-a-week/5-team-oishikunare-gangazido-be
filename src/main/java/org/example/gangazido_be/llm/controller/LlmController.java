@@ -41,7 +41,9 @@ public class LlmController {
 			user.getId(), httpServletRequest,
 			request.getLatitude(), request.getLongitude(), request.getMessage()).getBody();
 
-		return ResponseEntity.ok(response);
+		return llmService.generateChat(
+			user.getId(), httpServletRequest,
+			request.getLatitude(), request.getLongitude(), request.getMessage());
 	}
 }
 
