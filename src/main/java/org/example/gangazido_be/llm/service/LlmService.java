@@ -141,30 +141,22 @@ public class LlmService {
 		String lowerMessage = message.toLowerCase();
 		if (lowerMessage.contains("미세먼지") || lowerMessage.contains("공기") || lowerMessage.contains("대기") || lowerMessage.contains("날씨")) {
 			prompt = String.format(
-				"당신은 반려견 산책 추천 AI입니다. **반드시 JSON 형식으로만 답변하세요.** HTML이나 마크다운, 자연어 문장만 있는 응답은 허용되지 않습니다.\\n" +
-					"미세먼지 데이터와 반려견 정보를 바탕으로 **%s**의 산책 가능 여부를 판단하고 그 결과를 제공해주세요" +
-					"응답에 반드시 반려견 이름을 포함해주세요." +
-					"산책 추천 또는 비추천 사유에 기온 %.1f°C, 미세먼지 PM10 %.1fµg/m³, PM2.5 %.1fµg/m³ 수치를 반드시 모두 포함하여 설명하세요**" +
-					"📌 **현재 환경 데이터:**\n" +
-					"- 날씨 상태: %s\n" +
-					"- 기온: %.1f°C\n" +
-					"- 미세먼지(PM10): %.1f µg/m³\n" +
-					"- 초미세먼지(PM2.5): %.1f µg/m³\n" +
-					"- 반려견 정보:\n" +
-					"  - 이름: %s\n" +
-					"  - 견종: %s\n" +
-					"  - 나이: %d살\n" +
-					"  - 무게: %.1fkg\n\n" +
-					"📌 **미세먼지가 반려견 산책에 미치는 영향을 고려하여 JSON 형식으로 답변해주세요:**\n" +
-					"json\n" +
-				"{\n" +
-					"  \"recommendation\": \"산책 추천 또는 비추천\",\n" +
-					"  \"reason\": \"산책 추천 또는 비추천 사유 (미세먼지 영향 포함)\",\n" +
-					"  \"safety_tips\": [\"산책 시 유의 사항\"]\n" +
-					"}\n" +
-					"\n" +
-				"**반드시 위 JSON 형식을 지켜서 응답하세요.**",
-				petName, temperature, pm10, pm25, weatherCondition, temperature, pm10, pm25, petName, petBreed, petAge, petWeight
+				"당신은 반려견 산책 추천 AI입니다. 아래의 조건에 따라 반려견의 산책 가능 여부를 판단해 주세요.\n\n" +
+					"📌 반려견 이름은 %s이고, 견종은 %s, 나이는 %d살, 몸무게는 %.1fkg입니다.\n" +
+					"📌 현재 날씨는 %s이고, 기온은 %.1f°C입니다.\n" +
+					"📌 미세먼지 상태:\n" +
+					"- PM10: %.1f µg/m³\n" +
+					"- PM2.5: %.1f µg/m³\n\n" +
+					"미세먼지 상태에 따라 '좋음', '보통', '나쁨' 수준으로 분류하고, 반려견의 건강에 미치는 영향과 함께 산책을 추천할지 여부를 판단해주세요.\n\n" +
+					"⚠️ 만약 미세먼지 수치가 '나쁨' 수준이면 외출을 자제하라고 안내하고, 실내 활동을 추천해 주세요.\n" +
+					"✅ 응답은 반드시 아래 JSON 형식으로만 제공해주세요:\n\n" +
+					"{\n" +
+					"  \"recommendation\": \"미세먼지 상태(좋음/보통/나쁨)\",\n" +
+					"  \"reason\": \"정확한 미세먼지 수치 기반의 판단 및 설명\",\n" +
+					"  \"safety_tips\": [\"산책 시 유의 사항 또는 실내 활동 팁\"]\n" +
+					"}",
+				petName, petBreed, petAge, petWeight,
+				weatherCondition, temperature, pm10, pm25
 			);
 		} else if (message.contains("옷") || message.contains("입혀야") || lowerMessage.contains("외출 옷") || lowerMessage.contains("방한")) {
 			prompt = String.format(
