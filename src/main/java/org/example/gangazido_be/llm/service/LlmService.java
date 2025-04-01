@@ -232,7 +232,7 @@ public class LlmService {
 				petName, temperature, pm10, pm25, weatherCondition, temperature, pm10, pm25, petName, petBreed, petAge, petWeight
 			);
 		} else {
-			prompt = "대답할 수 없는 질문이라고 한 문장으로 말해.";
+			prompt = "대답할 수 없는 질문이라고 한 문장으로 말해. 그리고 너가 답할 수 있는 예시질문 3개도 함꼐 추천해줘.";
 		}
 
 		//System.out.println("📝 [DEBUG] 최종 GPT 프롬프트:\n" + prompt);
