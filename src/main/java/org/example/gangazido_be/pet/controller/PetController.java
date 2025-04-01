@@ -41,6 +41,7 @@ public class PetController {
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
 				.body(PetApiResponse.of("required_authorization", null));
 		}
+		System.out.println("🐶 user in session: " + user);
 
 		// userId 포함해서 반려견 등록
 		PetResponse response = petService.createPet(user.getId(), name, age, gender, breed, weight, profileImage);
