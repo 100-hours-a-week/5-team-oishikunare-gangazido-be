@@ -7,8 +7,9 @@ import java.util.regex.Pattern;
  */
 public class UserPasswordValidator {
 	// 비밀번호 정규식 패턴: 8-20자, 최소 하나의 대문자, 소문자, 숫자, 특수문자 포함
+	// 특수문자: ~!@#$%^&*_-+=`|\(){}[]:;"'<>,.?/
 	private static final String PASSWORD_PATTERN =
-		"^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,20}$";
+		"^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[~!@#$%^&*_\\-+=`|\\\\(){}\\[\\]:;\"'<>,.?/])[A-Za-z\\d~!@#$%^&*_\\-+=`|\\\\(){}\\[\\]:;\"'<>,.?/]{8,20}$";
 
 	private static final Pattern pattern = Pattern.compile(PASSWORD_PATTERN);
 
@@ -31,7 +32,7 @@ public class UserPasswordValidator {
 	 * @return 검증 실패 시 에러 메시지
 	 */
 	public static String getValidationMessage() {
-		return "비밀번호는 8-20자의 대소문자, 숫자, 특수문자(@$!%*?&)를 포함해야 합니다.";
+		return "비밀번호는 8-20자의 대소문자, 숫자, 특수문자(~!@#$%^&*_-+=`|\\(){}[]:;\"'<>,.?/)를 포함해야 합니다.";
 	}
 
 	/**
@@ -44,3 +45,4 @@ public class UserPasswordValidator {
 		return password != null && password.length() >= 8 && password.length() <= 20;
 	}
 }
+
