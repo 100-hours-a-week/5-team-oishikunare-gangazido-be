@@ -23,6 +23,8 @@ public class PetService {
 	private final PetRepository petRepository;
 	private final UserRepository userRepository;
 
+	private static final String CLOUDFRONT_URL = "https://d3jeniacjnodv5.cloudfront.net";
+
 	// 반려견 정보 등록
 	@Transactional
 	public PetResponse createPet(Integer userId, String name, Integer age, Boolean gender, String breed, Double weight, String profileImage) {
@@ -101,7 +103,15 @@ public class PetService {
 		Pet pet = petRepository.findByUserId(userId)
 			.orElseThrow(() -> new PetException(HttpStatus.NOT_FOUND, PetExceptionType.NOT_FOUND_PET.getMessage()));
 
-		return PetResponse.from(pet);
+		PetResponse response = PetResponse.from(pet);
+
+		// 🔥 CloudFront URL + timestamp 붙여서 반환
+		if (pet.getProfileImage() != null && !pet.getProfileImage().isBlank()) {
+			String imageUrl = CLOUDFRONT_URL + "/" + pet.getProfileImage() + "?t=" + System.currentTimeMillis();
+			response.setProfileImage(imageUrl);
+		}
+
+		return response;
 	}
 
 	// 반려견 정보 수정
