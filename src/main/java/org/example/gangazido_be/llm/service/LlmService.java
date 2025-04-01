@@ -215,8 +215,31 @@ public class LlmService {
 
 				petName, temperature, pm10, pm25, weatherCondition, temperature, petBreed, petWeight
 			);
-
-		} else {
+		} else if (lowerMessage.contains("안녕") || lowerMessage.contains("반가워") || lowerMessage.contains("고마워") || lowerMessage.contains("산책 어디") || lowerMessage.contains("뭐해")) {
+			prompt = String.format(
+				"너는 귀여운 반려견 산책 도우미 AI야. 사용자와 친근한 말투로 짧게 대답해줘.\n" +
+					"반려견 이름은 %s이고, 견종은 %s야. 사용자가 '%s'라고 말했어. 너무 딱딱하지 않게, 공감하며 답장해줘. 문장은 한두 문장으로 간단히 해줘.\n\n" +
+					"예시)\n" +
+					"Q: 안녕\nA: 안녕하세요! 🐶 반가워요!\n\n" +
+					"Q: 고마워\nA: 도움이 됐다니 저도 기뻐요!\n\n" +
+					"Q: 산책 어디로 갈까?\nA: 날씨 좋을 땐 가까운 공원도 좋겠네요!\n\n" +
+					"Q: %s\nA:",
+				petName, petBreed, message, message
+			);
+		} else if (lowerMessage.contains("어디") || lowerMessage.contains("추천") && lowerMessage.contains("산책로")) {
+			prompt = String.format(
+				"당신은 위치 기반 산책로 추천 AI입니다.\n" +
+					"현재 위치는 위도 %.6f, 경도 %.6f 입니다.\n" +
+					"이 근처 반경 2~3km 이내의 산책 가능한 장소 3곳을 추천해주세요.\n" +
+					"**아래 JSON 형식으로만 응답하세요.**\n\n" +
+					"{\n" +
+					"  \"routes\": [\n" +
+					"    { \"name\": \"산책로 이름\", \"description\": \"특징 및 반려견과의 산책 추천 이유\", \"distance_km\": 거리 }\n" +
+					"  ]\n" +
+					"}",
+				latitude, longitude
+			);
+		}else {
 			prompt = "대답할 수 없는 질문이라고 한 문장으로 말해.";
 		}
 
