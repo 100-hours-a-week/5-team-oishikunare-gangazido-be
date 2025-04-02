@@ -98,4 +98,10 @@ public class MarkerService {
 			marker.getCreatedAt().toString()
 		);
 	}
+
+	// 사용자 ID로 마커를 모두 삭제하는 메서드 - 잭
+	@Transactional
+	public void deleteAllMarkersByUserId(Integer userId) {
+		markerRepository.softDeleteAllByUserId(userId);
+	}
 }
