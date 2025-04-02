@@ -2,6 +2,7 @@ package org.example.gangazido_be.map.repository;
 
 import org.example.gangazido_be.map.entity.MarkerEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -24,5 +25,10 @@ public interface MarkerRepository extends JpaRepository<MarkerEntity, UUID> {
 		@Param("longitude") double longitude,
 		@Param("radius") double radius
 	);
+
+	// 사용자 ID를 기준으로 마커 소프트 딜리트 - 잭
+	@Modifying
+	@Query(value = "UPDATE marker SET deleted_at = NOW() WHERE user_id = :userId AND deleted_at IS NULL", nativeQuery = true)
+	void softDeleteAllByUserId(@Param("userId") Integer userId);
 }
 

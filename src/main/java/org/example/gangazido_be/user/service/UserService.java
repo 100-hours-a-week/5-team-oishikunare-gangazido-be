@@ -1,7 +1,9 @@
 package org.example.gangazido_be.user.service;
 
+import org.example.gangazido_be.map.service.MarkerService;
 import org.example.gangazido_be.pet.entity.Pet;
 import org.example.gangazido_be.pet.repository.PetRepository;
+import org.example.gangazido_be.pet.service.PetService;
 import org.example.gangazido_be.user.dto.UserDTO;
 import org.example.gangazido_be.user.entity.User;
 import org.example.gangazido_be.user.exception.*;
@@ -25,17 +27,19 @@ public class UserService {
 	private final PetRepository petRepository;
 	private final Argon2PasswordEncoder passwordEncoder;
 	private final UserS3FileService userS3FileService;
+	private final MarkerService markerService;
 	private final Logger logger = LoggerFactory.getLogger(UserService.class);
 
 	@Autowired
 	public UserService(UserRepository userRepository,
 		PetRepository petRepository,
 		Argon2PasswordEncoder passwordEncoder,
-		UserS3FileService userS3FileService) {
+		UserS3FileService userS3FileService, PetService petService, MarkerService markerService) {
 		this.userRepository = userRepository;
 		this.petRepository = petRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.userS3FileService = userS3FileService;
+		this.markerService = markerService;
 	}
 
 	/**
@@ -273,6 +277,27 @@ public class UserService {
 		if (user.getProfileImage() != null && !user.getProfileImage().isEmpty()) {
 			userS3FileService.deleteFile(user.getProfileImage());
 		}
+
+		// 사용자의 반려동물 정보 소프트 딜리트 처리
+		try {
+			// 사용자의 반려동물 정보 조회
+			Optional<Pet> petOptional = petRepository.findByUserId(userId);
+
+			// 반려동물 정보가 존재하면 소프트 딜리트 처리
+			if (petOptional.isPresent()) {
+				Pet pet = petOptional.get();
+				pet.onSoftDelete(); // Pet 클래스의 onSoftDelete 메서드 호출
+				petRepository.save(pet);
+				logger.info("사용자 ID {}의 반려동물 정보 소프트 딜리트 완료", userId);
+			}
+		} catch (Exception e) {
+			logger.error("사용자 ID {}의 반려동물 정보 소프트 딜리트 실패: {}", userId, e.getMessage());
+			// 반려동물 정보 삭제 실패는 사용자 삭제를 중단시키지 않음
+		}
+
+		// 사용자가 생성한 모든 마커 소프트 딜리트 처리
+		markerService.deleteAllMarkersByUserId(userId);
+		logger.info("사용자 ID {}의 마커가 소프트 딜리트 처리되었습니다.", userId);
 
 		// 논리적 삭제 (deletedAt 설정)
 		user.setDeletedAt(LocalDateTime.now());
