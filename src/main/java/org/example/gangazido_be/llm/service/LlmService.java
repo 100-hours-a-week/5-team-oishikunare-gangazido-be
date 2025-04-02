@@ -146,6 +146,13 @@ public class LlmService {
 				"- thanks: 감사 표현\n" +
 				"- cloth_recommend: 옷 추천 관련 질문\n" +   // ⬅️ 이 줄 추가!
 				"- unknown: 알 수 없음\n\n" +
+				"아래 예시처럼 판단해줘:\n" +
+				"Q: '오늘 어디 갈까?' → recommend_route\n" + // ✅ 이 줄 추가!
+				"Q: '산책해도 될까?' → walk_check\n" +
+				"Q: '미세먼지 어때?' → weather_info\n" +
+				"Q: '옷 입혀야 해?' → cloth_recommend\n" +
+				"Q: '고마워!' → thanks\n" +
+				"Q: '안녕!' → greeting\n" +
 				"반드시 JSON 형식으로 응답해. 예시: { \"intent\": \"walk_check\" }\n" +
 				"문장: \"%s\"\n", message
 		);
