@@ -27,11 +27,17 @@ public class MarkerController {
 	public ResponseEntity<?> createMarker(
 		HttpSession session,	// 현재 세션에서 로그인 정보 가져옴
 		@RequestBody MarkerRequestDto requestDto) {	// 클라이언트가 보낸 마커 데이터 (JSON > DTO)
+
 		Object userObj = session.getAttribute("user");
-		//
 		if (userObj == null) {
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
 					.body(Map.of("message", "required_authorization", "data", new HashMap<>()));
+		}
+
+		// 위도, 경도 값이 누락된 경우 예외 발생
+		// 값이 없을 경우 ILLegalStateException 발생
+		if (requestDto.getLatitude() == null || requestDto.getLongitude() == null) {
+			throw new IllegalStateException("invalid_latitude_longitude");    // MarkerExceptionHandler로 넘기기
 		}
 
 		// User 객체에서 ID 추출
@@ -42,11 +48,6 @@ public class MarkerController {
 		// 마커 저장 로직 호출
 		// requestDto를 서비스 계층으로 넘겨 마커를 저장, 저장된 마커 정보를 반환받는다.
 		MarkerResponseDto responseDto = markerService.createMarker(sessionUserId, requestDto);
-		// 위도, 경도 값이 누락된 경우 예외 발생
-		// 값이 없을 경우 ILLegalStateException 발생
-		if (requestDto.getLatitude() == null || requestDto.getLongitude() == null) {
-			throw new IllegalStateException("invalid_latitude_longitude");    // MarkerExceptionHandler로 넘기기
-		}
 
 		// 정상적으로 저장된 경우
 		// 응답 데이터는 JSON 형태로 클라이언트에 전달
