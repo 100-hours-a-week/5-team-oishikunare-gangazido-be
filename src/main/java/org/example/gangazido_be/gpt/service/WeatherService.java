@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service; // ✅ HTTP 요청을 위한 Rest
 import org.springframework.web.client.RestTemplate; // ✅ URL을 쉽게 조립하기 위한 유틸
 import org.json.JSONObject; // ✅ JSON 데이터 처리 라이브러리
 import org.springframework.web.util.UriComponentsBuilder;
-import org.json.JSONObject;
+
 
 @Service
 public class WeatherService { //  이 클래스가 서비스 계층의 Bean으로 등록되도록 지정 (Spring이 관리)
