@@ -173,6 +173,9 @@ public class LlmService {
 		} else {
 			try {
 				String intentResponse = gptService.generateText(intentCheckPrompt);
+				if (intentResponse == null || intentResponse.isEmpty()) {
+					throw new RuntimeException("GPT 응답이 null 또는 빈 문자열입니다.");
+				}
 				JSONObject intentJson = new JSONObject(intentResponse);
 				intent = intentJson.optString("intent", "unknown");
 
@@ -180,6 +183,7 @@ public class LlmService {
 				redisTemplate.opsForValue().set(intentCacheKey, intent, Duration.ofMinutes(10));
 				System.out.println("✅ [Intent 캐시 저장]: " + intent);
 			} catch (Exception e) {
+				System.err.println("❌ [Intent 분석 실패]: " + e.getMessage());
 				intent = "unknown";
 			}
 		}
