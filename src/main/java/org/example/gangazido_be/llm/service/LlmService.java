@@ -18,7 +18,6 @@ import org.json.JSONObject;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
@@ -52,11 +51,10 @@ public class LlmService {
 	}
 
 	// ✅ 생성자 주입 방식으로 의존성 주입 (Spring이 자동으로 관리)
-	public LlmService(GptService gptService, WeatherService weatherService, PetRepository petRepository, RedisTemplate<String, String> redisTemplate) {
+	public LlmService(GptService gptService, WeatherService weatherService, PetRepository petRepository) {
 		this.gptService = gptService;
 		this.weatherService = weatherService;
 		this.petRepository = petRepository;
-		this.redisTemplate = redisTemplate;
 	}
 
 	/**
@@ -65,8 +63,6 @@ public class LlmService {
 	 * - OpenWeather API를 호출하여 날씨 및 공기질 정보를 가져옴
 	 * - 반려견 정보 + 날씨 데이터를 조합하여 GPT에 질문을 보내 응답을 생성
 	 */
-	//레디스
-	private final RedisTemplate<String, String> redisTemplate;
 
 	//세션 id 받아오기
 	@SuppressWarnings("checkstyle:OperatorWrap")
@@ -141,9 +137,6 @@ public class LlmService {
 		System.out.println("🌡️ [기온]: " + temperature);
 		System.out.println("💨 [미세먼지 PM10]: " + pm10);
 		System.out.println("💨 [초미세먼지 PM2.5]: " + pm25);
-		// 👉 캐시 키 생성
-		String intentCacheKey = "intent|" + message.trim().toLowerCase();
-		String cachedIntent = redisTemplate.opsForValue().get(intentCacheKey);
 
 		String intentCheckPrompt = String.format(
 			"다음 사용자 문장이 어떤 의도를 가지는지 판단해줘.\n" +
@@ -165,38 +158,17 @@ public class LlmService {
 				"문장: \"%s\"\n", message
 		);
 
-		//String intentResponse;
+		String intentResponse;
 		String intent;
-		if (cachedIntent != null) {
-			intent = cachedIntent;
-			System.out.println("📦 [Intent 캐시 사용]: " + intent);
-		} else {
-			try {
-				String intentResponse = gptService.generateText(intentCheckPrompt);
-				if (intentResponse == null || intentResponse.isEmpty()) {
-					throw new RuntimeException("GPT 응답이 null 또는 빈 문자열입니다.");
-				}
-				JSONObject intentJson = new JSONObject(intentResponse);
-				intent = intentJson.optString("intent", "unknown");
-
-				// 캐시 저장: 10분
-				redisTemplate.opsForValue().set(intentCacheKey, intent, Duration.ofMinutes(10));
-				System.out.println("✅ [Intent 캐시 저장]: " + intent);
-			} catch (Exception e) {
-				System.err.println("❌ [Intent 분석 실패]: " + e.getMessage());
-				intent = "unknown";
-			}
-		}
-
-		/*try {
+		try {
 			intentResponse = gptService.generateText(intentCheckPrompt);
 			JSONObject intentJson = new JSONObject(intentResponse);
 			intent = intentJson.optString("intent", "unknown");
 		} catch (Exception e) {
 			System.err.println("[ERROR] intent 분석 실패: " + e.getMessage());
 			intent = "unknown";
-		}*/
-		String prompt; ///
+		}
+		String prompt;
 		switch (intent) {
 			case "weather_info":
 				prompt = createWeatherPrompt(
