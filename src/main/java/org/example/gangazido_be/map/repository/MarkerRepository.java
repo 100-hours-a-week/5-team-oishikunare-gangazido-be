@@ -36,5 +36,9 @@ public interface MarkerRepository extends JpaRepository<MarkerEntity, UUID> {
 	@Query("SELECT COUNT(m) FROM MarkerEntity m " +
 		"WHERE m.user_id = :userId AND m.createdAt >= :oneHourAgo AND m.deletedAt IS NULL")
 	long countMarkersInLastHour(@Param("userId") Integer userId, @Param("oneHourAgo") LocalDateTime oneHourAgo);
+
+	// 소프트 마커 제외, 중복 좌표 등록 방지
+	@Query("SELECT COUNT(m) > 0 FROM MarkerEntity m WHERE m.latitude = :lat AND m.longitude = :lng AND m.deletedAt IS NULL")
+	boolean existsAtLocation(@Param("lat") Double lat, @Param("lng") Double lng);
 }
 

@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+
 @Service
 public class MarkerService {
 	private final MarkerRepository markerRepository; // 데이터베이스와 연결할 레포지토리
@@ -23,14 +24,38 @@ public class MarkerService {
 	@Transactional
 	public MarkerResponseDto createMarker(Integer userId, MarkerRequestDto requestDto) {
 
-		// ✅ 현재 시간 기준 1시간 전 시간 계산
+		// 마커 위경도 중복 위치 확인
+		boolean exists = markerRepository.existsAtLocation(
+			requestDto.getLatitude(),
+			requestDto.getLongitude()
+		);
+		if (exists) {
+			throw new IllegalArgumentException("duplicate_location");
+		}
+
+		// 현재 시간 기준 1시간 전 시간 계산
 		LocalDateTime oneHourAgo = LocalDateTime.now().minusHours(1);
 
-		// ✅ 최근 1시간 동안 마커 개수 조회
+		// 최근 1시간 동안 마커 개수 조회
 		long recentCount = markerRepository.countMarkersInLastHour(userId, oneHourAgo);
-
 		if (recentCount >= 30) {
 			throw new IllegalStateException("1시간에 최대 30개의 마커만 등록할 수 있습니다.");
+		}
+
+		// 거리 제한 체크
+		List<MarkerEntity> nearbyMarkers = markerRepository.findMarkersWithinRadius(
+			requestDto.getLatitude(), requestDto.getLongitude(), 1.0 // 최대 거리: 1m
+		);
+		for (MarkerEntity marker : nearbyMarkers) {
+			double distance = calculateDistance(
+				requestDto.getLatitude(), requestDto.getLongitude(),
+				marker.getLatitude(), marker.getLongitude()
+			);
+			if (requestDto.getType() == 0 && distance < 2.0) {
+				throw new IllegalArgumentException("too_close_dangple");
+			} else if (requestDto.getType() >= 1 && distance < 5.0) {
+				throw new IllegalArgumentException("too_close_dangerous");
+			}
 		}
 
 		// 1️⃣ DTO → 엔티티 객체로 변환 (DB 저장을 위해)
@@ -54,6 +79,19 @@ public class MarkerService {
 			savedMarker.getLongitude(),
 			savedMarker.getCreatedAt().toString()
 		);
+	}
+
+	// 하버사인 공식 (지구 위도경도로 거리 계산)
+	private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+		final int EARTH_RADIUS = 6371000; // meters
+
+		double dLat = Math.toRadians(lat2 - lat1);
+		double dLon = Math.toRadians(lon2 - lon1);
+		double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+				+ Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+				* Math.sin(dLon / 2) * Math.sin(dLon / 2);
+		double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+		return EARTH_RADIUS * c;
 	}
 
 	// 마커 삭제
