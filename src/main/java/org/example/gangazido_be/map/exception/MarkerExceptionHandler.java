@@ -51,6 +51,14 @@ public class MarkerExceptionHandler {
 	@ExceptionHandler(IllegalStateException.class)    // IllegalStateException이 발생시 이 메서드에서 처리
 	public ResponseEntity<Map<String, Object>> handleInvalidLatitudeLongitude(IllegalStateException ex) {
 		Map<String, Object> response = new LinkedHashMap<>();
+		String message = ex.getMessage();
+
+		if ("1시간에 최대 30개의 마커만 등록할 수 있습니다.".equals(message)) {
+			response.put("message", "limit_exceeded");
+			response.put("error", message);
+			return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(response);
+		}
+
 		response.put("message", "invalid_latitude_longitude");    // 위/경도 누락 응답 메시지
 		response.put("data", new HashMap<>());    // 응답 data : {}
 		return ResponseEntity.badRequest().body(response);    // 400 Bad Request 반환

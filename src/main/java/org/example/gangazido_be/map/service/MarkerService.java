@@ -23,6 +23,16 @@ public class MarkerService {
 	@Transactional
 	public MarkerResponseDto createMarker(Integer userId, MarkerRequestDto requestDto) {
 
+		// ✅ 현재 시간 기준 1시간 전 시간 계산
+		LocalDateTime oneHourAgo = LocalDateTime.now().minusHours(1);
+
+		// ✅ 최근 1시간 동안 마커 개수 조회
+		long recentCount = markerRepository.countMarkersInLastHour(userId, oneHourAgo);
+
+		if (recentCount >= 30) {
+			throw new IllegalStateException("1시간에 최대 30개의 마커만 등록할 수 있습니다.");
+		}
+
 		// 1️⃣ DTO → 엔티티 객체로 변환 (DB 저장을 위해)
 		MarkerEntity markerEntity = new MarkerEntity(
 			UUID.randomUUID(),    // UUID 생성
