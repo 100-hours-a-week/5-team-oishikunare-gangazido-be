@@ -23,10 +23,19 @@ public class MarkerService {
 	@Transactional
 	public MarkerResponseDto createMarker(Integer userId, MarkerRequestDto requestDto) {
 
-		// ✅ 현재 시간 기준 1시간 전 시간 계산
+		// 마커 위경도 중복 위치 확인
+		boolean exists = markerRepository.existsAtLocation(
+			requestDto.getLatitude(),
+			requestDto.getLongitude()
+		);
+		if (exists) {
+			throw new IllegalArgumentException("duplicate_location");
+		}
+
+		// 현재 시간 기준 1시간 전 시간 계산
 		LocalDateTime oneHourAgo = LocalDateTime.now().minusHours(1);
 
-		// ✅ 최근 1시간 동안 마커 개수 조회
+		// 최근 1시간 동안 마커 개수 조회
 		long recentCount = markerRepository.countMarkersInLastHour(userId, oneHourAgo);
 
 		if (recentCount >= 30) {
