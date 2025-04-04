@@ -41,15 +41,15 @@ public class MarkerExceptionHandler {
 
 		if ("marker_not_found".equals(message)) {
 			response.put("message", "marker_not_found");
-			response.put("data", new HashMap<>());
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response); // 404 반환
-		}
-		if ("duplicate_location".equals(message)) {
+		} else if ("duplicate_location".equals(message)) {
 			response.put("message", "duplicate_location");
-			response.put("data", new HashMap<>());
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response); // 400
+		} else if ("too_close_dangple".equals(message)) {
+			response.put("message", "too_close_dangple");
+		} else if ("too_close_dangerous".equals(message)) {
+			response.put("message", "too_close_dangerous");
+		} else {
+			response.put("message", "invalid_marker_id");
 		}
-		response.put("message", "invalid_marker_id");
 		response.put("data", new HashMap<>());
 		return ResponseEntity.badRequest().body(response);
 	}
