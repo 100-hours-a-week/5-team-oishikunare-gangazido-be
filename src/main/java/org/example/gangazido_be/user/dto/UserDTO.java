@@ -30,7 +30,7 @@ public class UserDTO {
 	private String passwordConfirm;
 
 	@NotEmpty(message = "required_nickname")
-	@Size(min = 2, max = 20, message = "invalid_nickname_length")
+	@Size(min = 1, max = 10, message = "invalid_nickname_length")
 	@JsonProperty("user_nickname")
 	private String nickname;
 

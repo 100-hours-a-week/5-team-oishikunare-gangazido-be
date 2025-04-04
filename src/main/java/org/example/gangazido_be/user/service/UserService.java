@@ -123,8 +123,13 @@ public class UserService {
 		}
 
 		// 닉네임 길이 검사
-		if (userDTO.getNickname().length() < 2 || userDTO.getNickname().length() > 20) {
+		if (userDTO.getNickname().length() > 10) {
 			throw UserValidationException.invalidNicknameLength();
+		}
+
+		// 닉네임 공백 검사 추가
+		if (userDTO.getNickname().contains(" ")) {
+			throw new UserValidationException("invalid_nickname_format", "닉네임에는 띄어쓰기를 사용할 수 없습니다");
 		}
 
 		// 이메일 중복 체크
@@ -223,8 +228,13 @@ public class UserService {
 			}
 
 			// 길이 제한 검사
-			if (nickname.length() < 2 || nickname.length() > 20) {
+			if (nickname.length() > 10) {
 				throw UserValidationException.invalidNicknameLength();
+			}
+
+			// 닉네임 공백 검사 추가
+			if (nickname.contains(" ")) {
+				throw new UserValidationException("invalid_nickname_format", "닉네임에는 띄어쓰기를 사용할 수 없습니다");
 			}
 
 			// 닉네임 중복 체크
@@ -246,14 +256,20 @@ public class UserService {
 		// 기존 이미지 정보 저장
 		String oldProfileImage = user.getProfileImage();
 
-		// 새 이미지 URL 설정
+		// 디버깅 로그
+		logger.info("프로필 이미지 업데이트: userId={}, 기존 이미지={}, 새 이미지={}",
+			userId, oldProfileImage, profileImageUrl);
+
+		// 새 이미지 URL 설정 (null도 그대로 설정 - 이미지 제거)
 		user.setProfileImage(profileImageUrl);
 		User updatedUser = userRepository.save(user);
 
-		// 저장 성공 후 기존 이미지 삭제 시도 (있는 경우에만)
-		if (oldProfileImage != null && !oldProfileImage.isEmpty()) {
+		// 기존 이미지가 있고, 새 이미지가 null이거나 다른 경우 S3에서 삭제
+		if (oldProfileImage != null && !oldProfileImage.isEmpty() &&
+			(profileImageUrl == null || !profileImageUrl.equals(oldProfileImage))) {
 			try {
 				userS3FileService.deleteFile(oldProfileImage);
+				logger.info("기존 프로필 이미지 삭제 완료: {}", oldProfileImage);
 			} catch (Exception e) {
 				logger.warn("기존 프로필 이미지 삭제 실패: {}", e.getMessage());
 				// 새 이미지 저장은 이미 성공했으므로 예외를 던지지 않음

@@ -5,7 +5,7 @@ package org.example.gangazido_be.llm.service;
 
 import org.example.gangazido_be.pet.repository.PetRepository;
 import org.json.JSONArray;
-import org.springframework.data.redis.core.RedisTemplate;
+//import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.example.gangazido_be.llm.model.LlmResponse;
