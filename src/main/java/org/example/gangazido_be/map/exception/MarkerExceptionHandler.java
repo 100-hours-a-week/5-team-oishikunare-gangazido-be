@@ -37,12 +37,21 @@ public class MarkerExceptionHandler {
 	@ExceptionHandler(IllegalArgumentException.class)
 	public ResponseEntity<Map<String, Object>> handleNotFoundException(IllegalArgumentException ex) {
 		Map<String, Object> response = new LinkedHashMap<>();
-		if ("marker_not_found".equals(ex.getMessage())) {
+		String message = ex.getMessage();
+
+		if ("marker_not_found".equals(message)) {
 			response.put("message", "marker_not_found");
-			response.put("data", new HashMap<>());
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response); // 404 반환
+		} else if ("duplicate_location".equals(message)) {
+			response.put("message", "duplicate_location");
+		} else if ("too_close_dangple".equals(message)) {
+			response.put("message", "too_close_dangple");
+		} else if ("too_close_dangerous".equals(message)) {
+			response.put("message", "too_close_dangerous");
+		} else if ("too_close_mixed".equals(message)) {
+			response.put("message", "too_close_mixed");
+		} else {
+			response.put("message", "invalid_marker_id");
 		}
-		response.put("message", "invalid_marker_id");
 		response.put("data", new HashMap<>());
 		return ResponseEntity.badRequest().body(response);
 	}
@@ -51,6 +60,14 @@ public class MarkerExceptionHandler {
 	@ExceptionHandler(IllegalStateException.class)    // IllegalStateException이 발생시 이 메서드에서 처리
 	public ResponseEntity<Map<String, Object>> handleInvalidLatitudeLongitude(IllegalStateException ex) {
 		Map<String, Object> response = new LinkedHashMap<>();
+		String message = ex.getMessage();
+
+		if ("1시간에 최대 30개의 마커만 등록할 수 있습니다.".equals(message)) {
+			response.put("message", "limit_exceeded");
+			response.put("error", message);
+			return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(response);
+		}
+
 		response.put("message", "invalid_latitude_longitude");    // 위/경도 누락 응답 메시지
 		response.put("data", new HashMap<>());    // 응답 data : {}
 		return ResponseEntity.badRequest().body(response);    // 400 Bad Request 반환

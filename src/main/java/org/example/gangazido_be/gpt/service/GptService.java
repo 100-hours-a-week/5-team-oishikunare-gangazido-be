@@ -2,12 +2,9 @@
 package org.example.gangazido_be.gpt.service;
 
 import org.example.gangazido_be.pet.repository.PetRepository;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate; // 외부 api호출을 위한 spring 클래스
 import org.springframework.http.*;
-
 import com.fasterxml.jackson.databind.ObjectMapper; // json 처리용 잭슨 라이브러리
 
 import java.util.*;
@@ -17,10 +14,10 @@ public class GptService {
 // 환경변수에서 오픈 api 키를 가져옴
 	private final OpenAiConfig openAiConfig;
 	private static final String GPT_API_URL = "https://api.openai.com/v1/chat/completions";
-	private final PetRepository petRepository; //  PetRepository 주입 받아 사용 (현재 미사용이지만 필요시 사용 가능)
+	//private final PetRepository petRepository; //  PetRepository 주입 받아 사용 (현재 미사용이지만 필요시 사용 가능)
 	// 생성자 주입 방식으로 PetRepository 전달
 	public GptService(PetRepository petRepository, OpenAiConfig openAiConfig) {
-		this.petRepository = petRepository;
+		/* this.petRepository = petRepository; */
 		this.openAiConfig = openAiConfig;
 	}
 	//  입력 프롬프트를 기반으로 GPT가 생성한 텍스트를 반환하는 메서드
