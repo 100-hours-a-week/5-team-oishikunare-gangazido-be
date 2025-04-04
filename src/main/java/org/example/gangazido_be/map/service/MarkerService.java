@@ -11,7 +11,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-
 @Service
 public class MarkerService {
 	private final MarkerRepository markerRepository; // 데이터베이스와 연결할 레포지토리
@@ -51,10 +50,21 @@ public class MarkerService {
 				requestDto.getLatitude(), requestDto.getLongitude(),
 				marker.getLatitude(), marker.getLongitude()
 			);
-			if (requestDto.getType() == 0 && distance < 2.0) {
+
+			int newType = requestDto.getType();
+			int existingType = marker.getType();
+
+			if (newType == 0 && existingType == 0 && distance < 2.0) {
+				// 댕플끼리 2m 이내
 				throw new IllegalArgumentException("too_close_dangple");
-			} else if (requestDto.getType() >= 1 && distance < 5.0) {
+			} else if (newType >= 1 && existingType >= 1 && distance < 5.0) {
+				// 댕져러스끼리 5m 이내
 				throw new IllegalArgumentException("too_close_dangerous");
+			} else if (
+				((newType == 0 && existingType >= 1) || (newType >= 1 && existingType == 0)) && distance < 5.0
+			) {
+				// 댕플 <-> 댕져러스 3m 이내
+				throw new IllegalArgumentException("too_close_mixed");
 			}
 		}
 
@@ -88,8 +98,8 @@ public class MarkerService {
 		double dLat = Math.toRadians(lat2 - lat1);
 		double dLon = Math.toRadians(lon2 - lon1);
 		double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-				+ Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-				* Math.sin(dLon / 2) * Math.sin(dLon / 2);
+			+ Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+			* Math.sin(dLon / 2) * Math.sin(dLon / 2);
 		double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 		return EARTH_RADIUS * c;
 	}
@@ -146,6 +156,5 @@ public class MarkerService {
 			marker.getCreatedAt().toString()
 		);
 	}
-
 
 }
