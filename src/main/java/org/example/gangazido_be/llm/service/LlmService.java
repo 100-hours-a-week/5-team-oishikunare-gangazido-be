@@ -13,8 +13,6 @@ import org.example.gangazido_be.pet.entity.Pet;
 import org.springframework.stereotype.Service;
 import org.json.JSONObject;
 import jakarta.servlet.http.HttpServletRequest;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 // ✅ 이 클래스가 Spring의 Service Bean으로 등록됨
@@ -23,8 +21,7 @@ public class LlmService {
 	private final GptService gptService; // ✅ GPT API를 호출하는 서비스
 	private final WeatherService weatherService; // ✅ 날씨 데이터를 가져오는 서비스
 	private final PetRepository petRepository; // ✅ 반려견 정보를 DB에서 조회하는 Repository
-	// ✅ 캐시를 사용하여 GPT 응답을 저장하여 성능 최적화
-	private final Map<String, LlmResponse> responseCache = new HashMap<>();
+
 
 	// ✅ 생성자 주입 방식으로 의존성 주입 (Spring이 자동으로 관리)
 	public LlmService(GptService gptService, WeatherService weatherService, PetRepository petRepository) {
@@ -126,8 +123,8 @@ public class LlmService {
 				"- unknown: 알 수 없음\n\n" +
 				"아래 예시처럼 판단해줘:\n" +
 				"Q: '오늘 어디 갈까?' → recommend_route\n" + // ✅ 이 줄 추가!
-				"Q: '산책해도 될까?' → walk_check\n" +
-				"Q: '미세먼지 어때?' → weather_info\n" +
+				"Q: '산책해도 될까?','오늘 나갈까?' → walk_check\n" +
+				"Q: '미세먼지 어때?','오늘 공기 어때?' → weather_info\n" +
 				"Q: '옷 입혀야 해?' → cloth_recommend\n" +
 				"Q: '안녕!' → greeting\n" +
 				"반드시 JSON 형식으로 응답해. 예시: { \"intent\": \"walk_check\" }\n" +
@@ -137,13 +134,21 @@ public class LlmService {
 		String intentResponse;
 		String intent;
 		try {
+			// GPT 호출 먼저
 			intentResponse = gptService.generateText(intentCheckPrompt);
-			JSONObject intentJson = new JSONObject(intentResponse);
-			intent = intentJson.optString("intent", "unknown");
+
+			// 안전한 JSON 파싱
+			JSONObject intentJson = safeParseJson(intentResponse);
+			if (intentJson == null) {
+				intent = "unknown";
+			} else {
+				intent = intentJson.optString("intent", "unknown");
+			}
 		} catch (Exception e) {
 			System.err.println("[ERROR] intent 분석 실패: " + e.getMessage());
 			intent = "unknown";
 		}
+
 		String prompt = switch (intent) {
 			case "weather_info" -> createWeatherPrompt(
 				"당신은 반려견 산책 추천 AI입니다. 아래의 조건에 따라 반려견의 산책 가능 여부를 판단해 주세요.\n\n" +
@@ -232,6 +237,7 @@ public class LlmService {
 
 		// 🔥 GPT 호출
 		String gptResponse;
+
 		try {
 			gptResponse = gptService.generateText(prompt);
 			System.out.println("response: " + gptResponse);  // 🔍 GPT 응답 확인
@@ -247,6 +253,28 @@ public class LlmService {
 
 		return ResponseEntity.ok(new LlmResponse("llm_success", gptResponse));
 
+	}
+
+	private JSONObject safeParseJson(String raw) {
+		try {
+			// 백틱 제거
+			if (raw.startsWith("```")) {
+				raw = raw.replaceAll("```[a-z]*", "").trim();
+			}
+
+			// JSON 블록 추출
+			int start = raw.indexOf("{");
+			int end = raw.lastIndexOf("}");
+			if (start != -1 && end != -1 && start < end) {
+				raw = raw.substring(start, end + 1);
+			}
+
+			// 실제 파싱
+			return new JSONObject(raw);
+		} catch (Exception e) {
+			System.err.println("[ERROR] GPT 응답 JSON 파싱 실패: " + e.getMessage());
+			return null;
+		}
 	}
 
 	private String extractSessionId(HttpServletRequest request) {
