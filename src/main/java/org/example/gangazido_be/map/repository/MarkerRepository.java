@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,5 +25,10 @@ public interface MarkerRepository extends JpaRepository<MarkerEntity, UUID> {
 		@Param("longitude") double longitude,
 		@Param("radius") double radius
 	);
+
+	// 사용자별 마커 갯수 제한
+	@Query("SELECT COUNT(m) FROM MarkerEntity m " +
+		"WHERE m.user_id = :userId AND m.createdAt >= :oneHourAgo AND m.deletedAt IS NULL")
+	long countMarkersInLastHour(@Param("userId") Integer userId, @Param("oneHourAgo") LocalDateTime oneHourAgo);
 }
 
