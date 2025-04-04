@@ -47,6 +47,8 @@ public class MarkerExceptionHandler {
 			response.put("message", "too_close_dangple");
 		} else if ("too_close_dangerous".equals(message)) {
 			response.put("message", "too_close_dangerous");
+		} else if ("too_close_mixed".equals(message)) {
+			response.put("message", "too_close_mixed");
 		} else {
 			response.put("message", "invalid_marker_id");
 		}
