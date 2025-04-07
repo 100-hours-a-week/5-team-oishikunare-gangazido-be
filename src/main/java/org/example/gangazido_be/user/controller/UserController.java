@@ -299,9 +299,17 @@ public class UserController {
 				throw UserAuthenticationException.unauthorized();
 			}
 
-			// 적어도 하나의 필드는 필요
-			if ((updateDTO.getNickname() == null || updateDTO.getNickname().isEmpty()) &&
-				(updateDTO.getProfileImageKey() == null || updateDTO.getProfileImageKey().isEmpty())) {
+			// 디버깅 로그 추가
+			logger.info("사용자 정보 업데이트 요청: userId={}, nickname={}, profileImageKey={}",
+				user.getId(), updateDTO.getNickname(), updateDTO.getProfileImageKey());
+
+			// 적어도 하나의 필드는 필요 - profileImageKey가 null이면 이미지 제거 요청으로 간주
+			boolean hasUpdateData = (updateDTO.getNickname() != null && !updateDTO.getNickname().isEmpty()) ||
+				updateDTO.getProfileImageKey() != null || // 이미지 키가 있음
+				"null".equals(updateDTO.getProfileImageKey()) || // "null" 문자열인 경우(클라이언트에 따라 다름)
+				updateDTO.getProfileImageKey() == null; // 명시적 null인 경우
+
+			if (!hasUpdateData) {
 				throw new UserValidationException("required_profile_update_data", "required_profile_update_data");
 			}
 
@@ -313,8 +321,12 @@ public class UserController {
 			}
 
 			// 프로필 이미지 업데이트
-			if (updateDTO.getProfileImageKey() != null && !updateDTO.getProfileImageKey().isEmpty()) {
-				// S3에 실제로 이미지가 존재하는지 확인
+			if (updateDTO.getProfileImageKey() == null || "null".equals(updateDTO.getProfileImageKey())) {
+				// profileImageKey가 명시적으로 null이면 이미지 제거
+				logger.info("프로필 이미지 제거 요청: userId={}", user.getId());
+				updatedUser = userService.updateProfileImage(updatedUser.getId(), null);
+			} else if (updateDTO.getProfileImageKey() != null && !updateDTO.getProfileImageKey().isEmpty()) {
+				// 새 이미지로 업데이트
 				if (!userService.checkImageExists(updateDTO.getProfileImageKey())) {
 					logger.warn("S3에 이미지가 존재하지 않음: {}", updateDTO.getProfileImageKey());
 					throw new UserValidationException("image_not_found", "업로드된 이미지를 찾을 수 없습니다");

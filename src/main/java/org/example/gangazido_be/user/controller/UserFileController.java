@@ -88,24 +88,26 @@ public class UserFileController {
 
 		try {
 			String fileKey = imageInfo.get("fileKey");
-			if (fileKey == null || fileKey.isEmpty()) {
-				return UserApiResponse.badRequest("missing_file_key");
+			String profileImageUrl = null;
+
+			// fileKey가 존재하는 경우에만 S3 처리 수행
+			if (fileKey != null && !fileKey.isEmpty()) {
+				// 파일이 S3에 실제로 업로드되었는지 확인
+				if (!userS3FileService.doesObjectExist(fileKey)) {
+					return UserApiResponse.badRequest("image_upload_incomplete");
+				}
+
+				// S3 URL 생성
+				profileImageUrl = userS3FileService.getS3Url(fileKey);
 			}
 
-			// 파일이 S3에 실제로 업로드되었는지 확인
-			if (!userS3FileService.doesObjectExist(fileKey)) {
-				return UserApiResponse.badRequest("image_upload_incomplete");
-			}
-
-			// S3 URL 생성
-			String profileImageUrl = userS3FileService.getS3Url(fileKey);
-
-			// 이전 프로필 이미지가 있는 경우 S3에서 삭제
-			if (user.getProfileImage() != null && !user.getProfileImage().isEmpty()) {
+			// 이전 프로필 이미지가 있고 새 이미지가 다르거나 null인 경우 S3에서 삭제
+			if (user.getProfileImage() != null && !user.getProfileImage().isEmpty() &&
+				(profileImageUrl == null || !user.getProfileImage().equals(profileImageUrl))) {
 				userS3FileService.deleteFile(user.getProfileImage());
 			}
 
-			// 사용자 프로필 이미지 정보 업데이트
+			// 사용자 프로필 이미지 정보 업데이트 (null인 경우에도 처리)
 			User updatedUser = userService.updateProfileImage(user.getId(), profileImageUrl);
 			session.setAttribute("user", updatedUser);
 
