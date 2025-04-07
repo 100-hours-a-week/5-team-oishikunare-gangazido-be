@@ -13,7 +13,7 @@ public class CorsConfig {	// 아래 코드대로하면 security에서 중단 예
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration config = new CorsConfiguration();
-		config.setAllowedOrigins(List.of("http://localhost:3000", "https://www.gangazido.com"));
+		config.setAllowedOrigins(List.of("http://localhost:3000", "https://www.gangazido.com", "https://dev.gangazido.com"));
 		config.setAllowedMethods(List.of("GET", "POST", "PATCH", "DELETE", "OPTIONS"));
 		config.setAllowedHeaders(List.of("*"));
 		config.setAllowCredentials(true);
