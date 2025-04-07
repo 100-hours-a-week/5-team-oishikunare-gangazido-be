@@ -62,7 +62,7 @@ public class MarkerExceptionHandler {
 		Map<String, Object> response = new LinkedHashMap<>();
 		String message = ex.getMessage();
 
-		if ("1시간에 최대 30개의 마커만 등록할 수 있습니다.".equals(message)) {
+		if ("1시간에 최대 10개의 마커만 등록할 수 있습니다.".equals(message)) {
 			response.put("message", "limit_exceeded");
 			response.put("error", message);
 			return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(response);
