@@ -3,7 +3,7 @@ name: 🚀 Develop Backend CI/CD
 on:
   push:
     branches:
-      - main  # 이걸 develop으로 바꾸는 걸 잊지 마!
+      - develop
 
 jobs:
   deploy:
