@@ -38,7 +38,7 @@ public class MarkerService {
 
 		// 최근 1시간 동안 마커 개수 조회
 		long recentCount = markerRepository.countMarkersInLastHour(userId, oneHourAgo);
-		if (recentCount >= 30) {
+		if (recentCount >= 10) {
 			throw new IllegalStateException("1시간에 최대 10개의 마커만 등록할 수 있습니다.");
 		}
 
