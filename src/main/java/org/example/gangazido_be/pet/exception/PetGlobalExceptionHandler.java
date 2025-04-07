@@ -1,6 +1,6 @@
 package org.example.gangazido_be.pet.exception;
 
-
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -10,9 +10,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-// 전역 예외 처리기
 @RestControllerAdvice("org.example.gangazido_be.pet")
 public class PetGlobalExceptionHandler {
+
 	private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String message) {
 		Map<String, Object> response = new LinkedHashMap<>();
 		response.put("message", message);
@@ -20,24 +20,26 @@ public class PetGlobalExceptionHandler {
 		return new ResponseEntity<>(response, status);
 	}
 
-	// DTO에서 @Valid로 발생한 예외 처리 (400)
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<Map<String, Object>> handleValidationException(MethodArgumentNotValidException ex) {
-		String message = (ex.getBindingResult().hasErrors() && ex.getBindingResult().getFieldError() != null) ? ex.getBindingResult().getFieldError().getDefaultMessage() : "invalid_request";
-
+		String message = (ex.getBindingResult().hasErrors() && ex.getBindingResult().getFieldError() != null) ?
+			ex.getBindingResult().getFieldError().getDefaultMessage() :
+			"invalid_request";
 		return buildResponse(HttpStatus.BAD_REQUEST, message);
 	}
 
-
-	// 비즈니스 로직에서 발생한 예외 처리 (400, 404 등)
 	@ExceptionHandler(PetException.class)
 	public ResponseEntity<Map<String, Object>> handlePetException(PetException ex) {
 		return buildResponse(ex.getStatus(), ex.getMessage());
 	}
 
-	// 그 외 예상치 못한 예외 (500)
 	@ExceptionHandler(Exception.class)
-	public ResponseEntity<Map<String, Object>> handleGlobalException(Exception ex) {
+	public ResponseEntity<Map<String, Object>> handleGlobalException(Exception ex, HttpServletRequest request) {
+		String uri = request.getRequestURI();
+		if (uri.startsWith("/actuator")) {
+			// actuator 요청은 스프링의 기본 예외 처리로 넘긴다
+			throw new RuntimeException(ex);
+		}
 		return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "internal_server_error");
 	}
 }

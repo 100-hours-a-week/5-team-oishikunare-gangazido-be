@@ -1,11 +1,16 @@
 package org.example.gangazido_be.user.config;
 
+import java.util.List;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
@@ -18,8 +23,9 @@ public class UserSecurityConfig {
 	}
 
 	@Bean
-	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+	public SecurityFilterChain securityFilterChain(HttpSecurity http, CorsConfigurationSource corsConfigurationSource) throws Exception {
 		http
+			.cors(cors -> cors.configurationSource(corsConfigurationSource))  // CorsConfig 변경에 따른 레첼 추가 코드
 			.csrf(csrf -> csrf.disable())  // API 서버이므로 CSRF 비활성화
 			.authorizeHttpRequests( auth -> auth
 					.requestMatchers("/**").permitAll()

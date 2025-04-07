@@ -47,8 +47,10 @@ repositories {
 }
 
 dependencies {
+    annotationProcessor 'org.projectlombok:lombok:1.18.26' //여니
     implementation 'io.github.cdimascio:dotenv-java:3.0.0' // 여니 추가
-    implementation 'org.json:json:20210307'//여니 추가
+    implementation 'org.json:json:20210307' //여니 추가
+    implementation 'io.github.cdimascio:dotenv-java:2.2.0' // 여니추가 env
 
     // Spring Boot 기본 의존성
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
@@ -86,10 +88,18 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     //프로메테우스 적용
     implementation 'io.micrometer:micrometer-registry-prometheus'
+
     //Redis
     implementation 'org.springframework.session:spring-session-data-redis'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
-    implementation 'org.springframework.boot:spring-boot-starter-cache' //여니 추가
+    implementation 'org.springframework.boot:spring-boot-starter-cache'
+
+    // aws s3 sdk 의존성 추가 (레첼, 잭 같은 버전)
+    implementation 'software.amazon.awssdk:s3:2.20.147'
+
+    // AWS SDK v2 Presigner & Core 모듈 (레첼 추가)
+    implementation 'software.amazon.awssdk:auth:2.20.147'
+    implementation 'software.amazon.awssdk:regions:2.20.147'
 }
 
 tasks.named('test') {

@@ -1,13 +1,10 @@
-// ✅ GPTService: OpenAI GPT API를 호출해서 텍스트를 생성하는 서비스 클래스
+// GPTService: OpenAI GPT API를 호출해서 텍스트를 생성하는 서비스 클래스
 package org.example.gangazido_be.gpt.service;
 
 import org.example.gangazido_be.pet.repository.PetRepository;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate; // 외부 api호출을 위한 spring 클래스
 import org.springframework.http.*;
-
 import com.fasterxml.jackson.databind.ObjectMapper; // json 처리용 잭슨 라이브러리
 
 import java.util.*;
@@ -17,16 +14,10 @@ public class GptService {
 // 환경변수에서 오픈 api 키를 가져옴
 	private final OpenAiConfig openAiConfig;
 	private static final String GPT_API_URL = "https://api.openai.com/v1/chat/completions";
-
-	//public void callOpenAi() {
-	//String apiKey = openAiConfig.getApiKey();
-	//private static final String API_KEY = System.getenv("OPENAI_API_KEY"); //OpenAI API 키
-	// OpenAI GPT API의 요청 URL (v1/chat/completions 엔드포인트)
-
-	private final PetRepository petRepository; //  PetRepository 주입 받아 사용 (현재 미사용이지만 필요시 사용 가능)
+	//private final PetRepository petRepository; //  PetRepository 주입 받아 사용 (현재 미사용이지만 필요시 사용 가능)
 	// 생성자 주입 방식으로 PetRepository 전달
 	public GptService(PetRepository petRepository, OpenAiConfig openAiConfig) {
-		this.petRepository = petRepository;
+		/* this.petRepository = petRepository; */
 		this.openAiConfig = openAiConfig;
 	}
 	//  입력 프롬프트를 기반으로 GPT가 생성한 텍스트를 반환하는 메서드
@@ -76,15 +67,15 @@ public class GptService {
 			//choices 배열에서 첫 번째 응답 선택
 			List<Map<String, Object>> choices = (List<Map<String, Object>>) responseMap.get("choices");
 			if (choices == null || choices.isEmpty()) {
-				System.err.println("⚠️ [ERROR] choices 배열이 비어 있음.");
-				return "⚠️ GPT 응답이 없습니다.";
+				System.err.println(" [ERROR] choices 배열이 비어 있음.");
+				return "GPT 응답이 없습니다.";
 			}
 
 			//각 choice 내에 있는 message에서 content 추출
 			Map<String, Object> message = (Map<String, Object>) choices.get(0).get("message");
 			if (message == null || !message.containsKey("content")) {
-				System.err.println("⚠️ [ERROR] message 필드에 content 없음.");
-				return "⚠️ GPT 응답 메시지를 찾을 수 없습니다.";
+				System.err.println(" [ERROR] message 필드에 content 없음.");
+				return " GPT 응답 메시지를 찾을 수 없습니다.";
 			}
 			System.out.println("[DEBUG] OpenAI API 응답 원본: " + response.getBody()); // 원본 응답 확인
 			System.out.println("[DEBUG] OpenAI API 요청 JSON: " + objectMapper.writeValueAsString(requestBody));

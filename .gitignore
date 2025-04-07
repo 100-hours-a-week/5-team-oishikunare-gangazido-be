@@ -41,7 +41,6 @@ out/
 
 ### DB ###
 application.properties
-application.yml
 
 # 이미지/파일 업로드 디렉토리 (레첼 추가)
 uploads/

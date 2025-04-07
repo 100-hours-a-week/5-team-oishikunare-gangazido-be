@@ -5,11 +5,16 @@ import org.example.gangazido_be.user.dto.UserLoginRequestDTO;
 import org.example.gangazido_be.user.dto.UserPasswordChangeRequestDTO;
 import org.example.gangazido_be.user.dto.UserDTO;
 import org.example.gangazido_be.user.entity.User;
+import org.example.gangazido_be.user.exception.*;
 import org.example.gangazido_be.user.service.UserService;
 import org.example.gangazido_be.user.util.UserApiMessages;
 import org.example.gangazido_be.user.util.UserIdEncryptionUtil;
 import org.example.gangazido_be.user.validator.UserPasswordValidator;
+import org.example.gangazido_be.user.service.UserS3FileService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -21,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -34,69 +40,41 @@ import java.util.Date;
 public class UserController {
 	private final UserService userService;
 	private final UserIdEncryptionUtil idEncryptionUtil;
+	private final UserS3FileService userS3FileService;
 	private final Logger logger = LoggerFactory.getLogger(UserController.class);
 
 	@Autowired
-	public UserController(UserService userService, UserIdEncryptionUtil idEncryptionUtil) {
+	public UserController(UserService userService, UserS3FileService userS3FileService, UserIdEncryptionUtil idEncryptionUtil) {
 		this.userService = userService;
+		this.userS3FileService = userS3FileService;
 		this.idEncryptionUtil = idEncryptionUtil;
 	}
 
-	@PostMapping(value = "/signup", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@PostMapping("/signup")
 	public ResponseEntity<UserApiResponse<Map<String, Object>>> registerUser(
-		@RequestPart("user_email") String email,
-		@RequestPart("user_password") String password,
-		@RequestPart("user_password_confirm") String passwordConfirm,
-		@RequestPart("user_nickname") String nickname,
-		@RequestPart(value = "user_profileImage", required = false) MultipartFile profileImage,
+		@Valid @RequestBody UserDTO userDTO,
 		HttpSession session,
 		HttpServletResponse response) {
+
 		try {
-			// 입력값 검증
-			if (email == null || email.isEmpty()) {
-				return UserApiResponse.badRequest("required_email");
+			// 비밀번호 일치 확인
+			if (!userDTO.isPasswordMatching()) {
+				return UserApiResponse.badRequest("password_mismatch");
 			}
 
-			// 이메일 형식 검증
-			if (!email.matches("^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$")) {
-				return UserApiResponse.badRequest("invalid_email_format");
-			}
+			// 이미지 키 처리 부분 확인 및 개선
+			if (userDTO.getProfileImageKey() != null && !userDTO.getProfileImageKey().isEmpty()) {
+				// S3에 실제로 이미지가 존재하는지 확인
+				if (!userService.checkImageExists(userDTO.getProfileImageKey())) {
+					logger.warn("S3에 이미지가 존재하지 않음: {}", userDTO.getProfileImageKey());
+					return UserApiResponse.badRequest("image_not_found");
+				}
 
-			if (password == null || password.isEmpty()) {
-				return UserApiResponse.badRequest("required_password");
+				// 이미지 URL 생성 및 설정
+				String profileImageUrl = userService.getProfileImageUrlFromKey(userDTO.getProfileImageKey());
+				userDTO.setProfileImageUrl(profileImageUrl);
+				logger.info("프로필 이미지 URL 생성: {}", profileImageUrl);
 			}
-
-			if (nickname == null || nickname.isEmpty()) {
-				return UserApiResponse.badRequest("required_nickname");
-			}
-
-			// 닉네임 길이 검증
-			if (nickname.length() < 2 || nickname.length() > 20) {
-				return UserApiResponse.badRequest("invalid_nickname_length");
-			}
-
-			// 비밀번호 확인 처리 추가
-			if (passwordConfirm == null || passwordConfirm.isEmpty()) {
-				return UserApiResponse.badRequest("required_password_confirm");
-			}
-
-			// 비밀번호 확인 유효성 검사
-			if (!UserPasswordValidator.isValid(passwordConfirm)) {
-				return UserApiResponse.badRequest("invalid_password_confirm");
-			}
-
-			// 비밀번호 복잡성 검증
-			if (!UserPasswordValidator.isValid(password)) {
-				return UserApiResponse.badRequest(UserPasswordValidator.getValidationMessage());
-			}
-
-			// DTO 생성
-			UserDTO userDTO = UserDTO.builder()
-				.email(email)
-				.password(password)
-				.nickname(nickname)
-				.profileImage(profileImage)
-				.build();
 
 			// 사용자 등록
 			User registeredUser = userService.registerUser(userDTO);
@@ -110,65 +88,96 @@ public class UserController {
 			Map<String, Object> responseData = new HashMap<>();
 			responseData.put("userId", encryptedId);
 			responseData.put("nickname", registeredUser.getNickname());
+			responseData.put("profileImage", registeredUser.getProfileImage());
 
 			return UserApiResponse.success(UserApiMessages.USER_CREATED, responseData);
-		} catch (RuntimeException e) {
+		} catch (UserException e) {
 			logger.warn("회원가입 실패: {}", e.getMessage());
-
-			// 예외 메시지에 따른 처리
-			String errorMessage = e.getMessage();
-
-			if ("duplicate_email".equals(errorMessage)) {
-				return UserApiResponse.badRequest("duplicate_email");
-			} else if ("duplicate_nickname".equals(errorMessage)) {
-				return UserApiResponse.badRequest("duplicate_nickname");
-			} else if (errorMessage != null && errorMessage.contains("Data too long for column 'nickname'")) {
-				return UserApiResponse.badRequest("invalid_nickname_length");
-			} else if ("invalid_password_format".equals(errorMessage)) {
-				return UserApiResponse.badRequest("invalid_password_format");
-			} else {
-				return UserApiResponse.badRequest(errorMessage);
-			}
+			return UserApiResponse.badRequest(e.getErrorCode());
 		} catch (Exception e) {
 			logger.error("서버 오류: ", e);
 			return UserApiResponse.internalError(UserApiMessages.INTERNAL_ERROR);
 		}
 	}
 
+	// 인증 없이 s3 presigned url 가져오는 api
+	@PostMapping("/signup/profile-image-upload-url")
+	public ResponseEntity<UserApiResponse<Map<String, String>>> getSignupProfileImageUploadUrl(
+		@RequestBody Map<String, String> fileInfo) {
+
+		try {
+			String fileExtension = fileInfo.get("fileExtension");
+			String contentType = fileInfo.get("contentType");
+
+			// 파일 확장자 검증
+			if (fileExtension == null || !fileExtension.matches("\\.(jpg|jpeg|png|gif)$")) {
+				return UserApiResponse.badRequest("invalid_file_extension");
+			}
+
+			// MIME 타입 검증
+			if (contentType == null || !contentType.startsWith("image/")) {
+				return UserApiResponse.badRequest("invalid_content_type");
+			}
+
+			Map<String, String> presignedData = userS3FileService.generatePresignedUrlForProfileImage(
+				fileExtension, contentType);
+
+			return UserApiResponse.success("presigned_url_generated", presignedData);
+		} catch (Exception e) {
+			logger.error("Presigned URL 생성 오류: ", e);
+			return UserApiResponse.internalError("internal_server_error");
+		}
+	}
+
 	@PostMapping("/login")
+	@Operation(summary = "사용자 로그인", description = "이메일과 비밀번호로 로그인합니다")
+	@io.swagger.v3.oas.annotations.parameters.RequestBody(
+		description = "로그인 정보",
+		required = true,
+		content = @Content(schema = @Schema(implementation = UserLoginRequestDTO.class))
+	)
 	public ResponseEntity<UserApiResponse<Map<String, Object>>> login(
-		@Valid @RequestBody UserLoginRequestDTO loginRequest,
+		@RequestBody(required = false) Map<String, Object> requestMap,
 		HttpSession session,
 		HttpServletResponse response) {
 		try {
-			// 입력값 유효성 검사
-			if (loginRequest.getEmail() == null || loginRequest.getEmail().isEmpty()) {
+			// 기본 null 체크만 유지하고 서비스에 위임
+			if (requestMap == null) {
+				logger.warn("로그인 실패: 요청 데이터가 null");
+				return UserApiResponse.badRequest("required_email_and_password");
+			}
+
+			Object emailObj = requestMap.get("user_email");
+			Object passwordObj = requestMap.get("user_password");
+
+			if (emailObj == null) {
+				logger.warn("로그인 실패: 이메일 필드 누락");
 				return UserApiResponse.badRequest("required_email");
 			}
 
-			if (loginRequest.getPassword() == null || loginRequest.getPassword().isEmpty()) {
+			if (passwordObj == null) {
+				logger.warn("로그인 실패: 비밀번호 필드 누락");
 				return UserApiResponse.badRequest("required_password");
 			}
 
-			User user = userService.login(loginRequest.getEmail(), loginRequest.getPassword());
+			String email = emailObj.toString();
+			String password = passwordObj.toString();
+
+			// 서비스 호출 - 유효성 검증은 서비스에서 처리
+			User user = userService.login(email, password);
 
 			// 세션 및 쿠키 설정
 			setSessionAndCookie(user, session, response);
 
 			Map<String, Object> responseData = new HashMap<>();
 			responseData.put("nickname", user.getNickname());
+			responseData.put("userId", user.getId());
+			responseData.put("profileImage", user.getProfileImage());
 
 			return UserApiResponse.success(UserApiMessages.LOGIN_SUCCESS, responseData);
-		} catch (RuntimeException e) {
-			String errorMessage = e.getMessage();
-
-			// 모든 비밀번호/이메일 관련 오류는 통일된 메시지 사용
-			if ("missing_email".equals(errorMessage) || "invalid_password".equals(errorMessage)) {
-				return UserApiResponse.badRequest("invalid_email_or_password");
-			} else {
-				logger.warn("로그인 실패: {}", e.getMessage());
-				return UserApiResponse.badRequest("invalid_email_or_password");
-			}
+		} catch (UserException e) {
+			logger.warn("로그인 실패: {}", e.getMessage());
+			return UserApiResponse.badRequest(e.getErrorCode());
 		} catch (Exception e) {
 			logger.error("서버 오류: ", e);
 			return UserApiResponse.internalError("internal_server_error");
@@ -177,20 +186,42 @@ public class UserController {
 
 	// 사용자 정보 확인 API
 	@GetMapping("/me")
-	public ResponseEntity<UserApiResponse<Map<String, Object>>> getCurrentUser(HttpSession session) {
-		User user = (User) session.getAttribute("user");
-
-		if (user == null) {
-			return UserApiResponse.unauthorized(UserApiMessages.UNAUTHORIZED);
+	public ResponseEntity<UserApiResponse<Map<String, Object>>> getCurrentUser(HttpServletRequest request, HttpSession session) {
+		// 모든 쿠키 출력
+		Cookie[] cookies = request.getCookies();
+		if (cookies != null) {
+			for (Cookie cookie : cookies) {
+				logger.info("쿠키: {}={}", cookie.getName(), cookie.getValue());
+			}
+		} else {
+			logger.warn("요청에 쿠키가 없습니다!");
 		}
 
-		Map<String, Object> responseData = new HashMap<>();
-		responseData.put("userId", idEncryptionUtil.encrypt(user.getId()));
-		responseData.put("email", user.getEmail());
-		responseData.put("nickname", user.getNickname());
-		responseData.put("profileImage", user.getProfileImage());
+		// 세션 정보 출력
+		logger.info("세션 ID: {}", session.getId());
+		logger.info("사용자 정보: {}", session.getAttribute("user"));
 
-		return UserApiResponse.success(UserApiMessages.SUCCESS, responseData);
+		try {
+			User user = (User) session.getAttribute("user");
+
+			if (user == null) {
+				throw UserAuthenticationException.unauthorized();
+			}
+
+			Map<String, Object> responseData = new HashMap<>();
+			responseData.put("userId", user.getId());
+			responseData.put("email", user.getEmail());
+			responseData.put("nickname", user.getNickname());
+			responseData.put("profileImage", user.getProfileImage());
+
+			return UserApiResponse.success(UserApiMessages.SUCCESS, responseData);
+		} catch (UserException e) {
+			logger.warn("사용자 정보 조회 실패: {}", e.getMessage());
+			return UserApiResponse.badRequest(e.getErrorCode());
+		} catch (Exception e) {
+			logger.error("서버 오류: ", e);
+			return UserApiResponse.internalError(UserApiMessages.INTERNAL_ERROR);
+		}
 	}
 
 	@PostMapping("/logout")
@@ -206,7 +237,7 @@ public class UserController {
 			Cookie[] cookies = request.getCookies();
 			if (cookies != null) {
 				for (Cookie cookie : cookies) {
-					if (cookie.getName().equals("SESSIONID")) {
+					if (cookie.getName().equals("JSESSIONID")) {
 						cookie.setValue("");
 						cookie.setPath("/");
 						cookie.setMaxAge(0);
@@ -225,66 +256,86 @@ public class UserController {
 
 	// 중복 이메일 확인 API
 	@GetMapping("/check-email")
-	public ResponseEntity<UserApiResponse<Map<String, Boolean>>> checkEmailDuplicate(@RequestParam String email) {
-		boolean isDuplicate = userService.isEmailDuplicate(email);
-		Map<String, Boolean> responseData = Map.of("isDuplicate", isDuplicate);
-		return UserApiResponse.success(UserApiMessages.SUCCESS, responseData);
+	public ResponseEntity<UserApiResponse<Map<String, Boolean>>> checkEmailDuplicate(
+		@RequestParam(required = false) String email) {
+		try {
+			boolean isDuplicate = userService.isEmailDuplicate(email);
+			Map<String, Boolean> responseData = Map.of("isDuplicate", isDuplicate);
+			return UserApiResponse.success(UserApiMessages.SUCCESS, responseData);
+		} catch (UserException e) {
+			logger.warn("이메일 중복 체크 실패: {}", e.getMessage());
+			return UserApiResponse.badRequest(e.getErrorCode());
+		} catch (Exception e) {
+			logger.error("서버 오류: ", e);
+			return UserApiResponse.internalError(UserApiMessages.INTERNAL_ERROR);
+		}
 	}
 
 	// 중복 닉네임 확인 API
 	@GetMapping("/check-nickname")
-	public ResponseEntity<UserApiResponse<Map<String, Boolean>>> checkNicknameDuplicate(@RequestParam String nickname) {
-		boolean isDuplicate = userService.isNicknameDuplicate(nickname);
-		logger.info("닉네임 중복 체크: {}, 결과: {}", nickname, isDuplicate);
-		Map<String, Boolean> responseData = Map.of("isDuplicate", isDuplicate);
-		return UserApiResponse.success(UserApiMessages.SUCCESS, responseData);
+	public ResponseEntity<UserApiResponse<Map<String, Boolean>>> checkNicknameDuplicate(
+		@RequestParam(required = false) String nickname) {
+		try {
+			boolean isDuplicate = userService.isNicknameDuplicate(nickname);
+			logger.info("닉네임 중복 체크: {}, 결과: {}", nickname, isDuplicate);
+			Map<String, Boolean> responseData = Map.of("isDuplicate", isDuplicate);
+			return UserApiResponse.success(UserApiMessages.SUCCESS, responseData);
+		} catch (UserException e) {
+			logger.warn("닉네임 중복 체크 실패: {}", e.getMessage());
+			return UserApiResponse.badRequest(e.getErrorCode());
+		} catch (Exception e) {
+			logger.error("서버 오류: ", e);
+			return UserApiResponse.internalError(UserApiMessages.INTERNAL_ERROR);
+		}
 	}
 
-	@PatchMapping(value = "/me", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@PatchMapping("/me")
 	public ResponseEntity<UserApiResponse<Map<String, Object>>> updateMyInfo(
-		@RequestPart(value = "user_nickname", required = false) String nickname,
-		@RequestPart(value = "user_profile_image", required = false) MultipartFile profileImage,
+		@RequestBody UserDTO updateDTO,
 		HttpSession session) {
-
-		User user = (User) session.getAttribute("user");
-		if (user == null) {
-			return UserApiResponse.unauthorized(UserApiMessages.UNAUTHORIZED);
-		}
-
 		try {
-			// 닉네임과 프로필 이미지가 둘 다 제공되지 않은 경우 처리
-			if ((nickname == null || nickname.isEmpty()) &&
-				(profileImage == null || profileImage.isEmpty())) {
-				return UserApiResponse.badRequest("profile_update_data_required");
+			User user = (User) session.getAttribute("user");
+			if (user == null) {
+				throw UserAuthenticationException.unauthorized();
 			}
 
-			// 닉네임 유효성 검사
-			if (nickname != null && !nickname.isEmpty()) {
-				// 제어 문자 제거
-				nickname = nickname.replaceAll("[\\p{Cntrl}]", "");
+			// 디버깅 로그 추가
+			logger.info("사용자 정보 업데이트 요청: userId={}, nickname={}, profileImageKey={}",
+				user.getId(), updateDTO.getNickname(), updateDTO.getProfileImageKey());
 
-				// 빈 문자열이 되면 처리
-				if (nickname.isEmpty()) {
-					return UserApiResponse.badRequest("valid_nickname_required");
-				}
+			// 적어도 하나의 필드는 필요 - profileImageKey가 null이면 이미지 제거 요청으로 간주
+			boolean hasUpdateData = (updateDTO.getNickname() != null && !updateDTO.getNickname().isEmpty()) ||
+				updateDTO.getProfileImageKey() != null || // 이미지 키가 있음
+				"null".equals(updateDTO.getProfileImageKey()) || // "null" 문자열인 경우(클라이언트에 따라 다름)
+				updateDTO.getProfileImageKey() == null; // 명시적 null인 경우
 
-				// 길이 제한 검사
-				if (nickname.length() < 2 || nickname.length() > 20) {
-					return UserApiResponse.badRequest("invalid_nickname_length");
-				}
-
-				// 닉네임 중복 검사 (현재 사용자의 닉네임은 제외)
-				if (!nickname.equals(user.getNickname()) && userService.isNicknameDuplicate(nickname)) {
-					return UserApiResponse.badRequest("duplicate_nickname");
-				}
+			if (!hasUpdateData) {
+				throw new UserValidationException("required_profile_update_data", "required_profile_update_data");
 			}
 
-			// 프로필 이미지 파일 크기 검사 (예: 5MB 제한)
-			if (profileImage != null && !profileImage.isEmpty() && profileImage.getSize() > 5 * 1024 * 1024) {
-				return UserApiResponse.badRequest("profile_image_too_large");
+			User updatedUser = user;
+
+			// 닉네임 업데이트
+			if (updateDTO.getNickname() != null && !updateDTO.getNickname().isEmpty()) {
+				updatedUser = userService.updateUserInfo(user.getId(), updateDTO.getNickname());
 			}
 
-			User updatedUser = userService.updateUserInfo(user.getId(), nickname, profileImage);
+			// 프로필 이미지 업데이트
+			if (updateDTO.getProfileImageKey() == null || "null".equals(updateDTO.getProfileImageKey())) {
+				// profileImageKey가 명시적으로 null이면 이미지 제거
+				logger.info("프로필 이미지 제거 요청: userId={}", user.getId());
+				updatedUser = userService.updateProfileImage(updatedUser.getId(), null);
+			} else if (updateDTO.getProfileImageKey() != null && !updateDTO.getProfileImageKey().isEmpty()) {
+				// 새 이미지로 업데이트
+				if (!userService.checkImageExists(updateDTO.getProfileImageKey())) {
+					logger.warn("S3에 이미지가 존재하지 않음: {}", updateDTO.getProfileImageKey());
+					throw new UserValidationException("image_not_found", "업로드된 이미지를 찾을 수 없습니다");
+				}
+
+				String profileImageUrl = userService.getProfileImageUrlFromKey(updateDTO.getProfileImageKey());
+				updatedUser = userService.updateProfileImage(updatedUser.getId(), profileImageUrl);
+			}
+
 			session.setAttribute("user", updatedUser); // 세션 업데이트
 
 			Map<String, Object> responseData = new HashMap<>();
@@ -293,23 +344,9 @@ public class UserController {
 			responseData.put("profileImage", updatedUser.getProfileImage());
 
 			return UserApiResponse.success("update_user_data_success", responseData);
-		} catch (RuntimeException e) {
+		} catch (UserException e) {
 			logger.warn("사용자 정보 업데이트 실패: {}", e.getMessage());
-
-			// 구체적인 예외 메시지 처리
-			String errorMessage = e.getMessage();
-
-			if ("duplicate_nickname".equals(errorMessage)) {
-				return UserApiResponse.badRequest("duplicate_nickname");
-			} else if ("invalid_nickname_format".equals(errorMessage)) {
-				return UserApiResponse.badRequest("invalid_nickname_format");
-			} else if ("invalid_nickname_length".equals(errorMessage)) {
-				return UserApiResponse.badRequest("invalid_nickname_length");
-			} else if (errorMessage != null && errorMessage.contains("Data too long for column 'nickname'")) {
-				return UserApiResponse.badRequest("invalid_nickname_length");
-			} else {
-				return UserApiResponse.badRequest(errorMessage);
-			}
+			return UserApiResponse.badRequest(e.getErrorCode());
 		} catch (Exception e) {
 			logger.error("서버 오류: ", e);
 			return UserApiResponse.internalError(UserApiMessages.INTERNAL_ERROR);
@@ -321,13 +358,12 @@ public class UserController {
 		HttpServletRequest request,
 		HttpServletResponse response,
 		HttpSession session) {
-
-		User user = (User) session.getAttribute("user");
-		if (user == null) {
-			return UserApiResponse.unauthorized(UserApiMessages.UNAUTHORIZED);
-		}
-
 		try {
+			User user = (User) session.getAttribute("user");
+			if (user == null) {
+				throw UserAuthenticationException.unauthorized();
+			}
+
 			// 회원 탈퇴 처리
 			userService.deleteUser(user.getId());
 
@@ -349,9 +385,9 @@ public class UserController {
 			}
 
 			return UserApiResponse.success(UserApiMessages.USER_DELETED, null);
-		} catch (RuntimeException e) {
+		} catch (UserException e) {
 			logger.warn("회원 탈퇴 실패: {}", e.getMessage());
-			return UserApiResponse.badRequest(e.getMessage());
+			return UserApiResponse.badRequest(e.getErrorCode());
 		} catch (Exception e) {
 			logger.error("서버 오류: ", e);
 			return UserApiResponse.internalError(UserApiMessages.INTERNAL_ERROR);
@@ -360,78 +396,34 @@ public class UserController {
 
 	@PatchMapping("/me/password")
 	public ResponseEntity<UserApiResponse<Object>> changePassword(
-		@Valid @RequestBody UserPasswordChangeRequestDTO requestDTO,
+		@Valid @RequestBody(required = false) UserPasswordChangeRequestDTO requestDTO,
 		HttpSession session) {
-
-		User user = (User) session.getAttribute("user");
-		if (user == null) {
-			return UserApiResponse.unauthorized("required_authorization");
-		}
-
 		try {
-			// 현재 비밀번호 검증
-			if (requestDTO.getCurrentPassword() == null || requestDTO.getCurrentPassword().isEmpty()) {
-				return UserApiResponse.badRequest("required_current_password");
+			// 기본 null 체크만 수행
+			if (requestDTO == null) {
+				throw new UserValidationException("required_password_data", "required_password_data");
 			}
 
-			// 새 비밀번호 검증
-			if (requestDTO.getNewPassword() == null || requestDTO.getNewPassword().isEmpty()) {
-				return UserApiResponse.badRequest("required_new_password"); // 수정
+			User user = (User) session.getAttribute("user");
+			if (user == null) {
+				throw UserAuthenticationException.unauthorized();
 			}
 
-			// 비밀번호 확인 메시지 처리 추가
-			if (!UserPasswordValidator.isValid(requestDTO.getNewPassword())) {
-				return UserApiResponse.badRequest("invalid_new_password_format");
-			}
-
-			if (requestDTO.getNewPassword().length() < 8 || requestDTO.getNewPassword().length() > 20) {
-				return UserApiResponse.badRequest("invalid_new_password_length");
-			}
-
-			if (requestDTO.getConfirmPassword() == null || requestDTO.getConfirmPassword().isEmpty()) {
-				return UserApiResponse.badRequest("required_new_password_confirm");
-			}
-
-			if (!UserPasswordValidator.isValid(requestDTO.getConfirmPassword())) {
-				return UserApiResponse.badRequest("invalid_new_password_confirm_format");
-			}
-
-			if (requestDTO.getConfirmPassword().length() < 8 || requestDTO.getConfirmPassword().length() > 20) {
-				return UserApiResponse.badRequest("invalid_new_password_confirm_length");
-			}
-
-			// 새 비밀번호와 확인 비밀번호 일치 확인
-			if (!requestDTO.getNewPassword().equals(requestDTO.getConfirmPassword())) {
-				return UserApiResponse.badRequest("passwords_do_not_match");
-			}
-
-			// 비밀번호 복잡성 검증
-			if (!UserPasswordValidator.isValid(requestDTO.getNewPassword())) {
-				return UserApiResponse.badRequest("invalid_new_password_format");
-			}
-
+			// 서비스 호출 - 유효성 검증은 서비스에서 처리
+			// 단, 서비스 메소드를 수정하여 비밀번호 확인까지 처리하도록 변경 필요
 			User updatedUser = userService.changePassword(
 				user.getId(),
 				requestDTO.getCurrentPassword(),
-				requestDTO.getNewPassword()
+				requestDTO.getNewPassword(),
+				requestDTO.getConfirmPassword() // 서비스 메소드 수정 필요
 			);
 
 			session.setAttribute("user", updatedUser); // 세션 업데이트
 
 			return UserApiResponse.success(UserApiMessages.PASSWORD_CHANGED, null);
-		} catch (RuntimeException e) {
-			String errorMessage = e.getMessage();
-
-			if ("invalid_current_password".equals(errorMessage)) {
-				return UserApiResponse.badRequest("invalid_current_password");
-			} else if ("missing_user".equals(errorMessage)) {
-				return UserApiResponse.badRequest("user_not_found");
-			} else if (errorMessage.startsWith("invalid_password_")) {
-				return UserApiResponse.badRequest(errorMessage);
-			} else {
-				logger.warn("비밀번호 변경 실패: {}", errorMessage);
-				return UserApiResponse.badRequest(errorMessage);
-			}
+		} catch (UserException e) {
+			logger.warn("비밀번호 변경 실패: {}", e.getMessage());
+			return UserApiResponse.badRequest(e.getErrorCode());
 		} catch (Exception e) {
 			logger.error("서버 오류: ", e);
 			return UserApiResponse.internalError("internal_server_error");
@@ -440,19 +432,80 @@ public class UserController {
 
 	// 공통 세션 및 쿠키 설정 메서드
 	private void setSessionAndCookie(User user, HttpSession session, HttpServletResponse response) {
+		// // 세션에 사용자 정보 저장
+		// session.setAttribute("user", user);
+		// session.setMaxInactiveInterval(3600); // 세션 유효시간 1시간
+		//
+		// // 쿠키 설정 (세션 ID 저장)
+		// Cookie sessionCookie = new Cookie("JSESSIONID", session.getId());
+		// sessionCookie.setPath("/");
+		// sessionCookie.setHttpOnly(true);
+		// sessionCookie.setSecure(false); // HTTPS 환경에서만 사용 해제
+		// sessionCookie.setMaxAge(3600); // 1시간 유효
+		// response.addCookie(sessionCookie);
+		//
+		// // 디버깅 로그 추가
+		// logger.debug("쿠키 설정 완료: {}, 세션 ID: {}", sessionCookie.getName(), session.getId());
+
+		/** 이거 원래 쓰던거임
 		// 세션에 사용자 정보 저장
 		session.setAttribute("user", user);
 		session.setMaxInactiveInterval(3600); // 세션 유효시간 1시간
 
 		// 쿠키 설정 (세션 ID 저장)
 		Cookie sessionCookie = new Cookie("JSESSIONID", session.getId());
+
+		// 모든 경로에서 접근 가능하도록 설정
 		sessionCookie.setPath("/");
+
+		// XSS 공격 방지를 위한 HttpOnly 활성화
 		sessionCookie.setHttpOnly(true);
-		sessionCookie.setSecure(false); // HTTPS 환경에서만 사용 해제
-		sessionCookie.setMaxAge(3600); // 1시간 유효
+
+		// HTTPS 환경이므로 Secure 활성화
+		sessionCookie.setSecure(true);
+
+		// 도메인 설정 (www 서브도메인 포함)
+		sessionCookie.setDomain(".gangazido.com");
+
+		// 1시간 유효
+		sessionCookie.setMaxAge(3600);
+
+		// 브라우저에 쿠키 등록
 		response.addCookie(sessionCookie);
 
+		// SameSite 설정 (브라우저 호환성을 위해 자바 쿠키에서는 직접 헤더 설정 필요)
+		// 현재 자바의 Cookie 클래스는 SameSite 속성을 직접 지원하지 않음
+		response.setHeader("Set-Cookie", sessionCookie.getName() + "=" + sessionCookie.getValue() +
+			"; Max-Age=" + sessionCookie.getMaxAge() +
+			"; Path=" + sessionCookie.getPath() +
+			"; Domain=" + sessionCookie.getDomain() +
+			"; HttpOnly" +
+			"; Secure" +
+			"; SameSite=None");
+
 		// 디버깅 로그 추가
-		logger.debug("쿠키 설정 완료: {}, 세션 ID: {}", sessionCookie.getName(), session.getId());
+		logger.debug("쿠키 설정 완료: {}, 세션 ID: {}, 도메인: {}",
+			sessionCookie.getName(), session.getId(), sessionCookie.getDomain());
+		 **/
+
+		// 세션에 사용자 정보 저장
+		session.setAttribute("user", user);
+		session.setMaxInactiveInterval(3600); // 세션 유효시간 1시간
+
+		// JSESSIONID 수동으로 Set-Cookie 헤더 설정 (서브도메인 포함 + SameSite=None)
+		String sessionId = session.getId();
+
+		String cookieValue = "JSESSIONID=" + sessionId +
+			"; Path=/" +
+			"; Max-Age=3600" +
+			"; HttpOnly" +
+			"; Secure" +
+			"; SameSite=None";
+
+		// 헤더로 명시적으로 설정
+		response.setHeader("Set-Cookie", cookieValue);
+
+		// 디버깅 로그
+		logger.debug("쿠키 설정 완료: {}, 세션 ID: {}, 도메인: {}", "JSESSIONID", sessionId, "gangazido.com");
 	}
 }
