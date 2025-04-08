@@ -69,55 +69,45 @@ public class UserFileController {
 		}
 	}
 
-	/**
-	 * 프로필 이미지 업로드 완료 후 사용자 정보 업데이트
-	 *
-	 * @param imageInfo 업로드된 이미지 정보
-	 * @param session 세션 객체
-	 * @return 업데이트된 사용자 정보
-	 */
-	@PostMapping("/profile-image-update")
-	public ResponseEntity<UserApiResponse<Map<String, Object>>> updateProfileImage(
-		@RequestBody Map<String, String> imageInfo,
-		HttpSession session) {
-
-		User user = (User) session.getAttribute("user");
-		if (user == null) {
-			return UserApiResponse.unauthorized("unauthorized");
-		}
-
-		try {
-			String fileKey = imageInfo.get("fileKey");
-			String profileImageUrl = null;
-
-			// fileKey가 존재하는 경우에만 S3 처리 수행
-			if (fileKey != null && !fileKey.isEmpty()) {
-				// 파일이 S3에 실제로 업로드되었는지 확인
-				if (!userS3FileService.doesObjectExist(fileKey)) {
-					return UserApiResponse.badRequest("image_upload_incomplete");
-				}
-
-				// S3 URL 생성
-				profileImageUrl = userS3FileService.getS3Url(fileKey);
-			}
-
-			// 이전 프로필 이미지가 있고 새 이미지가 다르거나 null인 경우 S3에서 삭제
-			if (user.getProfileImage() != null && !user.getProfileImage().isEmpty() &&
-				(profileImageUrl == null || !user.getProfileImage().equals(profileImageUrl))) {
-				userS3FileService.deleteFile(user.getProfileImage());
-			}
-
-			// 사용자 프로필 이미지 정보 업데이트 (null인 경우에도 처리)
-			User updatedUser = userService.updateProfileImage(user.getId(), profileImageUrl);
-			session.setAttribute("user", updatedUser);
-
-			Map<String, Object> responseData = new HashMap<>();
-			responseData.put("profileImage", updatedUser.getProfileImage());
-
-			return UserApiResponse.success("profile_image_updated", responseData);
-		} catch (Exception e) {
-			logger.error("프로필 이미지 업데이트 오류: ", e);
-			return UserApiResponse.internalError("internal_server_error");
-		}
-	}
+	// @PostMapping("/profile-image-update")
+	// public ResponseEntity<UserApiResponse<Map<String, Object>>> updateProfileImage(
+	// 	@RequestBody Map<String, String> imageInfo,
+	// 	HttpSession session) {
+	//
+	// 	User user = (User) session.getAttribute("user");
+	// 	if (user == null) {
+	// 		return UserApiResponse.unauthorized("unauthorized");
+	// 	}
+	//
+	// 	try {
+	// 		String fileKey = imageInfo.get("fileKey");
+	//
+	// 		// fileKey가 존재하는 경우에만 S3 처리 수행
+	// 		if (fileKey != null && !fileKey.isEmpty()) {
+	// 			// 파일이 S3에 실제로 업로드되었는지 확인
+	// 			if (!userS3FileService.doesObjectExist(fileKey)) {
+	// 				return UserApiResponse.badRequest("image_upload_incomplete");
+	// 			}
+	// 		}
+	//
+	// 		// 사용자 프로필 이미지 정보 업데이트 (null인 경우에도 처리)
+	// 		// fileKey를 직접 저장 - URL 생성 로직 제거
+	// 		User updatedUser = userService.updateProfileImage(user.getId(), fileKey);
+	// 		session.setAttribute("user", updatedUser);
+	//
+	// 		Map<String, Object> responseData = new HashMap<>();
+	//
+	// 		// CloudFront URL로 변환하여 응답
+	// 		if (updatedUser.getProfileImage() != null && !updatedUser.getProfileImage().isEmpty()) {
+	// 			responseData.put("profileImage", userService.getCloudFrontUrlFromKey(updatedUser.getProfileImage()));
+	// 		} else {
+	// 			responseData.put("profileImage", null);
+	// 		}
+	//
+	// 		return UserApiResponse.success("profile_image_updated", responseData);
+	// 	} catch (Exception e) {
+	// 		logger.error("프로필 이미지 업데이트 오류: ", e);
+	// 		return UserApiResponse.internalError("internal_server_error");
+	// 	}
+	// }
 }

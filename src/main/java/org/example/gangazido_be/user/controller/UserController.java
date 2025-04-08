@@ -62,7 +62,7 @@ public class UserController {
 				return UserApiResponse.badRequest("password_mismatch");
 			}
 
-			// 이미지 키 처리 부분 확인 및 개선
+			// 이미지 키 처리 부분 수정
 			if (userDTO.getProfileImageKey() != null && !userDTO.getProfileImageKey().isEmpty()) {
 				// S3에 실제로 이미지가 존재하는지 확인
 				if (!userService.checkImageExists(userDTO.getProfileImageKey())) {
@@ -70,10 +70,7 @@ public class UserController {
 					return UserApiResponse.badRequest("image_not_found");
 				}
 
-				// 이미지 URL 생성 및 설정
-				String profileImageUrl = userService.getProfileImageUrlFromKey(userDTO.getProfileImageKey());
-				userDTO.setProfileImageUrl(profileImageUrl);
-				logger.info("프로필 이미지 URL 생성: {}", profileImageUrl);
+				// 이미지 URL 생성 로직 제거 - 키만 사용
 			}
 
 			// 사용자 등록
@@ -88,7 +85,12 @@ public class UserController {
 			Map<String, Object> responseData = new HashMap<>();
 			responseData.put("userId", encryptedId);
 			responseData.put("nickname", registeredUser.getNickname());
-			responseData.put("profileImage", registeredUser.getProfileImage());
+			// 프로필 이미지를 CloudFront URL로 변환하여 응답
+			if (registeredUser.getProfileImage() != null && !registeredUser.getProfileImage().isEmpty()) {
+				responseData.put("profileImage", userService.getCloudFrontUrlFromKey(registeredUser.getProfileImage()));
+			} else {
+				responseData.put("profileImage", null);
+			}
 
 			return UserApiResponse.success(UserApiMessages.USER_CREATED, responseData);
 		} catch (UserException e) {
@@ -212,7 +214,13 @@ public class UserController {
 			responseData.put("userId", user.getId());
 			responseData.put("email", user.getEmail());
 			responseData.put("nickname", user.getNickname());
-			responseData.put("profileImage", user.getProfileImage());
+
+			// profileImage를 CloudFront URL로 변환하여 응답
+			if (user.getProfileImage() != null && !user.getProfileImage().isEmpty()) {
+				responseData.put("profileImage", userService.getCloudFrontUrlFromKey(user.getProfileImage()));
+			} else {
+				responseData.put("profileImage", null);
+			}
 
 			return UserApiResponse.success(UserApiMessages.SUCCESS, responseData);
 		} catch (UserException e) {
@@ -312,7 +320,7 @@ public class UserController {
 				}
 			}
 
-			// 프로필 이미지 업데이트 - 필드가 명시적으로 포함된 경우에만 처리
+			// 프로필 이미지 업데이트
 			if (requestMap.containsKey("profile_image_key")) {
 				Object profileImageKeyObj = requestMap.get("profile_image_key");
 
@@ -329,19 +337,23 @@ public class UserController {
 							throw new UserValidationException("image_not_found", "업로드된 이미지를 찾을 수 없습니다");
 						}
 
-						String profileImageUrl = userService.getProfileImageUrlFromKey(profileImageKey);
-						updatedUser = userService.updateProfileImage(updatedUser.getId(), profileImageUrl);
+						// fileKey를 직접 저장 - URL 생성 제거
+						updatedUser = userService.updateProfileImage(updatedUser.getId(), profileImageKey);
 					}
 				}
 			}
-			// profile_image_key 필드가 요청에 없으면 이미지 변경 안함
 
 			session.setAttribute("user", updatedUser); // 세션 업데이트
 
 			Map<String, Object> responseData = new HashMap<>();
 			responseData.put("userId", idEncryptionUtil.encrypt(updatedUser.getId()));
 			responseData.put("nickname", updatedUser.getNickname());
-			responseData.put("profileImage", updatedUser.getProfileImage());
+			// CloudFront URL로 변환하여 응답
+			if (updatedUser.getProfileImage() != null && !updatedUser.getProfileImage().isEmpty()) {
+				responseData.put("profileImage", userService.getCloudFrontUrlFromKey(updatedUser.getProfileImage()));
+			} else {
+				responseData.put("profileImage", null);
+			}
 
 			return UserApiResponse.success("update_user_data_success", responseData);
 		} catch (UserException e) {
