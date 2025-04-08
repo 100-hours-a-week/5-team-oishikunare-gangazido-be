@@ -41,7 +41,7 @@ public class GptService {
 			messages.add(Map.of("role", "user", "content", prompt));
 			requestBody.put("messages", messages);
 
-			requestBody.put("temperature", 0.7);
+			requestBody.put("temperature", 0.5);
 
 			//ObjectMapper를 사용해 requestBody를 JSON 문자열로 변환
 			ObjectMapper objectMapper = new ObjectMapper();
