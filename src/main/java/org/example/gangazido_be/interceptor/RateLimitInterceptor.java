@@ -28,6 +28,7 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 		this.objectMapper = objectMapper;
 	}
 
+	@SuppressWarnings("checkstyle:RightCurly")
 	@Override
 	public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
 		if (!(handler instanceof HandlerMethod)) {
@@ -40,24 +41,17 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 
 		Bucket bucket = null;
 
-		// 로그인 API 제한
+
 		if (requestURI.equals("/v1/users/login") && method.equals("POST")) {
 			bucket = rateLimitConfig.getLoginBucket(ipAddress);
-		}
-		// 회원가입 API 제한
-		else if (requestURI.equals("/v1/users/signup") && method.equals("POST")) {
+		} else if (requestURI.equals("/v1/users/signup") && method.equals("POST")) {
 			bucket = rateLimitConfig.getSignupBucket(ipAddress);
-		}
-		// 중복 체크 API 제한
-		else if ((requestURI.equals("/v1/users/check-email") || requestURI.equals("/v1/users/check-nickname"))
-			&& method.equals("GET")) {
+		} else if ((requestURI.equals("/v1/users/check-email") || requestURI.equals("/v1/users/check-nickname")) &&
+			method.equals("GET")) {
 			bucket = rateLimitConfig.getDuplicateCheckBucket(ipAddress);
-		}
-		// 이미지 업로드 관련 API 제한
-		else if ((requestURI.equals("/v1/users/signup/profile-image-upload-url") ||
+		} else if ((requestURI.equals("/v1/users/signup/profile-image-upload-url") ||
 			requestURI.equals("/v1/users/profile-image-upload-url") ||
-			requestURI.equals("/v1/users/profile-image-update"))
-			&& method.equals("POST")) {
+			requestURI.equals("/v1/users/profile-image-update")) && method.equals("POST")) {
 			bucket = rateLimitConfig.getImageUploadBucket(ipAddress);
 		}
 
