@@ -51,7 +51,7 @@ public class UserService {
 		}
 
 		// CloudFront 도메인과 시간 기반 캐시 무효화 쿼리 파라미터 추가
-		return "https://d3jeniacjnodv5.cloudfront.net/" + fileKey + "?t=" + System.currentTimeMillis();
+		return CLOUDFRONT_URL + "/" + fileKey + "?t=" + System.currentTimeMillis();
 	}
 
 	/**
