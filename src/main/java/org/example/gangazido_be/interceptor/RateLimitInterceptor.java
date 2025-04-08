@@ -69,7 +69,7 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 				// UserApiResponse.tooManyRequests() 메서드를 사용하면 더 깔끔하게 구현할 수 있으나,
 				// 여기서는 인터셉터에서 직접 응답을 생성해야 하므로 수동으로 구성
 				response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
-				response.setContentType("application/json");
+				response.setContentType("application/json;charset=UTF-8");  // charset=UTF-8 추가
 
 				ResponseEntity<UserApiResponse<Object>> responseEntity =
 					UserApiResponse.error(HttpStatus.TOO_MANY_REQUESTS, "요청 횟수가 제한을 초과했습니다. 잠시 후 다시 시도해주세요.");
