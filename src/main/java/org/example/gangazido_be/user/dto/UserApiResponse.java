@@ -74,4 +74,19 @@ public class UserApiResponse<T> {
 	public static <T> ResponseEntity<UserApiResponse<T>> internalError(String message) {
 		return error(HttpStatus.INTERNAL_SERVER_ERROR, message);
 	}
+
+	/**
+	 * TOO_MANY_REQUESTS (429) 응답 생성
+	 *
+	 * @param message 에러 메시지
+	 * @return 429 Too Many Requests 응답
+	 */
+	public static <T> ResponseEntity<UserApiResponse<T>> tooManyRequests(String message) {
+		return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(
+			UserApiResponse.<T>builder()
+				.message(message)
+				.data(null)
+				.build()
+		);
+	}
 }

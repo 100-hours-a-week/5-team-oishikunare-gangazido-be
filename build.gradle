@@ -100,6 +100,9 @@ dependencies {
     // AWS SDK v2 Presigner & Core 모듈 (레첼 추가)
     implementation 'software.amazon.awssdk:auth:2.20.147'
     implementation 'software.amazon.awssdk:regions:2.20.147'
+
+    // api 제한 bucket4j 의존성 추가 (잭 추가)
+    implementation 'com.bucket4j:bucket4j-core:8.7.0'
 }
 
 tasks.named('test') {
