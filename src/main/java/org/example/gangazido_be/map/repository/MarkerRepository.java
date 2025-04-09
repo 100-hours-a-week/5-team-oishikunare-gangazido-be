@@ -40,5 +40,26 @@ public interface MarkerRepository extends JpaRepository<MarkerEntity, UUID> {
 	// 소프트 마커 제외, 중복 좌표 등록 방지
 	@Query("SELECT COUNT(m) > 0 FROM MarkerEntity m WHERE m.latitude = :lat AND m.longitude = :lng AND m.deletedAt IS NULL")
 	boolean existsAtLocation(@Param("lat") Double lat, @Param("lng") Double lng);
+
+	// 같은 유저가 같은 마커 종류 인접하게 찍는 것 막기 검사
+	@Query(value = """
+				SELECT EXISTS (
+						SELECT 1 FROM marker
+						WHERE user_id = :userId
+						  AND type = :type
+						  AND ST_Distance_Sphere(
+							POINT(longitude, latitude),
+							POINT(:longitude, :latitude)
+						  ) < :distance
+						  AND deleted_at IS NULL
+		   		)
+		""", nativeQuery = true)
+	Integer existsNearbySameMarker(
+		@Param("userId") Integer userId,
+		@Param("type") int type,
+		@Param("latitude") double latitude,
+		@Param("longitude") double longitude,
+		@Param("distance") double distance
+	);
 }
 
