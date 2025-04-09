@@ -14,10 +14,9 @@ public class GptService {
 // 환경변수에서 오픈 api 키를 가져옴
 	private final OpenAiConfig openAiConfig;
 	private static final String GPT_API_URL = "https://api.openai.com/v1/chat/completions";
-	//private final PetRepository petRepository; //  PetRepository 주입 받아 사용 (현재 미사용이지만 필요시 사용 가능)
+
 	// 생성자 주입 방식으로 PetRepository 전달
 	public GptService(PetRepository petRepository, OpenAiConfig openAiConfig) {
-		/* this.petRepository = petRepository; */
 		this.openAiConfig = openAiConfig;
 	}
 	//  입력 프롬프트를 기반으로 GPT가 생성한 텍스트를 반환하는 메서드
