@@ -17,6 +17,7 @@ public class RateLimitConfig {
 	private final Map<String, Bucket> signupBuckets = new ConcurrentHashMap<>();
 	private final Map<String, Bucket> duplicateCheckBuckets = new ConcurrentHashMap<>();
 	private final Map<String, Bucket> imageUploadBuckets = new ConcurrentHashMap<>();
+	private final Map<String, Bucket> markerBuckets = new ConcurrentHashMap<>();
 
 	// 로그인 버킷 가져오기 (1분당 100회 요청 제한)
 	public Bucket getLoginBucket(String ipAddress) {
@@ -36,6 +37,11 @@ public class RateLimitConfig {
 	// 이미지 업로드 버킷 가져오기 (1시간당 200회 요청 제한)
 	public Bucket getImageUploadBucket(String ipAddress) {
 		return imageUploadBuckets.computeIfAbsent(ipAddress, ip -> createImageUploadRateLimit());
+	}
+
+	// 마커 등록 요청용 버킷 가져오기
+	public Bucket getMarkerBucket(String ipAddress) {
+		return markerBuckets.computeIfAbsent(ipAddress, ip -> createMarkerRateLimit());
 	}
 
 	// 로그인 요청 제한 (1분당 100회)
@@ -69,4 +75,12 @@ public class RateLimitConfig {
 			.addLimit(limit)
 			.build();
 	}
+	// 마커 등록 요청 제한 (1분당 15회)
+	private Bucket createMarkerRateLimit() {
+		Bandwidth limit = Bandwidth.classic(15, Refill.intervally(15, Duration.ofMinutes(1)));
+		return Bucket.builder()
+			.addLimit(limit)
+			.build();
+	}
+
 }
