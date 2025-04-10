@@ -91,8 +91,10 @@ dependencies {
 
     //Redis
     //implementation 'org.springframework.session:spring-session-data-redis'
-    //implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     //implementation 'org.springframework.boot:spring-boot-starter-cache'
+
+    implementation 'org.springframework.boot:spring-boot-starter-mail'// 여니 이메일 인증 때문에 추가
 
     // aws s3 sdk 의존성 추가 (레첼, 잭 같은 버전)
     implementation 'software.amazon.awssdk:s3:2.20.147'
