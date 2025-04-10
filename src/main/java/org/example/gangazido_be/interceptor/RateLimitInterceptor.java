@@ -53,6 +53,8 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 			requestURI.equals("/v1/users/profile-image-upload-url") ||
 			requestURI.equals("/v1/users/profile-image-update")) && method.equals("POST")) {
 			bucket = rateLimitConfig.getImageUploadBucket(ipAddress);
+		} else if (requestURI.equals("/v1/markers") && method.equals("POST")) {
+			bucket = rateLimitConfig.getMarkerBucket(ipAddress); // 마커 등록 요청 제한
 		}
 
 		// 버킷이 할당된 경우 (즉, 제한이 필요한 API인 경우) 요청 제한 검사

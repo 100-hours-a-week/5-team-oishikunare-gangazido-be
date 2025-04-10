@@ -24,6 +24,20 @@ public class MarkerService {
 	@Transactional
 	public MarkerResponseDto createMarker(Integer userId, MarkerRequestDto requestDto) {
 
+		// 같은 종류 마커 같은 유저가 인접하게 찍는 것 막기
+		double duplicateCheckRadius = 30.0; // 반경 20m로 제한
+		boolean nearbySameMarkerExists = markerRepository.existsNearbySameMarker(
+			userId,
+			requestDto.getType(),
+			requestDto.getLatitude(),
+			requestDto.getLongitude(),
+			duplicateCheckRadius
+		) == 1;
+
+		if (nearbySameMarkerExists) {
+			throw new IllegalStateException("same_marker_too_close");
+		}
+
 		// 마커 위경도 중복 위치 확인
 		boolean exists = markerRepository.existsAtLocation(
 			requestDto.getLatitude(),

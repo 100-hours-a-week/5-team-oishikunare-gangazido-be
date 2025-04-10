@@ -66,6 +66,10 @@ public class MarkerExceptionHandler {
 			response.put("message", "limit_exceeded");
 			response.put("error", message);
 			return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(response);
+		} else if ("same_marker_too_close".equals(message)) {
+			response.put("message", "same_marker_too_close");
+			response.put("data", new HashMap<>());
+			return ResponseEntity.badRequest().body(response);
 		}
 
 		response.put("message", "invalid_latitude_longitude");    // 위/경도 누락 응답 메시지

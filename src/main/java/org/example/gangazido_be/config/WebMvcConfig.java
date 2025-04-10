@@ -26,6 +26,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
 				"/v1/users/check-nickname",
 				"/v1/users/signup/profile-image-upload-url",
 				"/v1/users/profile-image-upload-url",
-				"/v1/users/profile-image-update");
+				"/v1/users/profile-image-update",
+				"/v1/markers");
 	}
 }
