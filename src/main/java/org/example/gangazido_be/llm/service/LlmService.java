@@ -167,9 +167,9 @@ public class LlmService {
 					✅ 응답은 반드시 아래 JSON 형식으로만 제공해주세요:
 
 					{
-					  "recommendation": "미세먼지 상태(좋음/보통/나쁨)",
-					  "reason": "정확한 미세먼지 수치 기반의 판단 및 설명",
-					  "safety_tips": ["산책 시 유의 사항 또는 실내 활동 팁"]
+					"recommendation": "미세먼지 상태(좋음/보통/나쁨)",
+					"reason": "정확한 미세먼지 수치 기반의 판단 및 설명",
+					"safety_tips": ["산책 시 유의 사항 또는 실내 활동 팁"]
 					}""",
 				petName, petBreed, petAge, petWeight,
 				weatherCondition, temperature, pm10, pm25);
@@ -185,17 +185,17 @@ public class LlmService {
 					- 미세먼지(PM10): %.1f µg/m³
 					- 초미세먼지(PM2.5): %.1f µg/m³
 					- 반려견 정보:
-					  - 이름: %s
-					  - 견종: %s
-					  - 나이: %d살
-					  - 무게: %.1fkg
+					- 이름: %s
+					- 견종: %s
+					- 나이: %d살
+					- 무게: %.1fkg
 
 					📌 **응답은 JSON 형식으로 다음과 같이 제공해주세요:**
-					 json
+					json
 					{
-					  "recommendation": "산책 추천 또는 비추천",
-					  "reason": "산책 추천 또는 비추천 사유",
-					  "safety_tips": ["산책 시 유의 사항"]
+					recommendation": "산책 추천 또는 비추천",
+					"reason": "산책 추천 또는 비추천 사유",
+					"safety_tips": ["산책 시 유의 사항"]
 					}
 
 					""",
@@ -209,9 +209,9 @@ public class LlmService {
 					**아래 JSON 형식으로만 응답하세요.**
 
 					{
-					  "routes": [
-					    { "name": "산책로 이름", "description": "특징 및 반려견과의 산책 추천 이유", "distance_km": 거리 }
-					  ]
+					"routes": [
+					{ "name": "산책로 이름", "description": "특징 및 반려견과의 산책 추천 이유", "distance_km": 거리 }
+					]
 					}""",
 				latitude, longitude);
 			case "greeting" -> createFriendlyPrompt(
@@ -246,11 +246,11 @@ public class LlmService {
 
 					📌 **옷을 입어야 하는지 여부와 이유를 한글로 설명해주세요.**\
 					📌 **응답은 JSON 형식으로 다음과 같이 제공해주세요:**
-					 json
+					json
 					{
-					  "recommendation": "옷 입히기 추천 또는 비추천",
-					  "reason": "옷 입히기 추천 또는 비추천 사유",
-					  "safety_tips": ["산책 시 유의 사항"]
+					"recommendation": "옷 입히기 추천 또는 비추천",
+					"reason": "옷 입히기 추천 또는 비추천 사유",
+					"safety_tips": ["산책 시 유의 사항"]
 					}
 
 					""",
