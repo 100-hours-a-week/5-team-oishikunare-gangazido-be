@@ -95,7 +95,7 @@ public class PetService {
 
 		validatePetFields(name, age, gender, breed, weight);
 
-		String profileImagePath = profileImage != null && !profileImage.isBlank() ? profileImage : pet.getProfileImage();
+		String profileImagePath = profileImage == null ? null : profileImage;
 
 		pet.updatePet(name, profileImagePath, age, gender, breed, weight);
 		Pet saved = petRepository.save(pet);
