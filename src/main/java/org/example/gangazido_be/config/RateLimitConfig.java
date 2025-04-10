@@ -75,6 +75,7 @@ public class RateLimitConfig {
 			.addLimit(limit)
 			.build();
 	}
+
 	// 마커 등록 요청 제한 (1분당 15회)
 	private Bucket createMarkerRateLimit() {
 		Bandwidth limit = Bandwidth.classic(15, Refill.intervally(15, Duration.ofMinutes(1)));
