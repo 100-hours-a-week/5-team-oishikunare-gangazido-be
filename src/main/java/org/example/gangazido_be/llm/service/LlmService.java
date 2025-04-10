@@ -12,7 +12,9 @@ import org.example.gangazido_be.gpt.service.WeatherService;
 import org.example.gangazido_be.pet.entity.Pet;
 import org.springframework.stereotype.Service;
 import org.json.JSONObject;
+
 import jakarta.servlet.http.HttpServletRequest;
+
 import java.util.Optional;
 
 // ✅ 이 클래스가 Spring의 Service Bean으로 등록됨
@@ -21,7 +23,6 @@ public class LlmService {
 	private final GptService gptService; // ✅ GPT API를 호출하는 서비스
 	private final WeatherService weatherService; // ✅ 날씨 데이터를 가져오는 서비스
 	private final PetRepository petRepository; // ✅ 반려견 정보를 DB에서 조회하는 Repository
-
 
 	// ✅ 생성자 주입 방식으로 의존성 주입 (Spring이 자동으로 관리)
 	public LlmService(GptService gptService, WeatherService weatherService, PetRepository petRepository) {
@@ -331,7 +332,8 @@ public class LlmService {
 		return String.format(template, latitude, longitude);
 	}
 
-	private String createFriendlyPrompt(String template, String petName, String breed, String message, String userMessage) {
+	private String createFriendlyPrompt(String template, String petName, String breed, String message,
+		String userMessage) {
 		return String.format(template, petName, breed, message, userMessage);
 	}
 
@@ -339,7 +341,6 @@ public class LlmService {
 		double pm10, double pm25, String weatherCondition, double temp, String breed, double weight) {
 		return String.format(template, petName, temperature, pm10, pm25, weatherCondition, temp, breed, weight);
 	}
-
 
 	//  영어 날씨명을 한글로 변환
 	private String convertWeatherToKorean(String weather) {
