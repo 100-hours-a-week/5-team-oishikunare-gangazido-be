@@ -520,4 +520,23 @@ public class UserController {
 		// 디버깅 로그
 		logger.debug("쿠키 설정 완료: {}, 세션 ID: {}, 도메인: {}", "JSESSIONID", sessionId, "gangazido.com");
 	}
+
+	// userId로 유저 닉네임 조회 (세션 없이 접근 가능) 제리 추가
+	@GetMapping("/{userId}/nickname")
+	public ResponseEntity<UserApiResponse<Map<String, Object>>> getNicknameByUserId(@PathVariable Integer userId) {
+		try {
+			User user = userService.findUserById(userId);
+
+			Map<String, Object> responseData = new HashMap<>();
+			responseData.put("nickname", user.getNickname());
+
+			return UserApiResponse.success("nickname_lookup_success", responseData);
+		} catch (UserException e) {
+			logger.warn("닉네임 조회 실패: {}", e.getMessage());
+			return UserApiResponse.badRequest(e.getErrorCode());
+		} catch (Exception e) {
+			logger.error("서버 오류: ", e);
+			return UserApiResponse.internalError(UserApiMessages.INTERNAL_ERROR);
+		}
+	}
 }
