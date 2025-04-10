@@ -23,7 +23,8 @@ public class PetService {
 	private final PetRepository petRepository;
 	private final UserRepository userRepository;
 
-	private static final String CLOUDFRONT_URL = "https://d3jeniacjnodv5.cloudfront.net";
+	// private static final String CLOUDFRONT_URL = "https://d3jeniacjnodv5.cloudfront.net";	// 배포 url
+	private static final String CLOUDFRONT_URL = "https://d2zi61xwrfrt4q.cloudfront.net";	// 개발 url
 
 	// 반려견 정보 등록
 	@Transactional
@@ -94,7 +95,7 @@ public class PetService {
 
 		validatePetFields(name, age, gender, breed, weight);
 
-		String profileImagePath = profileImage != null && !profileImage.isBlank() ? profileImage : pet.getProfileImage();
+		String profileImagePath = profileImage == null ? null : profileImage;
 
 		pet.updatePet(name, profileImagePath, age, gender, breed, weight);
 		Pet saved = petRepository.save(pet);
@@ -148,6 +149,23 @@ public class PetService {
 	private PetResponse buildPetResponseWithImageUrl(Pet pet) {
 		PetResponse response = PetResponse.from(pet);
 
+		if (pet.getProfileImage() != null && !pet.getProfileImage().isBlank()) {
+			String imageUrl = CLOUDFRONT_URL + "/" + pet.getProfileImage() + "?t=" + System.currentTimeMillis();
+			response.setProfileImage(imageUrl);
+		}
+
+		return response;
+	}
+
+	// userId로 반려견 이미지, 이름 보내기
+	@Transactional(readOnly = true)
+	public PetResponse getPublicPetInfoByUserId(Integer userId) {
+		Pet pet = petRepository.findByUserId(userId)
+			.orElseThrow(() -> new PetException(HttpStatus.NOT_FOUND, PetExceptionType.NOT_FOUND_PET.getMessage()));
+
+		PetResponse response = PetResponse.from(pet);
+
+		// CloudFront URL 붙이기
 		if (pet.getProfileImage() != null && !pet.getProfileImage().isBlank()) {
 			String imageUrl = CLOUDFRONT_URL + "/" + pet.getProfileImage() + "?t=" + System.currentTimeMillis();
 			response.setProfileImage(imageUrl);

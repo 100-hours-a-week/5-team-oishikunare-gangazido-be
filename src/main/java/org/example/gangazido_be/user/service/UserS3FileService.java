@@ -48,7 +48,7 @@ public class UserS3FileService {
 	 * @return Map: presignedUrl과 fileKey 포함
 	 */
 	public Map<String, String> generatePresignedUrlForProfileImage(String fileExtension, String contentType) {
-		String key = "uploads/user/" + UUID.randomUUID().toString() + fileExtension;
+		String key = "user/" + UUID.randomUUID().toString() + fileExtension;
 
 		// 메타데이터 추가하지 않음 (또는 필요한 경우만 명시적으로 추가)
 		PutObjectRequest objectRequest = PutObjectRequest.builder()
@@ -172,28 +172,28 @@ public class UserS3FileService {
 	 * @param contentType 파일 MIME 타입
 	 * @return S3 URL
 	 */
-	public String uploadFile(byte[] fileContent, String fileKey, String contentType) {
-		try {
-			// fileKey가 null이면 자동 생성 (경로 변경)
-			if (fileKey == null || fileKey.isEmpty()) {
-				String extension = contentType != null ?
-					"." + contentType.substring(contentType.lastIndexOf("/") + 1) : ".jpg";
-				fileKey = "uploads/user/" + UUID.randomUUID().toString() + extension;
-			}
-
-			PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-				.bucket(bucketName)
-				.key(fileKey)
-				.contentType(contentType)
-				.build();
-
-			s3Client.putObject(putObjectRequest, RequestBody.fromBytes(fileContent));
-			logger.info("S3에 파일 업로드 완료: {}", fileKey);
-
-			return getS3Url(fileKey);
-		} catch (Exception e) {
-			logger.error("S3 파일 업로드 실패: {}", e.getMessage());
-			throw new RuntimeException("S3 파일 업로드 실패: " + e.getMessage());
-		}
-	}
+	// public String uploadFile(byte[] fileContent, String fileKey, String contentType) {
+	// 	try {
+	// 		// fileKey가 null이면 자동 생성 (경로 변경)
+	// 		if (fileKey == null || fileKey.isEmpty()) {
+	// 			String extension = contentType != null ?
+	// 				"." + contentType.substring(contentType.lastIndexOf("/") + 1) : ".jpg";
+	// 			fileKey = "user/" + UUID.randomUUID().toString() + extension;
+	// 		}
+	//
+	// 		PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+	// 			.bucket(bucketName)
+	// 			.key(fileKey)
+	// 			.contentType(contentType)
+	// 			.build();
+	//
+	// 		s3Client.putObject(putObjectRequest, RequestBody.fromBytes(fileContent));
+	// 		logger.info("S3에 파일 업로드 완료: {}", fileKey);
+	//
+	// 		return getS3Url(fileKey);
+	// 	} catch (Exception e) {
+	// 		logger.error("S3 파일 업로드 실패: {}", e.getMessage());
+	// 		throw new RuntimeException("S3 파일 업로드 실패: " + e.getMessage());
+	// 	}
+	// }
 }

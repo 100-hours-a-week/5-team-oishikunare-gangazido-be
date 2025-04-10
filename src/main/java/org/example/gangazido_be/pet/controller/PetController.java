@@ -102,4 +102,11 @@ public class PetController {
 	public ResponseEntity<PresignedUrlResponse> getPresignedUrl(@RequestBody PresignedUrlRequest request) {
 		return ResponseEntity.ok(s3Service.generatePresignedUrl(request.getFileExtension(), request.getContentType()));
 	}
+
+	// userId로 반려견 이미지, 이름 내보내기
+	@GetMapping("/public/{userId}")
+	public ResponseEntity<PetResponse> getPublicPetInfo(@PathVariable Integer userId) {
+		PetResponse pet = petService.getPublicPetInfoByUserId(userId);
+		return ResponseEntity.ok(pet);
+	}
 }

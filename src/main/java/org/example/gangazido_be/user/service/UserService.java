@@ -30,6 +30,9 @@ public class UserService {
 	private final MarkerService markerService;
 	private final Logger logger = LoggerFactory.getLogger(UserService.class);
 
+	// private static final String CLOUDFRONT_URL = "https://d3jeniacjnodv5.cloudfront.net";	// 배포 url
+	private static final String CLOUDFRONT_URL = "https://d2zi61xwrfrt4q.cloudfront.net";    // 개발 url
+
 	@Autowired
 	public UserService(UserRepository userRepository,
 		PetRepository petRepository,
@@ -42,20 +45,13 @@ public class UserService {
 		this.markerService = markerService;
 	}
 
-	/**
-	 * S3 파일 키로부터 프로필 이미지 URL을 생성하는 메서드
-	 *
-	 * @param fileKey S3 객체 키
-	 * @return S3 URL
-	 */
-	public String getProfileImageUrlFromKey(String fileKey) {
-		// fileKey 유효성 검사
+	public String getCloudFrontUrlFromKey(String fileKey) {
 		if (fileKey == null || fileKey.isEmpty()) {
-			throw new UserValidationException("invalid_file_key", "파일 키가 유효하지 않습니다");
+			return null;
 		}
 
-		// S3 URL 생성 후 반환
-		return userS3FileService.getS3Url(fileKey);
+		// CloudFront 도메인과 시간 기반 캐시 무효화 쿼리 파라미터 추가
+		return CLOUDFRONT_URL + "/" + fileKey + "?t=" + System.currentTimeMillis();
 	}
 
 	/**
@@ -144,18 +140,13 @@ public class UserService {
 
 		// 프로필 이미지 URL이 제공된 경우 사용
 		String profileImage = userDTO.getProfileImageUrl();
-
-		// 이미지가 없고 파일이 있는 경우 (레거시 지원)
-		if ((profileImage == null || profileImage.isEmpty()) && userDTO.getProfileImage() != null && !userDTO.getProfileImage().isEmpty()) {
-			logger.warn("레거시 MultipartFile 방식으로 이미지 업로드 시도 - 권장하지 않음");
-			// 레거시 방식 지원 코드는 생략
-		}
+		String profileImageKey = userDTO.getProfileImageKey();
 
 		User newUser = User.builder()
 			.email(userDTO.getEmail())
 			.password(passwordEncoder.encode(userDTO.getPassword()))
 			.nickname(userDTO.getNickname())
-			.profileImage(profileImage)
+			.profileImage(profileImageKey)  // URL 대신 key 저장
 			.build();
 
 		return userRepository.save(newUser);
@@ -249,30 +240,29 @@ public class UserService {
 
 	// 프로필 이미지만 업데이트하는 메서드
 	@Transactional
-	public User updateProfileImage(Integer userId, String profileImageUrl) {
+	public User updateProfileImage(Integer userId, String fileKey) {
 		User user = userRepository.findByIdAndDeletedAtIsNull(userId)
 			.orElseThrow(() -> new RuntimeException("missing_user"));
 
-		// 기존 이미지 정보 저장
-		String oldProfileImage = user.getProfileImage();
+		// 기존 이미지 키 저장
+		String oldFileKey = user.getProfileImage();
 
 		// 디버깅 로그
-		logger.info("프로필 이미지 업데이트: userId={}, 기존 이미지={}, 새 이미지={}",
-			userId, oldProfileImage, profileImageUrl);
+		logger.info("프로필 이미지 업데이트: userId={}, 기존 fileKey={}, 새 fileKey={}",
+			userId, oldFileKey, fileKey);
 
-		// 새 이미지 URL 설정 (null도 그대로 설정 - 이미지 제거)
-		user.setProfileImage(profileImageUrl);
+		// fileKey 설정 (null도 그대로 설정 - 이미지 제거)
+		user.setProfileImage(fileKey);
 		User updatedUser = userRepository.save(user);
 
 		// 기존 이미지가 있고, 새 이미지가 null이거나 다른 경우 S3에서 삭제
-		if (oldProfileImage != null && !oldProfileImage.isEmpty() &&
-			(profileImageUrl == null || !profileImageUrl.equals(oldProfileImage))) {
+		if (oldFileKey != null && !oldFileKey.isEmpty() &&
+			(fileKey == null || !fileKey.equals(oldFileKey))) {
 			try {
-				userS3FileService.deleteFile(oldProfileImage);
-				logger.info("기존 프로필 이미지 삭제 완료: {}", oldProfileImage);
+				userS3FileService.deleteFile(oldFileKey);
+				logger.info("기존 프로필 이미지 삭제 완료: {}", oldFileKey);
 			} catch (Exception e) {
 				logger.warn("기존 프로필 이미지 삭제 실패: {}", e.getMessage());
-				// 새 이미지 저장은 이미 성공했으므로 예외를 던지지 않음
 			}
 		}
 
@@ -369,5 +359,10 @@ public class UserService {
 		user.setPassword(passwordEncoder.encode(newPassword));
 
 		return userRepository.save(user);
+	}
+
+	public User findUserById(Integer userId) {
+		return userRepository.findById(userId)
+			.orElseThrow(() -> new UserNotFoundException("해당 사용자를 찾을 수 없습니다."));
 	}
 }
