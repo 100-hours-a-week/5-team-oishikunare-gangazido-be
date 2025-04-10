@@ -156,4 +156,21 @@ public class PetService {
 
 		return response;
 	}
+
+	// userId로 반려견 이미지, 이름 보내기
+	@Transactional(readOnly = true)
+	public PetResponse getPublicPetInfoByUserId(Integer userId) {
+		Pet pet = petRepository.findByUserId(userId)
+			.orElseThrow(() -> new PetException(HttpStatus.NOT_FOUND, PetExceptionType.NOT_FOUND_PET.getMessage()));
+
+		PetResponse response = PetResponse.from(pet);
+
+		// CloudFront URL 붙이기
+		if (pet.getProfileImage() != null && !pet.getProfileImage().isBlank()) {
+			String imageUrl = CLOUDFRONT_URL + "/" + pet.getProfileImage() + "?t=" + System.currentTimeMillis();
+			response.setProfileImage(imageUrl);
+		}
+
+		return response;
+	}
 }
