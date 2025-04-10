@@ -44,33 +44,33 @@ public class RateLimitConfig {
 		return markerBuckets.computeIfAbsent(ipAddress, ip -> createMarkerRateLimit());
 	}
 
-	// 로그인 요청 제한 (1분당 100회)
+	// 로그인 요청 제한 (1분당 30회)
 	private Bucket createLoginRateLimit() {
+		Bandwidth limit = Bandwidth.classic(30, Refill.intervally(30, Duration.ofMinutes(1)));
+		return Bucket.builder()
+			.addLimit(limit)
+			.build();
+	}
+
+	// 회원가입 요청 제한 (1시간당 10회)
+	private Bucket createSignupRateLimit() {
+		Bandwidth limit = Bandwidth.classic(10, Refill.intervally(10, Duration.ofHours(1)));
+		return Bucket.builder()
+			.addLimit(limit)
+			.build();
+	}
+
+	// 중복 확인 요청 제한 (1분당 100회)
+	private Bucket createDuplicateCheckRateLimit() {
 		Bandwidth limit = Bandwidth.classic(100, Refill.intervally(100, Duration.ofMinutes(1)));
 		return Bucket.builder()
 			.addLimit(limit)
 			.build();
 	}
 
-	// 회원가입 요청 제한 (1시간당 50회)
-	private Bucket createSignupRateLimit() {
-		Bandwidth limit = Bandwidth.classic(50, Refill.intervally(50, Duration.ofHours(1)));
-		return Bucket.builder()
-			.addLimit(limit)
-			.build();
-	}
-
-	// 중복 확인 요청 제한 (1분당 300회)
-	private Bucket createDuplicateCheckRateLimit() {
-		Bandwidth limit = Bandwidth.classic(300, Refill.intervally(300, Duration.ofMinutes(1)));
-		return Bucket.builder()
-			.addLimit(limit)
-			.build();
-	}
-
-	// 이미지 업로드 요청 제한 (1시간당 200회)
+	// 이미지 업로드 요청 제한 (1시간당 40회)
 	private Bucket createImageUploadRateLimit() {
-		Bandwidth limit = Bandwidth.classic(200, Refill.intervally(200, Duration.ofHours(1)));
+		Bandwidth limit = Bandwidth.classic(30, Refill.intervally(30, Duration.ofHours(1)));
 		return Bucket.builder()
 			.addLimit(limit)
 			.build();
