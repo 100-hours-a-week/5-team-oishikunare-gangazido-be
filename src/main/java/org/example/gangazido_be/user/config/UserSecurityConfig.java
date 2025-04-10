@@ -16,11 +16,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableWebSecurity
 public class UserSecurityConfig {
 
-	// @Bean
-	// public Argon2PasswordEncoder passwordEncoder() {
-	// 	// Argon2 설정: saltLength, hashLength, parallelism, memory, iterations
-	// 	return new Argon2PasswordEncoder(16, 32, 1, 4096, 1);
-	// }
+	@Bean
+	public Argon2PasswordEncoder passwordEncoder() {
+		// Argon2 설정: saltLength, hashLength, parallelism, memory, iterations
+		return new Argon2PasswordEncoder(16, 32, 1, 4096, 1);
+	}
 
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http, CorsConfigurationSource corsConfigurationSource) throws Exception {
