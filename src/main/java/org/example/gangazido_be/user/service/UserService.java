@@ -31,7 +31,7 @@ public class UserService {
 	private final Logger logger = LoggerFactory.getLogger(UserService.class);
 
 	// private static final String CLOUDFRONT_URL = "https://d3jeniacjnodv5.cloudfront.net";	// 배포 url
-	private static final String CLOUDFRONT_URL = "https://d2zi61xwrfrt4q.cloudfront.net";	// 개발 url
+	private static final String CLOUDFRONT_URL = "https://d2zi61xwrfrt4q.cloudfront.net";    // 개발 url
 
 	@Autowired
 	public UserService(UserRepository userRepository,
@@ -141,7 +141,6 @@ public class UserService {
 		// 프로필 이미지 URL이 제공된 경우 사용
 		String profileImage = userDTO.getProfileImageUrl();
 		String profileImageKey = userDTO.getProfileImageKey();
-
 
 		User newUser = User.builder()
 			.email(userDTO.getEmail())
@@ -363,7 +362,7 @@ public class UserService {
 	}
 
 	public User findUserById(Integer userId) {
-    	return userRepository.findById(userId)
-        	.orElseThrow(() -> new UserNotFoundException("해당 사용자를 찾을 수 없습니다."));
+		return userRepository.findById(userId)
+			.orElseThrow(() -> new UserNotFoundException("해당 사용자를 찾을 수 없습니다."));
 	}
 }

@@ -46,13 +46,13 @@ public interface MarkerRepository extends JpaRepository<MarkerEntity, UUID> {
 				SELECT EXISTS (
 						SELECT 1 FROM marker
 						WHERE user_id = :userId
-						  AND type = :type
-						  AND ST_Distance_Sphere(
+						AND type = :type
+						AND ST_Distance_Sphere(
 							POINT(longitude, latitude),
 							POINT(:longitude, :latitude)
-						  ) < :distance
-						  AND deleted_at IS NULL
-		   		)
+						) < :distance
+						AND deleted_at IS NULL
+						)
 		""", nativeQuery = true)
 	Integer existsNearbySameMarker(
 		@Param("userId") Integer userId,
