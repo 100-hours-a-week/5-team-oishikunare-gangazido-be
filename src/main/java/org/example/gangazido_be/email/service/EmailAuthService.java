@@ -19,7 +19,6 @@ public class EmailAuthService {
 		String code = generateCode();
 		redisTemplate.opsForValue().set("email:" + email, code, EXPIRE_TIME, TimeUnit.SECONDS);
 		String htmlContent = "<div style='font-family: Arial, sans-serif; text-align: center;'>" +
-			"<img src=\"https://github.com/user-attachments/assets/9a8f91a2-8772-4fd9-b9b7-a463ea512368\" alt=\"Gangazido 로고\" style=\"height: 120px; margin-bottom: 20px;\" />" +
 			"<h2 style='color: #f59e0b;'>🌟 Gangazido 회원가입 인증 🌟</h2>" +
 			"<p>아래 인증 코드를 입력해주세요.</p>" +
 			"<div style='margin: 20px auto; padding: 10px 20px; background-color: #fef3c7; " +
