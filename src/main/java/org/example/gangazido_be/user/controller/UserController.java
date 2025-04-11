@@ -210,6 +210,15 @@ public class UserController {
 				throw UserAuthenticationException.unauthorized();
 			}
 
+			// 이미지 키가 있는데 S3에 실제로 존재하지 않는 경우 처리
+			if (user.getProfileImage() != null && !user.getProfileImage().isEmpty()) {
+				if (!userService.checkImageExists(user.getProfileImage())) {
+					// S3에 이미지가 없으면 DB에서도 제거
+					user = userService.updateProfileImage(user.getId(), null);
+					session.setAttribute("user", user); // 세션 업데이트
+				}
+			}
+
 			Map<String, Object> responseData = new HashMap<>();
 			responseData.put("userId", user.getId());
 			responseData.put("email", user.getEmail());
