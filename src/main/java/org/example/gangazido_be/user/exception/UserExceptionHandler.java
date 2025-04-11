@@ -4,12 +4,14 @@ import org.example.gangazido_be.user.dto.UserApiResponse;
 import org.example.gangazido_be.user.util.UserApiMessages;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @ControllerAdvice
 public class UserExceptionHandler {
@@ -75,5 +77,11 @@ public class UserExceptionHandler {
 	public ResponseEntity<UserApiResponse<Object>> handleException(Exception e) {
 		logger.error("서버 오류 발생: ", e);
 		return UserApiResponse.internalError(UserApiMessages.INTERNAL_ERROR);
+	}
+
+	// 제리 추가
+	@ExceptionHandler(NoResourceFoundException.class)
+	public ResponseEntity<?> handleNoResourceFound(NoResourceFoundException ex) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND).body("정적 리소스를 찾을 수 없습니다.");
 	}
 }

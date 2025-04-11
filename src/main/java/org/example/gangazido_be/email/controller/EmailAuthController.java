@@ -1,8 +1,12 @@
 package org.example.gangazido_be.email.controller;
 
+import org.example.gangazido_be.config.RateLimitConfig;
 import org.example.gangazido_be.email.dto.EmailRequestDto;
 import org.example.gangazido_be.email.dto.EmailVerifyRequestDto;
 import org.example.gangazido_be.email.service.EmailAuthService;
+
+import io.github.bucket4j.Bucket;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,15 +19,34 @@ import java.util.Map;
 public class EmailAuthController {
 
 	private final EmailAuthService emailAuthService;
+	private final RateLimitConfig rateLimitConfig;
 
 	@PostMapping("/send")
-	public ResponseEntity<?> sendAuthCode(@RequestBody EmailRequestDto dto) {
+	public ResponseEntity<?> sendAuthCode(@RequestBody EmailRequestDto dto, HttpServletRequest request) {
+		String ip = request.getRemoteAddr();
+		Bucket bucket = rateLimitConfig.getEmailAuthBucket(ip); // ⬅️ email 전송용 버킷
+
+		if (!bucket.tryConsume(1)) {
+			return ResponseEntity.status(429).body(
+				Map.of("code", 429, "message", "too_many_requests")
+			);
+		}
 		emailAuthService.sendAuthCode(dto.email());
+
 		return ResponseEntity.ok(Map.of("code", 200, "message", "send_email_success"));
 	}
 
 	@PostMapping("/verify")
-	public ResponseEntity<?> verifyAuthCode(@RequestBody EmailVerifyRequestDto dto) {
+	public ResponseEntity<?> verifyAuthCode(@RequestBody EmailVerifyRequestDto dto, HttpServletRequest request) {
+		String ip = request.getRemoteAddr();
+		Bucket bucket = rateLimitConfig.getEmailAuthBucket(ip); // or 별도 verify용 버킷을 만들어도 좋음
+
+		if (!bucket.tryConsume(1)) {
+			return ResponseEntity.status(429).body(
+				Map.of("code", 429, "message", "too_many_requests")
+			);
+		}
+
 		boolean result = emailAuthService.verifyCode(dto.email(), dto.code());
 		if (result) {
 			return ResponseEntity.ok(Map.of("code", 200, "message", "verify_email_success"));
