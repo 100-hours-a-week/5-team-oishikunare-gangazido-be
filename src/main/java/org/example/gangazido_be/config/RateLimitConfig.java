@@ -103,7 +103,7 @@ public class RateLimitConfig {
 	}
 
 	private Bucket createChatRateLimit() {
-		Bandwidth limit = Bandwidth.classic(20, Refill.intervally(20, Duration.ofMinutes(1))); // 예: 1분에 20번
+		Bandwidth limit = Bandwidth.classic(5, Refill.intervally(20, Duration.ofMinutes(1))); // 예: 1분에 5번
 		return Bucket.builder()
 			.addLimit(limit)
 			.build();
