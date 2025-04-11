@@ -18,17 +18,17 @@ public class EmailAuthService {
 	public void sendAuthCode(String email) {
 		String code = generateCode();
 		redisTemplate.opsForValue().set("email:" + email, code, EXPIRE_TIME, TimeUnit.SECONDS);
-		String htmlContent = "<div style='font-family: Arial, sans-serif; text-align: center;'>"
-			+ "<img src=\"https://github.com/user-attachments/assets/9a8f91a2-8772-4fd9-b9b7-a463ea512368\" alt=\"Gangazido 로고\" style=\"height: 120px; margin-bottom: 20px;\" />"
-			+ "<h2 style='color: #f59e0b;'>🌟 Gangazido 회원가입 인증 🌟</h2>"
-			+ "<p>아래 인증 코드를 입력해주세요.</p>"
-			+ "<div style='margin: 20px auto; padding: 10px 20px; background-color: #fef3c7; "
-			+ "border: 1px solid #fcd34d; border-radius: 8px; display: inline-block;'>"
-			+ "<strong style='font-size: 24px; color: #b45309; letter-spacing: 2px;'>" + code + "</strong>"
-			+ "</div>"
-			+ "<p style='color: #6b7280; font-size: 12px;'>해당 코드는 5분 동안만 유효합니다.</p>"
-			+ "<p style='font-size: 11px;'>Gangazido 팀 드림 🐶</p>"
-			+ "</div>";
+		String htmlContent = "<div style='font-family: Arial, sans-serif; text-align: center;'>" +
+			"<img src=\"https://github.com/user-attachments/assets/9a8f91a2-8772-4fd9-b9b7-a463ea512368\" alt=\"Gangazido 로고\" style=\"height: 120px; margin-bottom: 20px;\" />" +
+			"<h2 style='color: #f59e0b;'>🌟 Gangazido 회원가입 인증 🌟</h2>" +
+			"<p>아래 인증 코드를 입력해주세요.</p>" +
+			"<div style='margin: 20px auto; padding: 10px 20px; background-color: #fef3c7; " +
+			"border: 1px solid #fcd34d; border-radius: 8px; display: inline-block;'>" +
+			"<strong style='font-size: 24px; color: #b45309; letter-spacing: 2px;'>" + code + "</strong>" +
+			"</div>" +
+			"<p style='color: #6b7280; font-size: 12px;'>해당 코드는 5분 동안만 유효합니다.</p>" +
+			"<p style='font-size: 11px;'>Gangazido 팀 드림 🐶</p>" +
+			"</div>";
 		emailUtil.sendEmail(email, "이메일 인증 코드", htmlContent);
 	}
 
