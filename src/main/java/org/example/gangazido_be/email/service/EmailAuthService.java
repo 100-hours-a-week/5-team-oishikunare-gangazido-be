@@ -39,6 +39,8 @@ public class EmailAuthService {
 		return code.equals(savedCode);
 	}
 
+
+
 	private String generateCode() {
 		return String.valueOf((int)(Math.random() * 900000) + 100000); // 6자리 숫자
 	}
