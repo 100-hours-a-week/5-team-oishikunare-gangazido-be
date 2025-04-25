@@ -16,6 +16,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.beans.factory.annotation.Value;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -23,8 +25,8 @@ public class PetService {
 	private final PetRepository petRepository;
 	private final UserRepository userRepository;
 
-	// private static final String CLOUDFRONT_URL = "https://d3jeniacjnodv5.cloudfront.net";	// 배포 url
-	private static final String CLOUDFRONT_URL = "https://d2zi61xwrfrt4q.cloudfront.net";	// 개발 url
+	@Value("${cloudfront.url}")
+	private String cloudfrontUrl;
 
 	// 반려견 정보 등록
 	@Transactional
@@ -150,7 +152,7 @@ public class PetService {
 		PetResponse response = PetResponse.from(pet);
 
 		if (pet.getProfileImage() != null && !pet.getProfileImage().isBlank()) {
-			String imageUrl = CLOUDFRONT_URL + "/" + pet.getProfileImage() + "?t=" + System.currentTimeMillis();
+			String imageUrl = cloudfrontUrl + "/" + pet.getProfileImage() + "?t=" + System.currentTimeMillis();
 			response.setProfileImage(imageUrl);
 		}
 
@@ -167,7 +169,7 @@ public class PetService {
 
 		// CloudFront URL 붙이기
 		if (pet.getProfileImage() != null && !pet.getProfileImage().isBlank()) {
-			String imageUrl = CLOUDFRONT_URL + "/" + pet.getProfileImage() + "?t=" + System.currentTimeMillis();
+			String imageUrl = cloudfrontUrl + "/" + pet.getProfileImage() + "?t=" + System.currentTimeMillis();
 			response.setProfileImage(imageUrl);
 		}
 
