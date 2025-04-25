@@ -74,7 +74,7 @@ public class PetService {
 		User user = userRepository.findById(userId)
 			.orElseThrow(() -> new PetException(HttpStatus.NOT_FOUND, PetExceptionType.NOT_FOUND_USER.getMessage()));
 
-		Pet pet = petRepository.findByUserId(userId)
+		Pet pet = petRepository.findByUserIdAndDeletedAtIsNull(userId)
 			.orElseThrow(() -> new PetException(HttpStatus.NOT_FOUND, PetExceptionType.NOT_FOUND_PET.getMessage()));
 
 		return buildPetResponseWithImageUrl(pet);
@@ -109,7 +109,7 @@ public class PetService {
 		User user = userRepository.findById(userId)
 			.orElseThrow(() -> new PetException(HttpStatus.NOT_FOUND, PetExceptionType.NOT_FOUND_USER.getMessage()));
 
-		Pet pet = petRepository.findByUserId(userId)
+		Pet pet = petRepository.findByUserIdAndDeletedAtIsNull(userId)
 			.orElseThrow(() -> new PetException(HttpStatus.NOT_FOUND, PetExceptionType.NOT_FOUND_PET.getMessage()));
 
 		if (!pet.getUser().getId().equals(userId)) {
