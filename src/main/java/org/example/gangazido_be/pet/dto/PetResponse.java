@@ -5,9 +5,6 @@ import lombok.Getter;
 import lombok.Setter;
 
 import org.example.gangazido_be.pet.entity.Pet;
-import org.example.gangazido_be.pet.exception.PetException;
-import org.example.gangazido_be.pet.exception.PetExceptionType;
-import org.springframework.http.HttpStatus;
 
 @Setter
 @Getter
@@ -16,7 +13,7 @@ public class PetResponse {
 	private String name;
 	private String profileImage;
 	private Integer age;
-	private Boolean gender;
+	private boolean gender;
 	private String breed;
 	private Double weight;
 

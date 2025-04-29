@@ -49,12 +49,7 @@ public class PetService {
 			log.debug("✔️ 소프트 삭제된 반려견 복구 로직 실행됨");
 			deletedPet.setDeletedAt(null);
 			deletedPet.setUser(user);
-			deletedPet.setName(name);
-			deletedPet.setAge(age);
-			deletedPet.setGender(gender);
-			deletedPet.setBreed(breed);
-			deletedPet.setWeight(weight);
-			deletedPet.setProfileImage(profileImage != null ? profileImage : ""); // 🔥 profileImage 빈 문자열 방어
+			deletedPet.updatePet(name, profileImage, age, gender, breed, weight);
 
 			Pet saved = petRepository.save(deletedPet);
 			return buildPetResponseWithImageUrl(saved);
@@ -63,11 +58,11 @@ public class PetService {
 		Pet pet = Pet.builder()
 			.user(user)
 			.name(name)
+			.profileImage(profileImage)
 			.age(age)
 			.gender(gender)
 			.breed(breed)
 			.weight(weight)
-			.profileImage(profileImage != null ? profileImage : "")
 			.build();
 
 		Pet saved = petRepository.save(pet);
@@ -80,14 +75,8 @@ public class PetService {
 		User user = userRepository.findById(userId)
 			.orElseThrow(() -> new PetException(HttpStatus.NOT_FOUND, PetExceptionType.NOT_FOUND_USER.getMessage()));
 
-		Pet pet = petRepository.findByUserIdAndDeletedAtIsNull(userId)
+		Pet pet = petRepository.findByUserId(userId)
 			.orElseThrow(() -> new PetException(HttpStatus.NOT_FOUND, PetExceptionType.NOT_FOUND_PET.getMessage()));
-
-		// 🔥 필수 필드 누락 방어 추가
-		if (pet.getName() == null || pet.getAge() == null || pet.getGender() == null ||
-			pet.getBreed() == null || pet.getWeight() == null) {
-			throw new PetException(HttpStatus.NOT_FOUND, PetExceptionType.NOT_FOUND_PET.getMessage());
-		}
 
 		return buildPetResponseWithImageUrl(pet);
 	}
@@ -121,7 +110,7 @@ public class PetService {
 		User user = userRepository.findById(userId)
 			.orElseThrow(() -> new PetException(HttpStatus.NOT_FOUND, PetExceptionType.NOT_FOUND_USER.getMessage()));
 
-		Pet pet = petRepository.findByUserIdAndDeletedAtIsNull(userId)
+		Pet pet = petRepository.findByUserId(userId)
 			.orElseThrow(() -> new PetException(HttpStatus.NOT_FOUND, PetExceptionType.NOT_FOUND_PET.getMessage()));
 
 		if (!pet.getUser().getId().equals(userId)) {
