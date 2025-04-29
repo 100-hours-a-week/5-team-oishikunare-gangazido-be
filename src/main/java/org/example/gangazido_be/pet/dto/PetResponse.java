@@ -21,10 +21,6 @@ public class PetResponse {
 	private Double weight;
 
 	public static PetResponse from(Pet pet) {
-		if (pet.getName() == null || pet.getAge() == null || pet.getGender() == null || pet.getBreed() == null || pet.getWeight() == null) {
-			throw new PetException(HttpStatus.NOT_FOUND, PetExceptionType.NOT_FOUND_PET.getMessage());
-		}
-
 		return PetResponse.builder()
 			.name(pet.getName())
 			.profileImage(pet.getProfileImage())
