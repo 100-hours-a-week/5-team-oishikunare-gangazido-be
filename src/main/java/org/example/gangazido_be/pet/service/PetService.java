@@ -47,9 +47,15 @@ public class PetService {
 
 		if (deletedPet != null) {
 			log.debug("✔️ 소프트 삭제된 반려견 복구 로직 실행됨");
+
 			deletedPet.setDeletedAt(null);
 			deletedPet.setUser(user);
-			deletedPet.updatePet(name, profileImage, age, gender, breed, weight);
+			deletedPet.setName(name);
+			deletedPet.setProfileImage(profileImage != null ? profileImage : ""); // 빈 문자열 방어
+			deletedPet.setAge(age);
+			deletedPet.setGender(gender);
+			deletedPet.setBreed(breed);
+			deletedPet.setWeight(weight);
 
 			Pet saved = petRepository.save(deletedPet);
 			return buildPetResponseWithImageUrl(saved);
