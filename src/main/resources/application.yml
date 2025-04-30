@@ -111,7 +111,3 @@ aws:
     bucket: gangazido-fe
     presigned-url:
       expiration: 600
-
-cloudfront:
-  url: ${CLOUDFRONT_URL}
-
