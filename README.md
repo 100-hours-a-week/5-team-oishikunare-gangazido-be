@@ -9,7 +9,7 @@
 
 | 구분 | 내용 |
 |------|------|
-| Language | Java 21 |
+| Language | Java 17 |
 | Framework | Spring Boot 3 |
 | Build Tool | Gradle 8 |
 | Database | MariaDB |
