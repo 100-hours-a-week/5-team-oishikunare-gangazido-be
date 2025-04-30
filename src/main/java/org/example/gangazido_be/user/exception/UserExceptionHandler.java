@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-@ControllerAdvice
+@ControllerAdvice(basePackages = "org.example.gangazido_be.user")
 public class UserExceptionHandler {
 	private final Logger logger = LoggerFactory.getLogger(UserExceptionHandler.class);
 
