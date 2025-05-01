@@ -24,8 +24,8 @@ public class PetService {
 	private final PetRepository petRepository;
 	private final UserRepository userRepository;
 
-	// private static final String CLOUDFRONT_URL = "https://d3jeniacjnodv5.cloudfront.net";	// 배포 url
-	private static final String CLOUDFRONT_URL = "https://d2zi61xwrfrt4q.cloudfront.net";
+	private static final String CLOUDFRONT_URL = "https://d3jeniacjnodv5.cloudfront.net";	// 배포 url
+	//private static final String CLOUDFRONT_URL = "https://d2zi61xwrfrt4q.cloudfront.net";
 
 	// 반려견 정보 등록
 	@Transactional

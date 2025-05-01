@@ -30,8 +30,8 @@ public class UserService {
 	private final MarkerService markerService;
 	private final Logger logger = LoggerFactory.getLogger(UserService.class);
 
-	// private static final String CLOUDFRONT_URL = "https://d3jeniacjnodv5.cloudfront.net";	// 배포 url
-	private static final String CLOUDFRONT_URL = "https://d2zi61xwrfrt4q.cloudfront.net";    // 개발 url
+	private static final String CLOUDFRONT_URL = "https://d3jeniacjnodv5.cloudfront.net";	// 배포 url
+	//private static final String CLOUDFRONT_URL = "https://d2zi61xwrfrt4q.cloudfront.net";    // 개발 url
 
 	@Autowired
 	public UserService(UserRepository userRepository,
